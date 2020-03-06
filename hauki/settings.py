@@ -23,10 +23,14 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['localhost']
 
+AUTH_USER_MODEL = 'users.User'
+
+SYSTEM_DATA_SOURCE_ID = 'hauki'
 
 # Application definition
 
 INSTALLED_APPS = [
+    'helusers',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -36,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     # Apps within this repository
+    'users',
     'hours'
 ]
 

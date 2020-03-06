@@ -2,3 +2,4 @@ Django
 django-reversion
 psycopg2
 djangorestframework
+django-helusers

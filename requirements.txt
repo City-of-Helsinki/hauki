@@ -9,7 +9,7 @@ certifi==2019.11.28       # via requests
 chardet==3.0.4            # via requests
 django-helusers==0.5.6    # via -r requirements.in
 django-reversion==3.0.5   # via -r requirements.in
-django==3.0.2             # via -r requirements.in, django-helusers, django-reversion, drf-oidc-auth
+django==3.0.3             # via -r requirements.in, django-helusers, django-reversion, drf-oidc-auth
 djangorestframework==3.10.3  # via -r requirements.in, drf-oidc-auth
 drf-oidc-auth==0.9        # via django-helusers
 ecdsa==0.15               # via python-jose

@@ -64,7 +64,7 @@ class Migration(migrations.Migration):
                 ('last_modified_time', models.DateTimeField(auto_now=True, db_index=True, null=True)),
                 ('deleted', models.BooleanField(default=False)),
                 ('status', models.IntegerField(choices=[(0, 'closed'), (1, 'open'), (2, 'undefined')], db_index=True, default=1)),
-                ('period', django.contrib.postgres.fields.ranges.DateTimeRangeField()),
+                ('period', django.contrib.postgres.fields.ranges.DateRangeField()),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hours_period_created_by', to=settings.AUTH_USER_MODEL)),
                 ('data_source', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='provided_period_data', to='hours.DataSource')),
                 ('last_modified_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hours_period_modified_by', to=settings.AUTH_USER_MODEL)),

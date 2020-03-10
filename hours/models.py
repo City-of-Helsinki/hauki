@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.postgres.fields import DateTimeRangeField
+from django.contrib.postgres.fields import DateRangeField, DateTimeRangeField
 from django.contrib.postgres.indexes import GistIndex
 from django.utils.translation import ugettext_lazy as _
 from hauki import settings
@@ -91,7 +91,7 @@ class Keyword(BaseModel):
 class Period(BaseModel):
     target = models.ForeignKey(Target, on_delete=models.PROTECT, related_name='periods', db_index=True)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
-    period = DateTimeRangeField()
+    period = DateRangeField()
 
     class Meta(BaseModel.Meta):
         verbose_name = _('Period')

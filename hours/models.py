@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.postgres.fields import DateRangeField, DateTimeRangeField
 from django.contrib.postgres.indexes import GistIndex
 from django.utils.translation import ugettext_lazy as _
+from rest_framework.exceptions import ValidationError
+from psycopg2.extras import DateTimeTZRange
 from hauki import settings
 
 
@@ -68,6 +70,18 @@ class BaseModel(models.Model):
     def __str__(self):
         return f'{self.name} ({self.id})'
 
+    def save(self, *args, **kwargs):
+        if not self.data_source:
+            raise ValidationError(_("Data source is required."))
+        if not self.origin_id:
+            raise ValidationError(_("Origin ID is required."))
+        if not self.id:
+            self.id = f'{self.data_source_id}:{self.origin_id}'
+        id_parts = self.id.split(':')
+        if len(id_parts) < 2 or id_parts[0] != self.data_source_id or id_parts[1] != self.origin_id:
+            raise ValidationError(_("Id must be of the format data_source:origin_id."))
+        super().save(*args, **kwargs)
+
 
 class Target(BaseModel):
     parent = models.ForeignKey('self', on_delete=models.PROTECT, related_name='first_children', db_index=True, null=True)
@@ -99,13 +113,17 @@ class Period(BaseModel):
         indexes = [
             GistIndex(fields=['period'])
         ]
+    
+    def __str__(self):
+        return f'{self.target}:{self.period})'
 
 
 class Opening(models.Model):
     period = models.ForeignKey(Period, on_delete=models.CASCADE, related_name='openings', db_index=True)
     weekday = models.IntegerField(choices=Weekday.choices)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
-    opening = DateTimeRangeField()
+    opens = models.TimeField(db_index=True)
+    closes = models.TimeField(db_index=True)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     # by default, all openings are for the first week of the rule, i.e. rotation of 1 week
     week = models.IntegerField(verbose_name=_('Week number'), default=1)
@@ -113,11 +131,8 @@ class Opening(models.Model):
     month = models.IntegerField(verbose_name=_('Month number'), default=0)
 
     def __str__(self):
-        return f'{self.period}: {self.weekday} {self.opening}'
+        return f'{self.period}: {self.weekday} {self.opens}-{self.closes}'
 
     class Meta:
         verbose_name = _('Opening')
         verbose_name_plural = _('Openings')
-        indexes = [
-            GistIndex(fields=['opening'])
-        ]

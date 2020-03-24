@@ -37,7 +37,7 @@ def target(session_data_source):
 @pytest.fixture(scope='session')
 def targets(target):
     values = []
-    for id in range(1,10000):
+    for id in range(1,1000):
         values.append(target(id))
     return Target.objects.bulk_create(values)
 
@@ -83,17 +83,37 @@ def periods(targets, long_period, medium_period, short_period):
     return Period.objects.bulk_create(values)
 
 @pytest.fixture(scope='session')
-def opening():
-    def _opening(period, weekday):
-        opens = random_hour(time(7), time(11))
-        closes = random_hour(time(13), time(2))
+def first_opening():
+    def _first_opening(period, weekday):
+        opens = random_hour(time(7), time(8))
+        closes = random_hour(time(10), time(13))
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
-    return _opening
+    return _first_opening
 
 @pytest.fixture(scope='session')
-def openings(periods, opening):
+def second_opening():
+    def _second_opening(period, weekday):
+        opens = random_hour(time(14), time(16))
+        closes = random_hour(time(18), time(20))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
+    return _second_opening
+
+@pytest.fixture(scope='session')
+def third_opening():
+    def _third_opening(period, weekday):
+        opens = random_hour(time(21), time(23))
+        closes = random_hour(time(1), time(4))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
+    return _third_opening
+
+@pytest.fixture(scope='session')
+def openings(periods, first_opening, second_opening, third_opening):
     values = []
-    for period in periods:
+    for index, period in enumerate(periods):
         for weekday in Weekday.choices:
-            values.append(opening(period, weekday[0]))
+            values.append(first_opening(period, weekday[0]))
+        if index % 10 == 0:
+            values.append(second_opening(period, weekday[0]))
+        if index % 100 == 0:
+            values.append(third_opening(period, weekday[0]))
     return Opening.objects.bulk_create(values)

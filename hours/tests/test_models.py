@@ -1,6 +1,7 @@
 import pytest
 from hours import models
 from rest_framework.exceptions import ValidationError
+from datetime import date
 
 
 @pytest.mark.parametrize('klass', ('Target', 'Keyword'))
@@ -21,4 +22,15 @@ def test_base_model(klass, data_source):
         Klass.objects.create(data_source_id='ds1', origin_id='1', id='ds2:2')
     Klass.objects.create(data_source_id='ds1', origin_id='1')
 
-    
+
+@pytest.mark.django_db
+def test_get_period_for_date(target, short_period, medium_period, long_period):
+    target = target('1')
+    target.save()
+    short_period = short_period(target, '1')
+    short_period.save()
+    medium_period = medium_period(target, '2')
+    medium_period.save()
+    long_period = long_period(target, '3')
+    long_period.save()
+    assert short_period == target.get_period_for_date(date(2021,7,15))

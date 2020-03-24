@@ -1,9 +1,13 @@
 from django.db import models
-from django.contrib.postgres.fields import DateRangeField, DateTimeRangeField
+from django.db.models import Count, F
+from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.indexes import GistIndex
+from psycopg2.extras import DateTimeTZRange
+import pandas as pd
+import numpy as np
+
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
-from psycopg2.extras import DateTimeTZRange
 from hauki import settings
 
 
@@ -92,6 +96,21 @@ class Target(BaseModel):
     class Meta(BaseModel.Meta):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
+
+    def get_period_for_date(self, date):
+        # returns the period that determines the opening hours for a given date, or None
+        active_periods = self.periods.filter(period__contains=date)
+        shortest_period = active_periods.first()
+        if shortest_period:
+            shortest_length = shortest_period.period.upper-shortest_period.period.lower
+        for period in active_periods:
+            # we have to evaluate the queryset (probably just a few objects)
+            # because upper and lower are field properties, not fields
+            length = period.period.upper-period.period.lower
+            if length < shortest_length:
+                shortest_period = period
+                shortest_length = length
+        return shortest_period
 
 
 class Keyword(BaseModel):

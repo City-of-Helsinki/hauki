@@ -99,18 +99,21 @@ class Target(BaseModel):
 
     def get_period_for_date(self, date):
         # returns the period that determines the opening hours for a given date, or None
-        active_periods = self.periods.filter(period__contains=date)
-        shortest_period = active_periods.first()
-        if shortest_period:
-            shortest_length = shortest_period.period.upper-shortest_period.period.lower
-        for period in active_periods:
+        potential_periods = self.periods.filter(period__contains=date)
+        override_periods = potential_periods.filter(override=True)
+        if override_periods:
+            potential_periods = override_periods
+        active_period = potential_periods.first()
+        if active_period:
+            shortest_length = active_period.period.upper-active_period.period.lower
+        for period in potential_periods:
             # we have to evaluate the queryset (probably just a few objects)
             # because upper and lower are field properties, not fields
             length = period.period.upper-period.period.lower
             if length < shortest_length:
-                shortest_period = period
+                active_period = period
                 shortest_length = length
-        return shortest_period
+        return active_period
 
 
 class Keyword(BaseModel):

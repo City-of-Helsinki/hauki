@@ -34,3 +34,17 @@ def test_get_period_for_date(target, short_period, medium_period, long_period):
     long_period = long_period(target, '3')
     long_period.save()
     assert short_period == target.get_period_for_date(date(2021,7,15))
+
+
+@pytest.mark.django_db
+def test_get_override_period_for_date(target, short_period, medium_period, long_period):
+    target = target('1')
+    target.save()
+    short_period = short_period(target, '1')
+    short_period.save()
+    medium_period = medium_period(target, '2')
+    medium_period.override = True
+    medium_period.save()
+    long_period = long_period(target, '3')
+    long_period.save()
+    assert medium_period == target.get_period_for_date(date(2021,7,15))

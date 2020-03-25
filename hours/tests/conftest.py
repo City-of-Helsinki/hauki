@@ -30,6 +30,36 @@ def target(data_source):
                       name='Kallion kirjasto')
     return _target
 
+@pytest.fixture
+def long_period(data_source):
+    def _long_period(target, origin_id):
+        period_id = f'{data_source.id}:{origin_id}'
+        start = random_date(date(2020,1,1), date(2020,12,31))
+        end = random_date(date(2022,1,1), date(2022,12,31))
+        return Period(id=period_id, data_source=data_source, origin_id=origin_id,
+                      target=target, period=DateRange(lower=start, upper=end))
+    return _long_period
+
+@pytest.fixture
+def medium_period(data_source):
+    def _medium_period(target, origin_id):
+        period_id = f'{data_source.id}:{origin_id}'
+        start = random_date(date(2021,1,1), date(2021,5,31))
+        end = random_date(date(2021,9,1), date(2021,12,31))
+        return Period(id=period_id, data_source=data_source, origin_id=origin_id,
+                      target=target, period=DateRange(lower=start, upper=end))
+    return _medium_period
+
+@pytest.fixture
+def short_period(data_source):
+    def _short_period(target, origin_id):
+        period_id = f'{data_source.id}:{origin_id}'
+        start = random_date(date(2021,7,10), date(2021,7,15))
+        end = random_date(date(2021,7,16), date(2021,7,20))
+        return Period(id=period_id, data_source=data_source, origin_id=origin_id,
+                      target=target, period=DateRange(lower=start, upper=end))
+    return _short_period
+
 @pytest.fixture(scope='module')
 def module_data_source():
     return DataSource.objects.create(id='sds1')
@@ -50,7 +80,7 @@ def targets(module_target):
     return Target.objects.bulk_create(values)
 
 @pytest.fixture(scope='module')
-def long_period(module_data_source):
+def module_long_period(module_data_source):
     def _long_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
         start = random_date(date(2020,1,1), date(2020,12,31))
@@ -60,7 +90,7 @@ def long_period(module_data_source):
     return _long_period
 
 @pytest.fixture(scope='module')
-def medium_period(module_data_source):
+def module_medium_period(module_data_source):
     def _medium_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
         start = random_date(date(2021,1,1), date(2021,5,31))
@@ -70,7 +100,7 @@ def medium_period(module_data_source):
     return _medium_period
 
 @pytest.fixture(scope='module')
-def short_period(module_data_source):
+def module_short_period(module_data_source):
     def _short_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
         start = random_date(date(2021,7,10), date(2021,7,15))
@@ -80,14 +110,14 @@ def short_period(module_data_source):
     return _short_period
 
 @pytest.fixture(scope='module')
-def periods(targets, long_period, medium_period, short_period):
+def periods(targets, module_long_period, module_medium_period, module_short_period):
     values = []
     for target in targets:
         # each target should have long and medium range and some exceptions
-        values.append(long_period(target, target.origin_id))
-        values.append(medium_period(target, f'{target.origin_id}-medium'))
-        values.append(short_period(target, f'{target.origin_id}-short1'))
-        values.append(short_period(target, f'{target.origin_id}-short2'))
+        values.append(module_long_period(target, target.origin_id))
+        values.append(module_medium_period(target, f'{target.origin_id}-medium'))
+        values.append(module_short_period(target, f'{target.origin_id}-short1'))
+        values.append(module_short_period(target, f'{target.origin_id}-short2'))
     return Period.objects.bulk_create(values)
 
 @pytest.fixture(scope='module')

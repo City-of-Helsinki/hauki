@@ -124,6 +124,7 @@ class Keyword(BaseModel):
 class Period(BaseModel):
     target = models.ForeignKey(Target, on_delete=models.PROTECT, related_name='periods', db_index=True)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
+    override = models.BooleanField(default=False, db_index=True)
     period = DateRangeField()
 
     class Meta(BaseModel.Meta):
@@ -139,15 +140,15 @@ class Period(BaseModel):
 
 class Opening(models.Model):
     period = models.ForeignKey(Period, on_delete=models.CASCADE, related_name='openings', db_index=True)
-    weekday = models.IntegerField(choices=Weekday.choices)
+    weekday = models.IntegerField(choices=Weekday.choices, db_index=True)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
     opens = models.TimeField(db_index=True)
     closes = models.TimeField(db_index=True)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     # by default, all openings are for the first week of the rule, i.e. rotation of 1 week
-    week = models.IntegerField(verbose_name=_('Week number'), default=1)
+    week = models.IntegerField(verbose_name=_('Week number'), default=1, db_index=True)
     # by default, there is no monthly rule (only weekly rule), i.e. rotation of 0 months
-    month = models.IntegerField(verbose_name=_('Month number'), default=0)
+    month = models.IntegerField(verbose_name=_('Month number'), default=0, db_index=True)
 
     def __str__(self):
         return f'{self.period}: {self.weekday} {self.opens}-{self.closes}'

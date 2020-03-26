@@ -3,3 +3,5 @@ django-reversion
 psycopg2
 djangorestframework
 django-helusers
+numpy
+pandas

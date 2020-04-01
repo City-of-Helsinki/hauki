@@ -17,6 +17,23 @@ class Status(models.IntegerChoices):
     CLOSED = 0, _('closed')
     OPEN = 1, _('open')
     UNDEFINED = 2, _('undefined')
+    SELF_SERVICE = 3, _('self_service')
+    WITH_RESERVATION = 4, _('with_reservation')
+    WITH_KEY = 5, _('with key')
+    ONLY_ENTERING = 6, _('only_entering')
+    ONLY_LEAVING = 7, _('only_leaving')
+
+
+class TargetType(models.IntegerChoices):
+    UNIT = 0, _('unit')
+    UNIT_SERVICE = 1, _('unit_service')
+    SPECIAL_GROUP = 2, _('special_group')
+    PERSON = 3, _('person')
+    TELEPHONE = 4, _('telephone')
+    SERVICE = 5, _('service')
+    SERVICE_CHANNEL = 6, _('service_channel')
+    SERVICE_AT_UNIT = 7, _('service_at_unit')
+    RESOURCE = 8, _('resource')
 
 
 class Weekday(models.IntegerChoices):
@@ -63,6 +80,8 @@ class BaseModel(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
     deleted = models.BooleanField(default=False)
+    published = models.BooleanField(default=True)
+    publication_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -92,14 +111,25 @@ class Target(BaseModel):
     second_parent = models.ForeignKey('self', on_delete=models.PROTECT, related_name='second_children', db_index=True, null=True)
     hours_updated = models.DateTimeField(null=True, blank=True, db_index=True)
     default_status = models.IntegerField(choices=Status.choices, default=Status.UNDEFINED)
+    target_type = models.IntegerField(choices=TargetType.choices, default=TargetType.UNIT)
 
     class Meta(BaseModel.Meta):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
 
-    def get_period_for_date(self, date):
-        # returns the period that determines the opening hours for a given date, or None
+    def get_period_for_date(self, date, include_drafts=False):
+        """Returns the period that determines the opening hours for a given date, or None
+
+        Parameters:
+        date (datetime.date): The date we want to find out the period for
+        include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
+
+        Returns:
+        Period: The period that determines opening hours for the given date
+        """
         potential_periods = self.periods.filter(period__contains=date)
+        if not include_drafts:
+            potential_periods = potential_periods.filter(published=True)
         override_periods = potential_periods.filter(override=True)
         if override_periods:
             potential_periods = override_periods

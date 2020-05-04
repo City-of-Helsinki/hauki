@@ -113,7 +113,7 @@ def module_target(module_data_source):
 @pytest.fixture(scope='module')
 def targets(module_target):
     values = []
-    for id in range(1,1000):
+    for id in range(1,10):
         values.append(module_target(id))
     return Target.objects.bulk_create(values)
 

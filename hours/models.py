@@ -240,3 +240,78 @@ class Opening(models.Model):
     class Meta:
         verbose_name = _('Opening')
         verbose_name_plural = _('Openings')
+
+
+class DailyHours(object):
+    # This is not strictly a django model, but we adhere to the same methods? or simpler API may suffice
+    # Store two years (current and future) in memory.
+    start = pd.Timestamp.today().floor(freq = 'D') - pd.offsets.YearBegin()
+    end = pd.Timestamp.today().floor(freq = 'D') + pd.offsets.YearEnd() + pd.DateOffset(years=1)
+    columns = pd.date_range(start, end).date
+    # this is the stored final structure, containing raw opening data
+    hours = pd.DataFrame(columns=columns)
+
+    def get_openings_for_slot(self, target, date):
+        #print('getting openings')
+        #print(target)
+        #print(date)
+        period = target.get_period_for_date(date)
+        #print(period)
+        if not period:
+            return Opening.objects.none()
+        else:
+            return period.get_openings_for_date(date)
+
+    def __init__(self, *args, **kwargs):
+        #print(self.columns)
+        #print(Target.objects.all())
+        data = {}
+        start = time.process_time()
+        for column in self.columns:
+            data[column] = [self.get_openings_for_slot(target,column) for target in Target.objects.all()]
+            #print(data[column])
+        # this is the processing structure with references to django objects, used to generate the hours
+        openings = pd.DataFrame(
+            data,
+            index=Target.objects.all(),
+            columns=self.columns
+            )
+
+        #print(self.columns)
+        print(time.process_time()-start)
+        print('dataframe generated')
+        print(openings)
+        
+
+
+
+
+        # 1. sort targets by max number of openings per day
+        #grouped_openings = Opening.objects.all().values('id','period', 'weekday', 'week', 'month')
+        #print(grouped_openings)
+        #target_ids = Target.objects.all().values_list('id', flat=True)
+        #print(target_ids)
+        #grouped_targets = Target.objects.all().values('periods')
+        ##print(grouped_targets)
+        #annotated_targets = Target.objects.all().annotate(slots=Count('periods__openings'))
+        #print(annotated_targets)
+        #for target in annotated_targets:
+        #    print(target)
+            #print(target.periods.all())
+            #for period in target.periods.all():
+                #print(period.openings.all())
+        #    print(target.slots)
+        #print(self.start)
+        #print(self.end)
+        #print(self.columns)
+        #print(self.dataframe)
+        #print(self.dataframe.memory_usage())
+
+        # pseudo-algorithm:
+    # ================
+    # 1. sort targets by max number of slots -- get number (test_targets())
+    # 2. iterate days, iterate sorted targets (generate_table(test_targets()))
+    # 3. insert values into array
+    #
+    # btw: array size = iterate slots, sum number of targets per slot, (multiply by days)
+    #

@@ -1,5 +1,5 @@
 import pytest
-from hours.models import Weekday, DataSource, Target, Period, Opening
+from hours.models import Status, Weekday, DataSource, Target, Period, Opening
 from psycopg2.extras import DateRange
 from random import randrange
 from datetime import timedelta, date, time
@@ -59,6 +59,44 @@ def short_period(data_source):
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
                       target=target, period=DateRange(lower=start, upper=end))
     return _short_period
+
+@pytest.fixture
+def period_first_week_opening(data_source):
+    def _opening(period, weekday):
+        opens = random_hour(time(7), time(8))
+        closes = random_hour(time(10), time(13))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
+    return _opening
+
+@pytest.fixture
+def period_second_week_opening(data_source):
+    def _opening(period, weekday):
+        opens = random_hour(time(7), time(8))
+        closes = random_hour(time(10), time(13))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=2)
+    return _opening
+
+@pytest.fixture
+def period_second_week_closing(data_source):
+    def _opening(period, weekday):
+        return Opening(weekday=weekday, period=period, status=Status.CLOSED, week=2)
+    return _opening
+
+@pytest.fixture
+def period_monthly_opening(data_source):
+    def _opening(period, weekday):
+        opens = random_hour(time(7), time(8))
+        closes = random_hour(time(10), time(13))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=1, month=1)
+    return _opening
+
+@pytest.fixture
+def period_second_monthly_opening(data_source):
+    def _opening(period, weekday):
+        opens = random_hour(time(7), time(8))
+        closes = random_hour(time(10), time(13))
+        return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=3, month=1)
+    return _opening
 
 @pytest.fixture(scope='module')
 def module_data_source():

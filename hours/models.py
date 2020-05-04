@@ -1,10 +1,12 @@
+from datetime import timedelta
 from django.db import models
-from django.db.models import Count, F
+from django.db.models import Count, F, Max
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.indexes import GistIndex
 from psycopg2.extras import DateTimeTZRange
 import pandas as pd
 import numpy as np
+import time
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
@@ -117,22 +119,29 @@ class Target(BaseModel):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
 
-    def get_period_for_date(self, date, include_drafts=False):
+    def get_period_for_date(self, date, include_drafts=False, period_type=None):
         """Returns the period that determines the opening hours for a given date, or None
 
         Parameters:
         date (datetime.date): The date we want to find out the period for
         include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
+        period_type (string): Only consider 'normal' or 'override' periods, or None (considers both).
 
         Returns:
         Period: The period that determines opening hours for the given date
         """
         potential_periods = self.periods.filter(period__contains=date)
+        if period_type:
+            if period_type=='normal':
+                potential_periods.filter(override=False)
+            if period_type=='override':
+                potential_periods.filter(override=True)
         if not include_drafts:
             potential_periods = potential_periods.filter(published=True)
         override_periods = potential_periods.filter(override=True)
         if override_periods:
             potential_periods = override_periods
+        # TODO: save period length in db to skip evaluation here, just order by length?
         active_period = potential_periods.first()
         if active_period:
             shortest_length = active_period.period.upper-active_period.period.lower
@@ -170,21 +179,63 @@ class Period(BaseModel):
     def __str__(self):
         return f'{self.target}:{self.period})'
 
+    def get_openings_for_date(self, date):
+        """Returns the openings the period determines for the given date
+
+        Parameters:
+        date (datetime.date): The date we want to find out all opening hours for
+
+        Returns:
+        list: All the openings that the period determines for the given date
+        """
+        # Weekly rotation is subordinate to monthly rotation, if present.
+        # max_month 0 means no monthly rotation (only weekly rotation)
+        max_month = self.openings.aggregate(Max('month'))['month__max']
+        # max_week 0 means no weekly rotation (only monthly rotation)
+        max_week = self.openings.aggregate(Max('week'))['week__max']
+
+        # get number of requested month since start
+        date_month_number = (date.year - self.period.lower.year)*12 + date.month - self.period.lower.month + 1
+        # get number of requested month modulo repetition
+        if max_month:
+            # zero remainder is mapped to max_month (range is 1, 2,  ..., max_month)
+            opening_month_number = date_month_number % max_month if date_month_number % max_month else max_month
+        else:
+            opening_month_number = 0
+
+        # first week of period may be partial, depending on starting weekday
+        period_start_weekday = self.period.lower.isoweekday()
+        # get number of requested week since start
+        date_week_number = int(((date-self.period.lower).days + period_start_weekday - 1) / 7) + 1
+        # get number of requested weekday in month, or since period start modulo repetition
+        if max_month:
+            # if max_month > 0, week numbers refer to weekdays from the start of month.
+            # range is (1, 2, 3, 4) or (1, 2, 3, 4, 5) depending on how long the month is
+            opening_week_number = int((date.day - 1) / 7) + 1 if max_week else 0
+        else:
+            # if max_month = 0, week numbers refer to weeks since period start
+            if max_week:
+                # zero remainder is mapped to max_week (range is 1, 2,  ..., max_week)
+                opening_week_number = date_week_number % max_week if date_week_number % max_week else max_week
+            else:
+                opening_week_number = 0
+        return self.openings.filter(weekday=date.isoweekday(), week=opening_week_number, month=opening_month_number)
+
 
 class Opening(models.Model):
     period = models.ForeignKey(Period, on_delete=models.CASCADE, related_name='openings', db_index=True)
     weekday = models.IntegerField(choices=Weekday.choices, db_index=True)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
-    opens = models.TimeField(db_index=True)
-    closes = models.TimeField(db_index=True)
+    opens = models.TimeField(null=True, db_index=True)
+    closes = models.TimeField(null=True, db_index=True)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
-    # by default, all openings are for the first week of the rule, i.e. rotation of 1 week
+    # by default, all openings are for the first week of the rule, i.e. rotation of 1 week.
     week = models.IntegerField(verbose_name=_('Week number'), default=1, db_index=True)
-    # by default, there is no monthly rule (only weekly rule), i.e. rotation of 0 months
+    # by default, no monthly rotation. if month > 0,  week number refers to weeks within month.
     month = models.IntegerField(verbose_name=_('Month number'), default=0, db_index=True)
 
     def __str__(self):
-        return f'{self.period}: {self.weekday} {self.opens}-{self.closes}'
+        return f'{self.period}: {self.week},{self.month}: {Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
 
     class Meta:
         verbose_name = _('Opening')

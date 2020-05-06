@@ -1,9 +1,10 @@
 from datetime import timedelta
+from collections import OrderedDict
 from django.db import models
 from django.db.models import Count, F, Max
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.indexes import GistIndex
-from psycopg2.extras import DateTimeTZRange
+from psycopg2.extras import DateRange
 import pandas as pd
 import numpy as np
 import time
@@ -119,18 +120,22 @@ class Target(BaseModel):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
 
-    def get_period_for_date(self, date, include_drafts=False, period_type=None):
-        """Returns the period that determines the opening hours for a given date, or None
+    def get_periods_for_range(self, start, end=None, include_drafts=False, period_type=None):
+        """Returns the period that determines the opening hours for each date in the range, or None
 
         Parameters:
-        date (datetime.date): The date we want to find out the period for
+        start (date): Starting date for requested date range
+        end (date): Ending date for requested date range. If omitted, only return one date.
         include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
         period_type (string): Only consider 'normal' or 'override' periods, or None (considers both).
 
         Returns:
-        Period: The period that determines opening hours for the given date
+        OrderedDict[Period]: The period that determines opening hours for each date
         """
-        potential_periods = self.periods.filter(period__contains=date)
+        if not end:
+            # default only returns single day
+            end = start
+        potential_periods = self.periods.filter(period__overlap=DateRange(lower=start, upper=end, bounds='[]'))
         if period_type:
             if period_type=='normal':
                 potential_periods.filter(override=False)
@@ -138,21 +143,78 @@ class Target(BaseModel):
                 potential_periods.filter(override=True)
         if not include_drafts:
             potential_periods = potential_periods.filter(published=True)
-        override_periods = potential_periods.filter(override=True)
-        if override_periods:
-            potential_periods = override_periods
-        # TODO: save period length in db to skip evaluation here, just order by length?
-        active_period = potential_periods.first()
-        if active_period:
-            shortest_length = active_period.period.upper-active_period.period.lower
-        for period in potential_periods:
-            # we have to evaluate the queryset (probably just a few objects)
-            # because upper and lower are field properties, not fields
-            length = period.period.upper-period.period.lower
-            if length < shortest_length:
-                active_period = period
-                shortest_length = length
-        return active_period
+        periods = [p for p in potential_periods.prefetch_related('openings')] # 1 query + evaluate small QS, that's all we need
+        # store the rotation metadata per period
+        for period in periods:
+            # Weekly rotation is subordinate to monthly rotation, if present.
+            # max_month 0 means no monthly rotation (only weekly rotation)
+            period.max_month = period.openings.aggregate(Max('month'))['month__max']
+            # max_week 0 means no weekly rotation (only monthly rotation)
+            period.max_week = period.openings.aggregate(Max('week'))['week__max']
+        # shorter periods always take precedence
+        periods.sort(key=lambda x: (-x.override, x.period.upper - x.period.lower))
+        dates = pd.date_range(start, end).date
+        active_periods = OrderedDict()  
+        for date in dates:
+            for period in periods:
+                if date in period.period:
+                    active_periods[date] = period
+                    break
+            else:
+                active_periods[date] = None
+        return active_periods
+
+    def get_openings_for_range(self, start, end=None, include_drafts=False, period_type=None, period=None):
+        """Returns the opening hours for each date in the range, or None
+
+        Parameters:
+        start (date): Starting date for requested date range
+        end (date): Ending date for requested date range. If omitted, only return one date.
+        include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
+        period_type (string): Only consider 'normal' or 'override' periods, or None (considers both).
+
+        Returns:
+        OrderedDict[Queryset[Opening]]: All the opening hours for each date
+        """
+        active_periods = self.get_periods_for_range(start, end, include_drafts=False, period_type=None)
+        if not end:
+            # default only returns single day
+            end = start
+        dates = pd.date_range(start, end).date
+        openings = OrderedDict()
+        for date in dates:
+            if not active_periods[date]:
+                openings[date] = Opening.objects.none()
+                continue
+            # get number of requested month since start of active period
+            date_month_number = (date.year - active_periods[date].period.lower.year)*12 + date.month - active_periods[date].period.lower.month + 1
+            # get number of requested month modulo repetition
+            max_month = active_periods[date].max_month
+            max_week = active_periods[date].max_week
+            if max_month:
+                # zero remainder is mapped to max_month (range is 1, 2,  ..., max_month)
+                opening_month_number = date_month_number % max_month if date_month_number % max_month else max_month
+            else:
+                opening_month_number = 0
+
+            # first week of period may be partial, depending on starting weekday
+            period_start_weekday = active_periods[date].period.lower.isoweekday()
+            # get number of requested week since start of active period
+            date_week_number = int(((date-active_periods[date].period.lower).days + period_start_weekday - 1) / 7) + 1
+            # get number of requested weekday in month, or since period start modulo repetition
+            if max_month:
+                # if max_month > 0, week numbers refer to weekdays from the start of month.
+                # range is (1, 2, 3, 4) or (1, 2, 3, 4, 5) depending on how long the month is
+                opening_week_number = int((date.day - 1) / 7) + 1 if max_week else 0
+            else:
+                # if max_month = 0, week numbers refer to weeks since period start
+                if max_week:
+                    # zero remainder is mapped to max_week (range is 1, 2,  ..., max_week)
+                    opening_week_number = date_week_number % max_week if date_week_number % max_week else max_week
+                else:
+                    opening_week_number = 0
+            openings[date] = active_periods[date].openings.filter(weekday=date.isoweekday(), week=opening_week_number, month=opening_month_number)
+        return openings
 
 
 class Keyword(BaseModel):
@@ -169,6 +231,7 @@ class Period(BaseModel):
     override = models.BooleanField(default=False, db_index=True)
     period = DateRangeField()
 
+
     class Meta(BaseModel.Meta):
         verbose_name = _('Period')
         verbose_name_plural = _('Periods')
@@ -178,48 +241,6 @@ class Period(BaseModel):
     
     def __str__(self):
         return f'{self.target}:{self.period})'
-
-    def get_openings_for_date(self, date):
-        """Returns the openings the period determines for the given date
-
-        Parameters:
-        date (datetime.date): The date we want to find out all opening hours for
-
-        Returns:
-        list: All the openings that the period determines for the given date
-        """
-        # Weekly rotation is subordinate to monthly rotation, if present.
-        # max_month 0 means no monthly rotation (only weekly rotation)
-        max_month = self.openings.aggregate(Max('month'))['month__max']
-        # max_week 0 means no weekly rotation (only monthly rotation)
-        max_week = self.openings.aggregate(Max('week'))['week__max']
-
-        # get number of requested month since start
-        date_month_number = (date.year - self.period.lower.year)*12 + date.month - self.period.lower.month + 1
-        # get number of requested month modulo repetition
-        if max_month:
-            # zero remainder is mapped to max_month (range is 1, 2,  ..., max_month)
-            opening_month_number = date_month_number % max_month if date_month_number % max_month else max_month
-        else:
-            opening_month_number = 0
-
-        # first week of period may be partial, depending on starting weekday
-        period_start_weekday = self.period.lower.isoweekday()
-        # get number of requested week since start
-        date_week_number = int(((date-self.period.lower).days + period_start_weekday - 1) / 7) + 1
-        # get number of requested weekday in month, or since period start modulo repetition
-        if max_month:
-            # if max_month > 0, week numbers refer to weekdays from the start of month.
-            # range is (1, 2, 3, 4) or (1, 2, 3, 4, 5) depending on how long the month is
-            opening_week_number = int((date.day - 1) / 7) + 1 if max_week else 0
-        else:
-            # if max_month = 0, week numbers refer to weeks since period start
-            if max_week:
-                # zero remainder is mapped to max_week (range is 1, 2,  ..., max_week)
-                opening_week_number = date_week_number % max_week if date_week_number % max_week else max_week
-            else:
-                opening_week_number = 0
-        return self.openings.filter(weekday=date.isoweekday(), week=opening_week_number, month=opening_month_number)
 
 
 class Opening(models.Model):
@@ -251,36 +272,21 @@ class DailyHours(object):
     # this is the stored final structure, containing raw opening data
     hours = pd.DataFrame(columns=columns)
 
-    def get_openings_for_slot(self, target, date):
-        #print('getting openings')
-        #print(target)
-        #print(date)
-        period = target.get_period_for_date(date)
-        #print(period)
-        if not period:
-            return Opening.objects.none()
-        else:
-            return period.get_openings_for_date(date)
-
     def __init__(self, *args, **kwargs):
-        #print(self.columns)
-        #print(Target.objects.all())
-        data = {}
-        start = time.process_time()
-        for column in self.columns:
-            data[column] = [self.get_openings_for_slot(target,column) for target in Target.objects.all()]
-            #print(data[column])
+        start_time = time.process_time()
+        targets = list(Target.objects.all().prefetch_related('periods__openings'))
+        # Just a single query to get the whole db
+        data = (target.get_openings_for_range(self.start.date(), self.end.date()) for target in targets)
         # this is the processing structure with references to django objects, used to generate the hours
         openings = pd.DataFrame(
-            data,
-            index=Target.objects.all(),
+            [*data],
+            index=targets,
             columns=self.columns
             )
 
-        #print(self.columns)
-        print(time.process_time()-start)
+        print(time.process_time() - start_time)
         print('dataframe generated')
-        print(openings)
+        print(openings.memory_usage())
         
 
 

@@ -37,7 +37,7 @@ def long_period(data_source):
         start = random_date(date(2020,1,1), date(2020,12,31))
         end = random_date(date(2022,1,1), date(2022,12,31))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
-                      target=target, period=DateRange(lower=start, upper=end))
+                      target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _long_period
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def medium_period(data_source):
         start = random_date(date(2021,1,1), date(2021,5,31))
         end = random_date(date(2021,9,1), date(2021,12,31))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
-                      target=target, period=DateRange(lower=start, upper=end))
+                      target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _medium_period
 
 @pytest.fixture
@@ -57,7 +57,7 @@ def short_period(data_source):
         start = random_date(date(2021,7,10), date(2021,7,15))
         end = random_date(date(2021,7,16), date(2021,7,20))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
-                      target=target, period=DateRange(lower=start, upper=end))
+                      target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _short_period
 
 @pytest.fixture
@@ -113,7 +113,7 @@ def module_target(module_data_source):
 @pytest.fixture(scope='module')
 def targets(module_target):
     values = []
-    for id in range(1,10):
+    for id in range(1,100):
         values.append(module_target(id))
     return Target.objects.bulk_create(values)
 
@@ -124,7 +124,7 @@ def module_long_period(module_data_source):
         start = random_date(date(2020,1,1), date(2020,12,31))
         end = random_date(date(2022,1,1), date(2022,12,31))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end))
+                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _long_period
 
 @pytest.fixture(scope='module')
@@ -134,7 +134,7 @@ def module_medium_period(module_data_source):
         start = random_date(date(2021,1,1), date(2021,5,31))
         end = random_date(date(2021,9,1), date(2021,12,31))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end))
+                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _medium_period
 
 @pytest.fixture(scope='module')
@@ -144,7 +144,7 @@ def module_short_period(module_data_source):
         start = random_date(date(2021,7,10), date(2021,7,15))
         end = random_date(date(2021,7,16), date(2021,7,20))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end))
+                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _short_period
 
 @pytest.fixture(scope='module')
@@ -188,8 +188,10 @@ def openings(periods, first_opening, second_opening, third_opening):
     for index, period in enumerate(periods):
         for weekday in Weekday.choices:
             values.append(first_opening(period, weekday[0]))
+        # add some extra spice
         if index % 10 == 0:
             values.append(second_opening(period, weekday[0]))
-        if index % 100 == 0:
+        # wow, this is a rare case
+        if index % 50 == 0:
             values.append(third_opening(period, weekday[0]))
     return Opening.objects.bulk_create(values)

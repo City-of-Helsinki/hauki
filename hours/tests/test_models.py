@@ -33,7 +33,8 @@ def test_get_period_for_date(target, short_period, medium_period, long_period):
     medium_period.save()
     long_period = long_period(target, '3')
     long_period.save()
-    assert short_period == target.get_period_for_date(date(2021,7,15))
+    test_date = date(2021,7,15)
+    assert short_period == target.get_periods_for_range(test_date)[test_date]
 
 
 @pytest.mark.django_db
@@ -47,27 +48,29 @@ def test_get_override_period_for_date(target, short_period, medium_period, long_
     medium_period.save()
     long_period = long_period(target, '3')
     long_period.save()
-    assert medium_period == target.get_period_for_date(date(2021,7,15))
+    test_date = date(2021,7,15)
+    assert medium_period == target.get_periods_for_range(test_date)[test_date]
 
 
 @pytest.mark.django_db
-def test_get_weekly_openings_for_date(target, long_period, period_first_week_opening):
+def test_get_weekly_openings_for_range(target, long_period, period_first_week_opening):
     target = target('1')
     target.save()
     long_period = long_period(target, '1')
     long_period.save()
     period_opening = period_first_week_opening(long_period, date(2021,7,1).isoweekday())
     period_opening.save()
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert not long_period.get_openings_for_date(date(2021,7,2))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,8))
-    assert not long_period.get_openings_for_date(date(2021,7,9))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,15))
-    assert not long_period.get_openings_for_date(date(2021,7,16))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,22))
-    assert not long_period.get_openings_for_date(date(2021,7,23))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,29))
-    assert not long_period.get_openings_for_date(date(2021,7,30))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert period_opening in openings[date(2021,7,1)]
+    assert not openings[date(2021,7,2)]
+    assert period_opening in openings[date(2021,7,8)]
+    assert not openings[date(2021,7,9)]
+    assert period_opening in openings[date(2021,7,15)]
+    assert not openings[date(2021,7,16)]
+    assert period_opening in openings[date(2021,7,22)]
+    assert not openings[date(2021,7,23)]
+    assert period_opening in openings[date(2021,7,29)]
+    assert not openings[date(2021,7,30)]
 
 
 @pytest.mark.django_db
@@ -80,16 +83,17 @@ def test_get_multiple_openings_for_date(target, long_period, period_first_week_o
     first_opening.save()
     second_opening = period_first_week_opening(long_period, date(2021,7,1).isoweekday())
     second_opening.save()
-    assert first_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert not long_period.get_openings_for_date(date(2021,7,2))
-    assert first_opening in long_period.get_openings_for_date(date(2021,7,8))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,8))
-    assert not long_period.get_openings_for_date(date(2021,7,9))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert first_opening in openings[date(2021,7,1)]
+    assert second_opening in openings[date(2021,7,1)]
+    assert not openings[date(2021,7,2)]
+    assert first_opening in openings[date(2021,7,8)]
+    assert second_opening in openings[date(2021,7,8)]
+    assert not openings[date(2021,7,9)]
 
 
 @pytest.mark.django_db
-def test_get_two_weekly_openings_for_date(target, long_period, period_first_week_opening):
+def test_get_two_weekly_openings_for_range(target, long_period, period_first_week_opening):
     target = target('1')
     target.save()
     long_period = long_period(target, '1')
@@ -98,24 +102,25 @@ def test_get_two_weekly_openings_for_date(target, long_period, period_first_week
     period_opening.save()
     second_opening = period_first_week_opening(long_period,  date(2021,7,6).isoweekday())
     second_opening.save()
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert not long_period.get_openings_for_date(date(2021,7,2))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,6))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,8))
-    assert not long_period.get_openings_for_date(date(2021,7,9))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,13))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,15))
-    assert not long_period.get_openings_for_date(date(2021,7,16))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,20))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,22))
-    assert not long_period.get_openings_for_date(date(2021,7,23))
-    assert second_opening in long_period.get_openings_for_date(date(2021,7,27))
-    assert period_opening in long_period.get_openings_for_date(date(2021,7,29))
-    assert not long_period.get_openings_for_date(date(2021,7,30))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert period_opening in openings[date(2021,7,1)]
+    assert not openings[date(2021,7,2)]
+    assert second_opening in openings[date(2021,7,6)]
+    assert period_opening in openings[date(2021,7,8)]
+    assert not openings[date(2021,7,9)]
+    assert second_opening in openings[date(2021,7,13)]
+    assert period_opening in openings[date(2021,7,15)]
+    assert not openings[date(2021,7,16)]
+    assert second_opening in openings[date(2021,7,20)]
+    assert period_opening in openings[date(2021,7,22)]
+    assert not openings[date(2021,7,23)]
+    assert second_opening in openings[date(2021,7,27)]
+    assert period_opening in openings[date(2021,7,29)]
+    assert not openings[date(2021,7,30)]
 
 
 @pytest.mark.django_db
-def test_get_biweekly_openings_for_date(target, long_period, period_first_week_opening, period_second_week_opening):
+def test_get_biweekly_openings_for_range(target, long_period, period_first_week_opening, period_second_week_opening):
     target = target('1')
     target.save()
     long_period = long_period(target, '1')
@@ -124,16 +129,17 @@ def test_get_biweekly_openings_for_date(target, long_period, period_first_week_o
     second_week_opening = period_second_week_opening(long_period, long_period.period.lower.isoweekday())
     first_week_opening.save()
     second_week_opening.save()
-    assert first_week_opening in long_period.get_openings_for_date(long_period.period.lower)
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=1))
-    assert second_week_opening in long_period.get_openings_for_date(long_period.period.lower + timedelta(days=7))
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=8))
-    assert first_week_opening in long_period.get_openings_for_date(long_period.period.lower + timedelta(days=14))
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=15))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert first_week_opening in openings[long_period.period.lower]
+    assert not openings[long_period.period.lower + timedelta(days=1)]
+    assert second_week_opening in openings[long_period.period.lower + timedelta(days=7)]
+    assert not openings[long_period.period.lower + timedelta(days=8)]
+    assert first_week_opening in openings[long_period.period.lower + timedelta(days=14)]
+    assert not openings[long_period.period.lower + timedelta(days=15)]
 
 
 @pytest.mark.django_db
-def test_get_biweekly_opening_for_date(target, long_period, period_first_week_opening, period_second_week_closing):
+def test_get_biweekly_opening_for_range(target, long_period, period_first_week_opening, period_second_week_closing):
     target = target('1')
     target.save()
     long_period = long_period(target, '1')
@@ -142,28 +148,30 @@ def test_get_biweekly_opening_for_date(target, long_period, period_first_week_op
     second_week_closing = period_second_week_closing(long_period, long_period.period.lower.isoweekday())
     first_week_opening.save()
     second_week_closing.save()
-    assert first_week_opening in long_period.get_openings_for_date(long_period.period.lower)
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=1))
-    assert second_week_closing in long_period.get_openings_for_date(long_period.period.lower + timedelta(days=7))
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=8))
-    assert first_week_opening in long_period.get_openings_for_date(long_period.period.lower + timedelta(days=14))
-    assert not long_period.get_openings_for_date(long_period.period.lower + timedelta(days=15))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert first_week_opening in openings[long_period.period.lower]
+    assert not openings[long_period.period.lower + timedelta(days=1)]
+    assert second_week_closing in openings[long_period.period.lower + timedelta(days=7)]
+    assert not openings[long_period.period.lower + timedelta(days=8)]
+    assert first_week_opening in openings[long_period.period.lower + timedelta(days=14)]
+    assert not openings[long_period.period.lower + timedelta(days=15)]
 
 
 @pytest.mark.django_db
-def test_get_monthly_openings_for_date(target, long_period, period_monthly_opening):
+def test_get_monthly_openings_for_range(target, long_period, period_monthly_opening):
     target = target('1')
     target.save()
     long_period = long_period(target, '1')
     long_period.save()
     monthly_opening = period_monthly_opening(long_period, date(2021,7,1).isoweekday())
     monthly_opening.save()
-    assert monthly_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert not long_period.get_openings_for_date(date(2021,7,8))
-    assert not long_period.get_openings_for_date(date(2021,7,15))
-    assert not long_period.get_openings_for_date(date(2021,7,22))
-    assert not long_period.get_openings_for_date(date(2021,7,29))
-    assert monthly_opening in long_period.get_openings_for_date(date(2021,8,5))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert monthly_opening in openings[date(2021,7,1)]
+    assert not openings[date(2021,7,8)]
+    assert not openings[date(2021,7,15)]
+    assert not openings[date(2021,7,22)]
+    assert not openings[date(2021,7,29)]
+    assert monthly_opening in openings[date(2021,8,5)]
 
 
 @pytest.mark.django_db
@@ -176,11 +184,12 @@ def test_get_two_monthly_openings_for_date(target, long_period, period_monthly_o
     monthly_opening.save()
     second_monthly_opening = period_second_monthly_opening(long_period, date(2021,7,1).isoweekday())
     second_monthly_opening.save()
-    assert monthly_opening in long_period.get_openings_for_date(date(2021,7,1))
-    assert not long_period.get_openings_for_date(date(2021,7,8))
-    assert second_monthly_opening in long_period.get_openings_for_date(date(2021,7,15))
-    assert not long_period.get_openings_for_date(date(2021,7,22))
-    assert not long_period.get_openings_for_date(date(2021,7,29))
-    assert monthly_opening in long_period.get_openings_for_date(date(2021,8,5))
-    assert not long_period.get_openings_for_date(date(2021,8,12))
-    assert second_monthly_opening in long_period.get_openings_for_date(date(2021,8,19))
+    openings = target.get_openings_for_range(long_period.period.lower, long_period.period.upper)
+    assert monthly_opening in openings[date(2021,7,1)]
+    assert not openings[date(2021,7,8)]
+    assert second_monthly_opening in openings[date(2021,7,15)]
+    assert not openings[date(2021,7,22)]
+    assert not openings[date(2021,7,29)]
+    assert monthly_opening in openings[date(2021,8,5)]
+    assert not openings[date(2021,8,12)]
+    assert second_monthly_opening in openings[date(2021,8,19)]

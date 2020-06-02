@@ -133,17 +133,18 @@ class Target(BaseModel):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
 
-    def get_periods_for_range(self, start, end=None, include_drafts=False, period_type=None):
-        """Returns the period that determines the opening hours for each date in the range, or None
+    def get_periods_for_range(self, start, end=None, include_drafts=False, include_deleted=False, period_type=None):
+        """Returns the period, annotated with rotation metadata and prefetched opening hours, that determines the opening hours for each date in the range, or None
 
         Parameters:
         start (date): Starting date for requested date range
         end (date): Ending date for requested date range. If omitted, only return one date.
         include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
-        period_type (string): Only consider 'normal' or 'override' periods, or None (considers both).
+        include_deleted (bool): Whether deleted periods are taken into account
+        period_type (string): Only consider 'normal' or 'override' periods, or None (override overrides normal).
 
         Returns:
-        OrderedDict[Period]: The period that determines opening hours for each date
+        OrderedDict[Period]: The period that determines opening hours for each date, with max_month and max_week metadata, and prefetched opening hours data.
         """
         if not end:
             # default only returns single day
@@ -156,7 +157,9 @@ class Target(BaseModel):
                 potential_periods.filter(override=True)
         if not include_drafts:
             potential_periods = potential_periods.filter(published=True)
-        periods = [p for p in potential_periods.prefetch_related('openings')] # 1 query + evaluate small QS, that's all we need
+        if not include_deleted:
+            potential_periods = potential_periods.filter(deleted=False)
+        periods = [p for p in potential_periods.prefetch_related('openings__daily_hours')] # 1 query + join all openings and linked hours
         # store the rotation metadata per period
         for period in periods:
             # Weekly rotation is subordinate to monthly rotation, if present.
@@ -177,19 +180,21 @@ class Target(BaseModel):
                 active_periods[date] = None
         return active_periods
 
-    def get_openings_for_range(self, start, end=None, include_drafts=False, period_type=None, period=None):
+    def get_openings_for_range(self, start, end=None, include_drafts=False, include_deleted=False, period_type=None, period=None):
         """Returns the opening hours for each date in the range, or None
 
         Parameters:
         start (date): Starting date for requested date range
         end (date): Ending date for requested date range. If omitted, only return one date.
         include_drafts (bool): Whether non-published periods are taken into account, for preview purposes
+        include_deleted (bool): Whether deleted periods are taken into account
         period_type (string): Only consider 'normal' or 'override' periods, or None (considers both).
+        period (Period): Get openings from a specified period instead.
 
         Returns:
         OrderedDict[Queryset[Opening]]: All the opening hours for each date
         """
-        active_periods = self.get_periods_for_range(start, end, include_drafts=False, period_type=None)
+        active_periods = self.get_periods_for_range(start, end, include_drafts, include_deleted, period_type)
         if not end:
             # default only returns single day
             end = start

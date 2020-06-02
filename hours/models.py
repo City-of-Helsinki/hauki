@@ -21,10 +21,11 @@ class Status(models.IntegerChoices):
     OPEN = 1, _('open')
     UNDEFINED = 2, _('undefined')
     SELF_SERVICE = 3, _('self_service')
-    WITH_RESERVATION = 4, _('with_reservation')
-    WITH_KEY = 5, _('with key')
-    ONLY_ENTERING = 6, _('only_entering')
-    ONLY_LEAVING = 7, _('only_leaving')
+    WITH_KEY = 4, _('with key')
+    WITH_RESERVATION = 5, _('with reservation')
+    WITH_KEY_AND_RESERVATION = 6, _('with key and reservation')
+    ONLY_ENTERING = 7, _('only entering')
+    ONLY_LEAVING = 8, _('only leaving')
 
 
 class TargetType(models.IntegerChoices):
@@ -37,6 +38,8 @@ class TargetType(models.IntegerChoices):
     SERVICE_CHANNEL = 6, _('service_channel')
     SERVICE_AT_UNIT = 7, _('service_at_unit')
     RESOURCE = 8, _('resource')
+    BUILDING = 9, _('building')
+    AREA = 10, _('area')
 
 
 class Weekday(models.IntegerChoices):

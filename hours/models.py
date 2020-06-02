@@ -6,7 +6,6 @@ from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.indexes import GistIndex
 from psycopg2.extras import DateRange
 import pandas as pd
-import numpy as np
 import time
 
 from django.utils.translation import ugettext_lazy as _
@@ -260,6 +259,53 @@ class Period(BaseModel):
     def __str__(self):
         return f'{self.target}:{self.period})'
 
+    def save(self):
+        #print('saving period')
+        #print(self)
+        super().save()
+        self.update_daily_hours()
+
+    def update_daily_hours(self):
+        """
+        Updates the DailyHours table for the duration of the Period.
+
+        This method is called at each Period save, because Period range dictates the range of
+        dates that must be updated. Changing an opening within a period also triggers an update.
+        """
+        #print('updating daily hours, current:')
+        current_daily_hours = self.target.daily_hours.filter(date__contained_by=self.period)
+        #print(current_daily_hours.query)
+        #print(current_daily_hours)
+        new_openings = self.target.get_openings_for_range(self.period.lower, self.period.upper)
+        #print('openings needed:')
+        #print(new_openings)
+        to_delete = set(current_daily_hours.values_list('pk', flat=True))
+        #print('delete list:')
+        #print(to_delete)
+        to_add = []
+        for date, openings in new_openings.items():
+            #print(date)
+            for opening in openings:
+                #print(opening)
+                #print(current_daily_hours.filter(date=date))
+                #print(opening.daily_hours)
+                try:
+                    existing = current_daily_hours.get(date=date, opening=opening)
+                    #print(existing.pk)
+                    #print('opening exists already')
+                    # if any opening is still valid, retain it
+                    to_delete.discard(existing.pk)
+                except DailyHours.DoesNotExist:
+                    # if any opening was not found, add it
+                    #print('opening should be added')
+                    to_add.append(DailyHours(target=self.target, date=date, opening=opening))
+        #print('deleting')
+        #print(to_delete)
+        DailyHours.objects.filter(id__in=to_delete).delete()
+        #print('creating')
+        #print(to_add)
+        DailyHours.objects.bulk_create(to_add)
+
 
 class Opening(models.Model):
     period = models.ForeignKey(Period, on_delete=models.CASCADE, related_name='openings', db_index=True)
@@ -281,61 +327,25 @@ class Opening(models.Model):
         verbose_name_plural = _('Openings')
 
 
-class DailyHours(object):
-    # This is not strictly a django model, but we adhere to the same methods? or simpler API may suffice
-    # Store two years (current and future) in memory.
-    start = pd.Timestamp.today().floor(freq = 'D') - pd.offsets.YearBegin()
-    end = pd.Timestamp.today().floor(freq = 'D') + pd.offsets.YearEnd() + pd.DateOffset(years=1)
-    columns = pd.date_range(start, end).date
-    # this is the stored final structure, containing raw opening data
-    hours = pd.DataFrame(columns=columns)
-
-    def __init__(self, *args, **kwargs):
-        start_time = time.process_time()
-        targets = list(Target.objects.all().prefetch_related('periods__openings'))
-        # Just a single query to get the whole db
-        data = (target.get_openings_for_range(self.start.date(), self.end.date()) for target in targets)
-        # this is the processing structure with references to django objects, used to generate the hours
-        openings = pd.DataFrame(
-            [*data],
-            index=targets,
-            columns=self.columns
-            )
-
-        print(time.process_time() - start_time)
-        print('dataframe generated')
-        print(openings.memory_usage())
-        
+    def save(self):
+        #print('saving opening')
+        #print(self)
+        super().save()
+        self.period.update_daily_hours()
 
 
+class DailyHours(models.Model):
+    target = models.ForeignKey(Target, on_delete=models.CASCADE, related_name='daily_hours', db_index=True)
+    date = models.DateField(db_index=True)
+    opening = models.ForeignKey(Opening, on_delete=models.CASCADE, related_name='daily_hours', db_index=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
+    def __str__(self):
+        return f'{self.target}: {self.date} {Status(self.opening.status).label} {self.opening.opens}-{self.opening.closes}'
 
-        # 1. sort targets by max number of openings per day
-        #grouped_openings = Opening.objects.all().values('id','period', 'weekday', 'week', 'month')
-        #print(grouped_openings)
-        #target_ids = Target.objects.all().values_list('id', flat=True)
-        #print(target_ids)
-        #grouped_targets = Target.objects.all().values('periods')
-        ##print(grouped_targets)
-        #annotated_targets = Target.objects.all().annotate(slots=Count('periods__openings'))
-        #print(annotated_targets)
-        #for target in annotated_targets:
-        #    print(target)
-            #print(target.periods.all())
-            #for period in target.periods.all():
-                #print(period.openings.all())
-        #    print(target.slots)
-        #print(self.start)
-        #print(self.end)
-        #print(self.columns)
-        #print(self.dataframe)
-        #print(self.dataframe.memory_usage())
-
-        # pseudo-algorithm:
-    # ================
-    # 1. sort targets by max number of slots -- get number (test_targets())
-    # 2. iterate days, iterate sorted targets (generate_table(test_targets()))
-    # 3. insert values into array
-    #
-    # btw: array size = iterate slots, sum number of targets per slot, (multiply by days)
-    #
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['target', 'date', 'opening'], name='unique_opening_per_date')
+        ]
+        verbose_name = _('Daily hours')
+        verbose_name_plural = _('Daily hours')

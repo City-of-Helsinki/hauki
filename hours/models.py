@@ -318,14 +318,21 @@ class Opening(models.Model):
     week = models.IntegerField(verbose_name=_('Week number'), default=1, db_index=True)
     # by default, no monthly rotation. if month > 0,  week number refers to weeks within month.
     month = models.IntegerField(verbose_name=_('Month number'), default=0, db_index=True)
-
-    def __str__(self):
-        return f'{self.period}: {self.week},{self.month}: {Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
+    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_created_by")
+    last_modified_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_modified_by")
 
     class Meta:
         verbose_name = _('Opening')
         verbose_name_plural = _('Openings')
 
+    def __str__(self):
+        return f'{self.period}: {self.week},{self.month}: {Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
 
     def save(self):
         #print('saving opening')

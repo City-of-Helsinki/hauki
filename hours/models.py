@@ -111,6 +111,16 @@ class BaseModel(models.Model):
             raise ValidationError(_("Id must be of the format data_source:origin_id."))
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        raise ValidationError(_("This model does not support hard deletion. Please do soft_delete."))
+
+    def soft_delete(self, *args, **kwargs):
+        self.deleted = True
+        self.save()
+
+    def undelete(self, *args, **kwargs):
+        self.deleted = False
+        self.save()
 
 class Target(BaseModel):
     parent = models.ForeignKey('self', on_delete=models.PROTECT, related_name='first_children', db_index=True, null=True)

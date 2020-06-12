@@ -21,6 +21,8 @@ def test_base_model(klass, data_source):
         Klass.objects.create(data_source_id='ds1', origin_id='1', id='something else')
     with pytest.raises(ValidationError):
         Klass.objects.create(data_source_id='ds1', origin_id='1', id='ds2:2')
+    with pytest.raises(ValidationError):
+        Klass.objects.create(data_source_id='ds1', origin_id=1)
     Klass.objects.create(data_source_id='ds1', origin_id='1')
 
 

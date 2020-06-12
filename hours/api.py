@@ -1,6 +1,6 @@
 from rest_framework import routers, serializers, viewsets
 
-from .models import Target
+from .models import Target, DailyHours
 
 all_views = []
 
@@ -29,11 +29,15 @@ class APIRouter(routers.DefaultRouter):
             self._register_view(view)
 
 
-class TargetSerializer(serializers.ModelSerializer):
-    fields = ['name']
+class TargetSerializer(serializers.HyperlinkedModelSerializer):
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Target
+        fields = ['id', 'data_source', 'origin_id', 'same_as', 'target_type',
+              'parent', 'second_parent', 'name', 'description',
+              'created_time', 'last_modified_time', 'publication_time',
+              'hours_updated']
 
 
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
@@ -42,3 +46,16 @@ class TargetViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 register_view(TargetViewSet, 'target')
+
+class DailyHoursSerializer(serializers.HyperlinkedModelSerializer):
+
+    class Meta:
+        model = DailyHours
+
+
+class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DailyHours.objects.all()
+    serializer_class = DailyHoursSerializer
+
+
+register_view(DailyHoursViewSet, 'daily_hours')

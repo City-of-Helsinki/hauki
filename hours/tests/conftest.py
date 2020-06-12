@@ -1,5 +1,6 @@
 import pytest
 from hours.models import Status, Weekday, DataSource, Target, Period, Opening
+from rest_framework.test import APIClient
 from psycopg2.extras import DateRange
 from random import randrange
 from datetime import timedelta, date, time
@@ -17,6 +18,10 @@ def random_hour(start, end):
     delta = end_hour - start_hour
     random_time = randrange(delta)
     return time((start_hour+random_time) % 24)
+
+@pytest.fixture
+def api_client():
+   return APIClient()
 
 @pytest.fixture
 def data_source():

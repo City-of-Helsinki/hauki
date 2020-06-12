@@ -103,6 +103,8 @@ class BaseModel(models.Model):
             raise ValidationError(_("Data source is required."))
         if not self.origin_id:
             raise ValidationError(_("Origin ID is required."))
+        if not isinstance(self.origin_id, str):
+            raise ValidationError(_("Origin ID must be a string."))
         if not self.id:
             self.id = f'{self.data_source_id}:{self.origin_id}'
         id_parts = self.id.split(':')

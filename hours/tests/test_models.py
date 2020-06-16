@@ -87,6 +87,18 @@ def test_get_weekly_openings_for_range(target, long_period, period_first_week_op
 
 
 @pytest.mark.django_db
+def test_hours_updated_time(target, long_period, period_first_week_opening):
+    target = target('1')
+    target.save()
+    long_period = long_period(target, '1')
+    long_period.save()
+    first_opening = period_first_week_opening(long_period, date(2021,7,1).isoweekday())
+    first_opening.save()
+    print(target.hours_updated)
+    assert target.hours_updated
+
+
+@pytest.mark.django_db
 def test_get_multiple_openings_for_date(target, long_period, period_first_week_opening):
     target = target('1')
     target.save()

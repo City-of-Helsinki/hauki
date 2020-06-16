@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from collections import OrderedDict
 from django.db import models
 from django.db.models import Count, F, Max
@@ -307,6 +307,9 @@ class Period(BaseModel):
         #print('creating')
         #print(to_add)
         DailyHours.objects.bulk_create(to_add)
+        target = self.target
+        target.hours_updated = datetime.now()
+        target.save(update_fields=['hours_updated'])
 
 
 class Opening(models.Model):

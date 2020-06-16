@@ -2,6 +2,8 @@ Django
 django-reversion
 psycopg2
 djangorestframework
+django-filter
 django-helusers
 numpy
 pandas
+holidays

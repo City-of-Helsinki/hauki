@@ -11,7 +11,7 @@ convertdate==2.2.1        # via holidays
 django-filter==2.3.0      # via -r requirements.in
 django-helusers==0.5.6    # via -r requirements.in
 django-reversion==3.0.5   # via -r requirements.in
-django==3.0.3             # via -r requirements.in, django-filter, django-helusers, django-reversion, drf-oidc-auth
+django==3.0.7             # via -r requirements.in, django-filter, django-helusers, django-reversion, drf-oidc-auth
 djangorestframework==3.10.3  # via -r requirements.in, drf-oidc-auth
 drf-oidc-auth==0.9        # via django-helusers
 ecdsa==0.15               # via python-jose

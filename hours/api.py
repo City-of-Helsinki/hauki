@@ -1,6 +1,6 @@
 from rest_framework import routers, serializers, viewsets, filters
 
-from .models import Target, DailyHours, Opening, Period
+from .models import Target, DailyHours, Opening, Period, Status, TargetType, Weekday
 
 all_views = []
 
@@ -29,8 +29,18 @@ class APIRouter(routers.DefaultRouter):
             self._register_view(view)
 
 
+class IntegerChoiceField(serializers.ChoiceField):
+    def __init__(self, choices, **kwargs):
+        self.enum = choices
+        super().__init__(choices, **kwargs)
+
+    def to_representation(self, obj):
+        return self.enum(obj).label
+
+
 class TargetSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    target_type = IntegerChoiceField(choices=TargetType)
 
     class Meta:
         model = Target
@@ -50,6 +60,9 @@ register_view(TargetViewSet, 'target')
 
 
 class OpeningSerializer(serializers.HyperlinkedModelSerializer):
+    status = IntegerChoiceField(choices=Status)
+    weekday = IntegerChoiceField(choices=Weekday)
+
     class Meta:
         model = Opening
         fields = ['status', 'opens', 'closes', 'description', 'period', 'weekday',
@@ -59,6 +72,7 @@ class OpeningSerializer(serializers.HyperlinkedModelSerializer):
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     openings = OpeningSerializer(many=True)
+    status = IntegerChoiceField(choices=Status)
 
     class Meta:
         model = Period

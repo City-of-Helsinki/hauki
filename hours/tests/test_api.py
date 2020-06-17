@@ -56,8 +56,8 @@ def test_get_target_list(api_client, targets):
     url = reverse('target-list')
     response = api_client.get(url)
     assert response.status_code == 200
-    assert len(response.data) == 10
-    for target in response.data:
+    assert response.data['count'] == 10
+    for target in response.data['results']:
         assert_target_has_fields(target)
 
 @pytest.mark.django_db
@@ -72,8 +72,8 @@ def test_get_period_list(api_client, periods):
     url = reverse('period-list')
     response = api_client.get(url)
     assert response.status_code == 200
-    assert len(response.data) == 40
-    for period in response.data:
+    assert response.data['count'] == 40
+    for period in response.data['results']:
         assert_period_has_fields(period)
 
 @pytest.mark.django_db

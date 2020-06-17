@@ -68,7 +68,7 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Period.objects.all()
+    queryset = Period.objects.all().prefetch_related('openings')
     serializer_class = PeriodSerializer
     filter_backends = [filters.OrderingFilter]
     ordering = ['target']
@@ -82,11 +82,11 @@ class DailyHoursSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = DailyHours
-        fields = ['target', 'date', 'opening']
+        fields = ['date', 'target', 'opening']
 
 
 class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = DailyHours.objects.all()
+    queryset = DailyHours.objects.all().select_related('opening')
     serializer_class = DailyHoursSerializer
     filter_backends = [filters.OrderingFilter]
     ordering = ['date', 'target']

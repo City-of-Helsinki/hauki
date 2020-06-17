@@ -261,10 +261,8 @@ class Period(BaseModel):
     def __str__(self):
         return f'{self.target}:{self.period})'
 
-    def save(self):
-        #print('saving period')
-        #print(self)
-        super().save()
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         self.update_daily_hours()
 
     def update_daily_hours(self):
@@ -339,10 +337,8 @@ class Opening(models.Model):
     def __str__(self):
         return f'{self.period}: {self.week},{self.month}: {Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
 
-    def save(self):
-        #print('saving opening')
-        #print(self)
-        super().save()
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         self.period.update_daily_hours()
 
 

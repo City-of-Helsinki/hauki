@@ -40,11 +40,12 @@ class IntegerChoiceField(serializers.ChoiceField):
 
 class TargetSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    organization = serializers.PrimaryKeyRelatedField(read_only=True)
     target_type = IntegerChoiceField(choices=TargetType)
 
     class Meta:
         model = Target
-        fields = ['id', 'data_source', 'origin_id', 'same_as', 'target_type',
+        fields = ['id', 'data_source', 'origin_id', 'organization','same_as', 'target_type',
               'parent', 'second_parent', 'name', 'description',
               'created_time', 'last_modified_time', 'publication_time',
               'hours_updated']

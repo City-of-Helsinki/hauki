@@ -25,6 +25,8 @@ ALLOWED_HOSTS = ['localhost']
 
 AUTH_USER_MODEL = 'users.User'
 
+DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'hours.DataSource'
+
 SYSTEM_DATA_SOURCE_ID = 'hauki'
 
 # Application definition
@@ -39,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
+    'django_orghierarchy',
 
     # Apps within this repository
     'users',

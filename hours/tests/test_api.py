@@ -13,6 +13,7 @@ def assert_target_has_fields(target):
         'id',
         'data_source',
         'origin_id',
+        'organization',
         'same_as',
         'target_type',
         'parent',

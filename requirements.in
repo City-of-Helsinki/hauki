@@ -4,6 +4,8 @@ psycopg2
 djangorestframework
 django-filter
 django-helusers
+django-orghierarchy
+requests-cache
 numpy
 pandas
 holidays

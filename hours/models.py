@@ -11,6 +11,7 @@ import time
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from hauki import settings
+from django_orghierarchy.models import Organization
 
 
 User = settings.AUTH_USER_MODEL
@@ -129,6 +130,7 @@ class Target(BaseModel):
     hours_updated = models.DateTimeField(null=True, blank=True, db_index=True)
     default_status = models.IntegerField(choices=Status.choices, default=Status.UNDEFINED)
     target_type = models.IntegerField(choices=TargetType.choices, default=TargetType.UNIT)
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name='targets', db_index=True, null=True)
 
     class Meta(BaseModel.Meta):
         verbose_name = _('Target')

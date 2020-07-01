@@ -73,8 +73,8 @@ class BaseModel(models.Model):
     origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=100, db_index=True)
 
     # Properties from schema.org/Thing
-    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
-    description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, blank=True)
+    description = models.TextField(verbose_name=_('Description'), blank=True)
     same_as = models.URLField(verbose_name=_('Same object as'), max_length=1000, null=True, blank=True)
 
     created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)

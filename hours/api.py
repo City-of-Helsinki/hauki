@@ -5,10 +5,10 @@ from .models import Target, DailyHours, Opening, Period, Status, TargetType, Wee
 all_views = []
 
 
-def register_view(klass, name, base_name=None):
+def register_view(klass, name, basename=None):
     entry = {'class': klass, 'name': name}
-    if base_name is not None:
-        entry['base_name'] = base_name
+    if basename is not None:
+        entry['basename'] = basename
     all_views.append(entry)
 
 
@@ -22,7 +22,7 @@ class APIRouter(routers.DefaultRouter):
         if view['class'] in self.registered_api_views:
             return
         self.registered_api_views.add(view['class'])
-        self.register(view['name'], view['class'], base_name=view.get("base_name"))
+        self.register(view['name'], view['class'], basename=view.get("basename"))
 
     def _register_all_views(self):
         for view in all_views:

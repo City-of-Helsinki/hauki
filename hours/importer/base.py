@@ -10,7 +10,7 @@ from django.conf import settings
 from django import db
 
 
-from hours.models import Target
+from hours.models import BaseModel, Target, TargetIdentifier, DataSource
 
 class Importer(object):
     def __init__(self, options):
@@ -19,15 +19,15 @@ class Importer(object):
         self.setup()
 
     @staticmethod
-    def mark_deleted(obj):
+    def mark_deleted(obj: BaseModel) -> bool:
         return obj.soft_delete()
 
     @staticmethod
-    def check_deleted(obj):
+    def check_deleted(obj: BaseModel) -> bool:
         return obj.deleted
 
     @staticmethod
-    def clean_text(text, strip_newlines=False):
+    def clean_text(text:str, strip_newlines: bool=False) -> str:
         # remove non-breaking spaces and separators
         text = text.replace('\xa0', ' ').replace('\x1f', '')
         # remove nil bytes
@@ -37,7 +37,10 @@ class Importer(object):
         # remove consecutive whitespaces
         return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
-    def _set_field(self, obj, field_name, val):
+    def _set_field(self, obj: BaseModel, field_name: str, val: object):
+        """
+        Sets the field_name field of obj to val, if changed.
+        """
         if not hasattr(obj, field_name):
             self.logger.debug("'%s' not there!" % field_name)
             self.logger.debug(vars(obj))
@@ -57,7 +60,10 @@ class Importer(object):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
 
-    def _update_fields(self, obj, info, skip_fields):
+    def _update_fields(self, obj: BaseModel, info: dict, skip_fields: list):
+        """
+        Updates the fields in obj according to info.
+        """
         obj_fields = list(obj._meta.fields)
         # trans_fields = translator.get_options_for_model(type(obj)).fields
         # for field_name, lang_fields in trans_fields.items():
@@ -92,15 +98,18 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
-    @db.transaction.atomic
-    def save_target(self, data):
+    def _update_or_create_object(self, klass: type, data: dict) -> BaseModel:
+        """
+        Takes the class and serialized data, creates and/or updates the BaseModel object and returns it unsaved
+        for class-specific processing and saving.
+        """
         args = dict(data_source=data['data_source'], origin_id=data['origin_id'])
         obj_id = "%s:%s" % (data['data_source'].id, data['origin_id'])
         try:
-            obj = Target.objects.get(**args)
+            obj = klass.objects.get(**args)
             obj._created = False
-        except Target.DoesNotExist:
-            obj = Target(**args)
+        except klass.DoesNotExist:
+            obj = klass(**args)
             obj._created = True
             obj.id = obj_id
             obj.save()
@@ -112,21 +121,35 @@ class Importer(object):
         self._update_fields(obj, data, skip_fields)
         self._set_field(obj, 'deleted', False)
         self._set_field(obj, 'published', True)
+        return obj
 
-        # identifiers = {x.namespace: x for x in obj.identifiers.all()}
-        # for id_data in data.get('identifiers', []):
-        #     ns = id_data['namespace']
-        #     val = id_data['value']
-        #     if ns in identifiers:
-        #         id_obj = identifiers[ns]
-        #         if id_obj.value != val:
-        #             id_obj.value = val
-        #             id_obj.save()
-        #             obj._changed = True
-        #     else:
-        #         id_obj = UnitIdentifier(unit=obj, namespace=ns, value=val)
-        #         id_obj.save()
-        #         obj._changed = True
+    @db.transaction.atomic
+    def save_target(self, data: dict) -> Target:
+        """
+        Takes the serialized target data, creates and/or updates the corresponding Target object, saves and returns it.
+        """
+        obj = self._update_or_create_object(Target, data)
+
+        # Update related identifiers
+        identifiers = {x.data_source_id: x for x in obj.identifiers.all()}
+        for identifier in data.get('identifiers', []):
+            data_source_id = identifier['data_source_id']
+            origin_id = identifier['origin_id']
+            if data_source_id in identifiers:
+                existing_identifier = identifiers[data_source_id]
+                if existing_identifier.origin_id != origin_id:
+                    existing_identifier.origin_id = origin_id
+                    existing_identifier.save()
+                    obj._changed = True
+                    obj._changed_fields.append('identifiers')
+            else:
+                data_source, created = DataSource.objects.get_or_create(id=data_source_id)
+                if created:
+                    self.logger.debug('Created missing data source %s' % data_source_id)
+                new_identifier = TargetIdentifier(target=obj, data_source=data_source, origin_id=origin_id)
+                new_identifier.save()
+                obj._changed = True
+                obj._changed_fields.append('identifiers')
 
         if obj._changed:
             if not obj._created:

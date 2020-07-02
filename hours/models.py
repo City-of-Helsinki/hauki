@@ -238,6 +238,24 @@ class Target(BaseModel):
         return openings
 
 
+class TargetIdentifier(models.Model):
+    target = models.ForeignKey(Target, on_delete=models.CASCADE, related_name='identifiers', db_index=True)
+    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE, related_name='identifiers', db_index=True)
+    origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=100, db_index=True)
+
+    class Meta:
+        verbose_name = _('Target identifier')
+        verbose_name_plural = _('Target identifiers')
+        constraints = [
+            models.UniqueConstraint(fields=['data_source', 'origin_id'],
+                                    name='unique_identifier_per_data_source'),
+            models.UniqueConstraint(fields=['data_source', 'target'],
+                                    name='unique_identifier_per_target'),
+        ]
+
+    def __str__(self):
+        return f'{self.data_source}:{self.origin_id} ({self.target})'
+
 class Keyword(BaseModel):
     targets = models.ManyToManyField(Target, related_name='keywords', db_index=True)
 

@@ -1,6 +1,6 @@
 from rest_framework import routers, serializers, viewsets, filters
 
-from .models import Target, DailyHours, Opening, Period, Status, TargetType, Weekday
+from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
 
 all_views = []
 
@@ -38,21 +38,30 @@ class IntegerChoiceField(serializers.ChoiceField):
         return self.enum(obj).label
 
 
+class IdentifierSerializer(serializers.HyperlinkedModelSerializer):
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = TargetIdentifier
+        fields = ['data_source', 'origin_id']
+
+
 class TargetSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
     target_type = IntegerChoiceField(choices=TargetType)
+    identifiers = IdentifierSerializer(many=True)
 
     class Meta:
         model = Target
         fields = ['id', 'data_source', 'origin_id', 'organization','same_as', 'target_type',
               'parent', 'second_parent', 'name', 'description',
               'created_time', 'last_modified_time', 'publication_time',
-              'hours_updated']
+              'hours_updated', 'identifiers']
 
 
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Target.objects.all()
+    queryset = Target.objects.all().prefetch_related('identifiers')
     serializer_class = TargetSerializer
     filter_backends = [filters.OrderingFilter]
 

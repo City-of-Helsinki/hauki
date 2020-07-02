@@ -2,6 +2,9 @@
 
 Django application and REST API for managing opening hours across all services
 
+## Issue tracking
+Jira: https://helsinkisolutionoffice.atlassian.net/projects/HAUKI/issues/?filter=allissues
+
 ## Prerequisites
 
 * PostgreSQL (>= 10) with PostGIS extension

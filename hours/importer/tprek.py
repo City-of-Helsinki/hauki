@@ -24,20 +24,39 @@ class TPRekImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
     @staticmethod
-    def get_url(resource_name, res_id=None):
+    def get_url(resource_name: str, res_id: str=None) -> str:
         url = "%s%s/" % (URL_BASE, resource_name)
         if res_id is not None:
             url = "%s%s/" % (url, res_id)
         return url
 
-    def pk_get(self, resource_name, res_id=None):
+    def pk_get(self, resource_name: str, res_id: str=None) -> dict:
         url = self.get_url(resource_name, res_id)
         logger.info("Fetching URL %s" % url)
         resp = requests.get(url)
         assert resp.status_code == 200
         return resp.json()
 
-    def get_unit_data(self, data):
+    def get_unit_identifiers(self, unit_id: str, data: dict) -> list:
+        """
+        Takes target id and unit data dict in TPREK v4 API format and returns the corresponding serialized
+        TargetIdentifier data
+        """
+        identifiers = []
+        if 'sources' in data:
+            for source in data["sources"]:
+                identifier = {
+                    'target_id': unit_id,
+                    'data_source_id': source['source'],
+                    'origin_id': source['id']
+                }
+                identifiers.append(identifier)
+        return identifiers
+
+    def get_unit_data(self, data: dict) -> dict:
+        """
+        Takes unit data dict in TPREK v4 API format and returns the corresponding serialized Target data.
+        """
         obj_id = 'tprek:%s' % str(data['id'])
         obj_organization, created = Organization.objects.get_or_create(data_source=self.data_source, origin_id=data['dept_id'])
         if created:
@@ -49,7 +68,8 @@ class TPRekImporter(Importer):
             'name': self.clean_text(data['name_fi']),
             'description': self.clean_text(data.get('desc_fi', "")),
             'same_as': self.get_url('unit', data['id']),
-            'organization': obj_organization
+            'organization': obj_organization,
+            'identifiers': self.get_unit_identifiers(obj_id, data)
         }
         return unit_data
 

@@ -5,7 +5,7 @@ import requests_cache
 from django import db
 from django.conf import settings
 
-from ..models import Target, DataSource, TargetType
+from ..models import Target, TargetIdentifier, DataSource, TargetType
 from django_orghierarchy.models import Organization
 from .base import Importer, register_importer
 from .sync import ModelSyncher

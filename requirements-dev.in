@@ -4,3 +4,6 @@ ipython
 pytest
 pytest-cov
 pytest-django
+requests-mock
+django-extensions
+jupyter

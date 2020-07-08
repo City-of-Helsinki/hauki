@@ -9,3 +9,4 @@ requests-cache
 numpy
 pandas
 holidays
+delorean

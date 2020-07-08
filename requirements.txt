@@ -5,9 +5,11 @@
 #    pip-compile
 #
 asgiref==3.2.9            # via django
+babel==2.8.0              # via delorean
 certifi==2020.4.5.2       # via requests
 chardet==3.0.4            # via requests
 convertdate==2.2.1        # via holidays
+delorean==1.0.0           # via -r requirements.in
 django-filter==2.3.0      # via -r requirements.in
 django-helusers==0.5.6    # via -r requirements.in
 django-js-asset==1.2.2    # via django-mptt
@@ -20,6 +22,7 @@ drf-oidc-auth==0.10.0     # via django-helusers
 ecdsa==0.15               # via python-jose
 future==0.18.2            # via pyjwkest
 holidays==0.10.2          # via -r requirements.in
+humanize==2.4.1           # via delorean
 idna==2.9                 # via requests
 korean-lunar-calendar==0.2.1  # via holidays
 numpy==1.18.5             # via -r requirements.in, pandas
@@ -29,13 +32,14 @@ pyasn1==0.4.8             # via python-jose, rsa
 pycryptodomex==3.9.7      # via pyjwkest
 pyjwkest==1.4.2           # via drf-oidc-auth
 pymeeus==0.3.7            # via convertdate
-python-dateutil==2.8.1    # via holidays, pandas
+python-dateutil==2.8.1    # via delorean, holidays, pandas
 python-jose==3.1.0        # via django-helusers
-pytz==2020.1              # via convertdate, django, pandas
+pytz==2020.1              # via babel, convertdate, delorean, django, pandas, tzlocal
 requests-cache==0.5.2     # via -r requirements.in
 requests==2.23.0          # via django-helusers, django-orghierarchy, pyjwkest, requests-cache
 rsa==4.6                  # via python-jose
 six==1.15.0               # via ecdsa, holidays, pyjwkest, python-dateutil, python-jose
 sqlparse==0.3.1           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
+tzlocal==2.1              # via delorean
 urllib3==1.25.9           # via requests

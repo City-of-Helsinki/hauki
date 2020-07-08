@@ -165,13 +165,15 @@ class KirjastotImporter(Importer):
                     if not description:
                         # Use the holiday name if present
                         description = fi_holidays.get(opening_times['date'])
+                    if not description:
+                        description = ''
                     if opening_times['times']:
                         for time in opening_times['times']:
                             opening_data.append({
                                 'weekday': weekday,
                                 'week': week,
                                 'status': KIRKANTA_STATUS_MAP[time['status']],
-                                'description': opening_times['info'],
+                                'description': description,
                                 'opens': time['from'],
                                 'closes': time['to']
                             })
@@ -180,7 +182,7 @@ class KirjastotImporter(Importer):
                             'weekday': weekday,
                             'week': week,
                             'status': Status.CLOSED,
-                            'description': opening_times['info']
+                            'description': description
                         })
         return opening_data
 
@@ -204,10 +206,15 @@ class KirjastotImporter(Importer):
             end = days[-1]['date']
             end_index = days[-1]['index']
             openings = self.get_openings(data['schedules'][start_index:end_index+1])
+            name = ''
             if start == end:
                 # name single day periods after the day
                 name = days[0]['info']
-            else:
+            if not name:
+                # even single day periods might be unnamed, resort to holiday names
+                name = fi_holidays.get(start)
+            if not name:
+                #  all previous names may be None
                 name = ''
             period_data = {
                 'data_source': self.data_source,

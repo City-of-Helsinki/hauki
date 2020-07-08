@@ -1,4 +1,4 @@
-
+import requests_cache
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -9,7 +9,7 @@ from hours.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import data for opening hours"
 
-    importer_types = ['units', 'openings']
+    importer_types = ['units', 'connections', 'targets', 'openings']
 
     def __init__(self):
         super().__init__()
@@ -31,6 +31,8 @@ class Command(BaseCommand):
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
 
     def handle(self, *args, **options):
+        if options['cached']:
+            requests_cache.install_cache('hours_import')
         module = options['module']
         if module not in self.importers:
             raise CommandError("Importer %s not found. Valid importers: %s" % (module, self.imp_list))

@@ -5,6 +5,7 @@ import re
 import struct
 import time
 import functools
+import requests
 
 from django.conf import settings
 from django import db
@@ -17,6 +18,19 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
+
+    def get_url(self, resource_name: str, res_id: str=None) -> str:
+        url = "%s%s/" % (self.URL_BASE, resource_name)
+        if res_id is not None:
+            url = "%s%s/" % (url, res_id)
+        return url
+
+    def api_get(self, resource_name: str, res_id: str=None, params: dict=None) -> dict:
+        url = self.get_url(resource_name, res_id)
+        self.logger.info("Fetching URL %s with params %s " % (url, params))
+        resp = requests.get(url, params)
+        resp.raise_for_status()
+        return resp.json()
 
     @staticmethod
     def mark_deleted(obj: BaseModel) -> bool:

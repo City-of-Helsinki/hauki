@@ -11,7 +11,7 @@ from django.conf import settings
 from django import db
 
 
-from hours.models import BaseModel, Target, TargetIdentifier, DataSource
+from hours.models import BaseModel, Target, TargetIdentifier, DataSource, Period, Opening
 
 class Importer(object):
     def __init__(self, options):
@@ -59,7 +59,7 @@ class Importer(object):
             self.logger.debug("'%s' not there!" % field_name)
             self.logger.debug(vars(obj))
 
-        obj_val = getattr(obj, field_name)
+        obj_val = getattr(obj, field_name, None)
         if obj_val == val:
             return
 
@@ -126,8 +126,6 @@ class Importer(object):
             obj = klass(**args)
             obj._created = True
             obj.id = obj_id
-            obj.save()
-            self.logger.debug("%s created" % obj)
         obj._changed = False
         obj._changed_fields = []
 
@@ -143,8 +141,11 @@ class Importer(object):
         Takes the serialized target data, creates and/or updates the corresponding Target object, saves and returns it.
         """
         obj = self._update_or_create_object(Target, data)
+        if obj._created:
+            obj.save()
+            self.logger.debug("%s created" % obj)
 
-        # Update related identifiers
+        # Update related identifiers after the target has been created
         identifiers = {x.data_source_id: x for x in obj.identifiers.all()}
         for identifier in data.get('identifiers', []):
             data_source_id = identifier['data_source_id']
@@ -171,6 +172,42 @@ class Importer(object):
             obj.save()
 
         return obj
+
+    @db.transaction.atomic
+    def save_period(self, data: dict) -> Period:
+        """
+        Takes the serialized Period data with Openings, creates and/or updates the corresponding Period object,
+        saves and returns it.
+        """
+        obj = self._update_or_create_object(Period, data)
+        if obj._created:
+            obj.save()
+            self.logger.debug("%s created" % obj)
+
+        # Update openings after the period has been created
+        openings = obj.openings.all()
+        openings.delete()
+        new_openings = []
+        for opening in data.get('openings', []):
+            # openings have no identifiers in kirkanta and they are generated from data
+            # therefore, we cannot identify existing openings with new ones
+            new_opening = Opening(period=obj,
+                                  weekday=opening['weekday'],
+                                  week=opening['week'],
+                                  status=opening['status'],
+                                  description=opening.get('description', None),
+                                  opens=opening.get('opens', None),
+                                  closes=opening.get('closes', None)
+                                  )
+            new_openings.append(new_opening)
+        Opening.objects.bulk_create(new_openings)
+        obj._changed = True
+        obj._changed_fields.append('openings')
+        if not obj._created:
+            self.logger.debug("%s changed: %s" % (obj, ', '.join(obj._changed_fields)))
+
+        # Saving updates the daily hours for the duration of the period
+        obj.save()
 
 importers = {}
 

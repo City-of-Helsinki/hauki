@@ -13,6 +13,23 @@ KIRKANTA_STATUS_MAP = {
     2: Status.SELF_SERVICE
 }
 
+def check_all_opening_hours(test_file_name, target):
+    # Check that all opening hours were saved
+    test_data = []
+    test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
+    with open(test_file_path) as f:
+        test_data = json.load(f)['data']
+    for day in test_data['schedules']:
+        if day['times']:
+            for opening in day['times']:
+                daily_hours = DailyHours.objects.get(date=day['date'],
+                                                     target=target,
+                                                     opening__opens=opening['from'],
+                                                     opening__closes=opening['to'],
+                                                     opening__status=KIRKANTA_STATUS_MAP[opening['status']])
+        else:
+            daily_hours = DailyHours.objects.get(date=day['date'], target=target, opening__status=Status.CLOSED)
+
 @pytest.fixture
 def mock_tprek_data(requests_mock):
     test_file_name = 'test_import_tprek_data.json'
@@ -23,6 +40,23 @@ def mock_tprek_data(requests_mock):
     call_command('hours_import', 'tprek', '--all')
     with open(test_file_path) as f:
         return json.load(f)[0]
+
+@pytest.mark.django_db
+@pytest.fixture
+def get_mock_library_data(mock_tprek_data, requests_mock):
+    def _mock_library_data(test_file_name):
+        # Call the library importer for the single created library
+        kallio = Target.objects.all()[0]
+        kallio_kirkanta_id = kallio.identifiers.get(data_source='kirkanta').origin_id
+        print(kallio_kirkanta_id)
+        url_to_mock = 'https://api.kirjastot.fi/v4/library/%s/?with=schedules&period.start=2020-06-01&period.end=2021-07-01' % kallio_kirkanta_id
+        test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
+        print(url_to_mock)
+        with open(test_file_path) as f:
+            mock_data = f.read()
+            requests_mock.get(url_to_mock, text=mock_data)
+        call_command('hours_import', 'kirjastot', '--openings', '--single', kallio.id)
+    return _mock_library_data
 
 @pytest.mark.django_db
 def test_import_tprek(mock_tprek_data):
@@ -46,19 +80,9 @@ def test_import_tprek(mock_tprek_data):
         assert identifiers[source['source']].origin_id == source['id']
 
 @pytest.mark.django_db
-def test_import_kirjastot_simple(mock_tprek_data, requests_mock):
-    # Call the library importer for the single created library
-    kallio = Target.objects.all()[0]
-    kallio_kirkanta_id = kallio.identifiers.get(data_source='kirkanta').origin_id
-    print(kallio_kirkanta_id)
-    url_to_mock = 'https://api.kirjastot.fi/v4/library/%s/?with=schedules&period.start=2020-06-01&period.end=2021-07-01' % kallio_kirkanta_id
+def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
     test_file_name = 'test_import_kirjastot_data_simple.json'
-    test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
-    print(url_to_mock)
-    with open(test_file_path) as f:
-        mock_data = f.read()
-        requests_mock.get(url_to_mock, text=mock_data)
-    call_command('hours_import', 'kirjastot', '--openings', '--single', kallio.id)
+    get_mock_library_data(test_file_name)
 
     # Check created objects
     assert Period.objects.count() == 1
@@ -66,23 +90,22 @@ def test_import_kirjastot_simple(mock_tprek_data, requests_mock):
     assert DailyHours.objects.count() == 12
 
     # Check all opening hours
-    test_data = []
-    with open(test_file_path) as f:
-        test_data = json.load(f)['data']
-    for day in test_data['schedules']:
-        if day['times']:
-            for opening in day['times']:
-                daily_hours = DailyHours.objects.get(date=day['date'],
-                                                     target=kallio,
-                                                     opening__opens=opening['from'],
-                                                     opening__closes=opening['to'],
-                                                     opening__status=KIRKANTA_STATUS_MAP[opening['status']])
-        else:
-            daily_hours = DailyHours.objects.get(date=day['date'], target=kallio, opening__status=Status.CLOSED)
+    kallio = Target.objects.all()[0]
+    check_all_opening_hours(test_file_name, kallio)
 
 @pytest.mark.django_db
-def test_import_kirjastot_complex(mock_tprek_data, requests_mock):
-    assert False
+def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
+    test_file_name = 'test_import_kirjastot_data_complex.json'
+    get_mock_library_data(test_file_name)
+
+    # Check created objects
+    #assert Period.objects.count() == 1
+    #assert Opening.objects.count() == 12
+    #assert DailyHours.objects.count() == 12
+
+    # Check all opening hours
+    kallio = Target.objects.all()[0]
+    check_all_opening_hours(test_file_name, kallio)
 
 @pytest.mark.django_db
 def test_import_kirjastot_update(mock_tprek_data, requests_mock):

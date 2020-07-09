@@ -26,9 +26,13 @@ def check_all_opening_hours(test_file_name, target):
                                                      target=target,
                                                      opening__opens=opening['from'],
                                                      opening__closes=opening['to'],
-                                                     opening__status=KIRKANTA_STATUS_MAP[opening['status']])
+                                                     opening__status=KIRKANTA_STATUS_MAP[opening['status']],
+                                                     opening__period__origin_id=day['period'])
         else:
-            daily_hours = DailyHours.objects.get(date=day['date'], target=target, opening__status=Status.CLOSED)
+            daily_hours = DailyHours.objects.get(date=day['date'],
+                                                 target=target,
+                                                 opening__status=Status.CLOSED,
+                                                 opening__period__origin_id=day['period'])
 
 @pytest.fixture
 def mock_tprek_data(requests_mock):
@@ -89,7 +93,7 @@ def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
     assert Opening.objects.count() == 12
     assert DailyHours.objects.count() == 12
 
-    # Check all opening hours
+    # Check daily opening hours
     kallio = Target.objects.all()[0]
     check_all_opening_hours(test_file_name, kallio)
 
@@ -99,11 +103,29 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     get_mock_library_data(test_file_name)
 
     # Check created objects
-    #assert Period.objects.count() == 1
-    #assert Opening.objects.count() == 12
-    #assert DailyHours.objects.count() == 12
+    assert Period.objects.count() == 2
+    periods_by_start = Period.objects.order_by('period')
+    summer_period, midsummer_period = periods_by_start
+    assert summer_period.openings.count() == 46
+    assert midsummer_period.openings.count() == 5
 
-    # Check all opening hours
+    # Check daily opening hours
+    kallio = Target.objects.all()[0]
+    check_all_opening_hours(test_file_name, kallio)
+
+@pytest.mark.django_db
+def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
+    test_file_name = 'test_import_kirjastot_data_pattern.json'
+    get_mock_library_data(test_file_name)
+
+    # Check created objects
+    assert Period.objects.count() == 2
+    periods_by_start = Period.objects.order_by('period')
+    summer_period, midsummer_period = periods_by_start
+    assert summer_period.openings.count() == 36
+    assert midsummer_period.openings.count() == 5
+
+    # Check daily opening hours
     kallio = Target.objects.all()[0]
     check_all_opening_hours(test_file_name, kallio)
 

@@ -6,6 +6,7 @@ from datetime import date, datetime
 from psycopg2.extras import DateRange
 import pandas as pd
 import numpy as np
+from math import ceil
 import delorean
 import holidays
 
@@ -141,8 +142,16 @@ class KirjastotImporter(Importer):
         # total rule must have length that is the least common multiple of all the lengths
         repetition_lengths = [len(repetition) for repetition in repetition_pattern.values()]
         max_week = np.lcm.reduce(repetition_lengths)
+        # however, len(data) is the maximum, no need to do more than that!
+        if max_week > len(data)/7:
+             max_week = int(ceil(len(data)/7))
         if max_week > 1:
             self.logger.debug("Detected repetition of %s weeks in period %s" % (max_week, period_id))
+        # first week may be partial, so openings for some weekdays start from the second week,
+        # first week pattern is found at the end. move those patterns by one week
+        for (weekday, pattern) in repetition_pattern.items():
+            if weekday < start_weekday:
+                repetition_pattern[weekday] = [pattern[-1]] + pattern[:-1]
 
         # 2nd (loop again): generate the openings based on the data for each weekday and week in repetition
         opening_data = []
@@ -150,11 +159,7 @@ class KirjastotImporter(Importer):
             for weekday in Weekday:
                 # not all weekdays are present for short holiday periods
                 if repetition_pattern.get(weekday):
-                    # first week may be partial, so the 1st week openings are split between 1st and n+1th in the list
-                    if week == 1 and weekday < start_weekday:
-                        week_index = max_week-1
-                    else:
-                        week_index = week-1
+                    week_index = week-1
                     # all patterns are not as long as the longest one. They repeat from the start earlier
                     repetition_length = len(repetition_pattern[weekday])
                     opening_times = repetition_pattern[weekday][week_index % repetition_length]

@@ -2,6 +2,9 @@ import pytest
 import requests
 import os
 import json
+from datetime import datetime, date, time
+from itertools import groupby, zip_longest
+from operator import itemgetter
 from django.core.management import call_command
 from hours.models import Target, DataSource, TargetIdentifier, TargetType, Period, Opening, DailyHours, Status
 from django_orghierarchy.models import Organization
@@ -13,13 +16,58 @@ KIRKANTA_STATUS_MAP = {
     2: Status.SELF_SERVICE
 }
 
-def check_all_opening_hours(test_file_name, target):
-    # Check that all opening hours were saved
-    test_data = []
-    test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
-    with open(test_file_path) as f:
-        test_data = json.load(f)['data']
-    for day in test_data['schedules']:
+def parse_date(date: str) -> date:
+    date = datetime.strptime(date, '%Y-%m-%d').date()
+    return date
+
+def parse_time(time: str) -> time:
+    time = datetime.strptime(time, '%H:%M').time()
+    return time
+
+def check_opening_hours(data):
+    # Check that all library hours from data are found in db
+    kirkanta_id = data['id']
+    target = Target.objects.get(identifiers__data_source='kirkanta', identifiers__origin_id=kirkanta_id)
+    if not data['schedules']:
+        print('No opening hours found for library %s' % target)
+        return
+    print('Checking hours for library %s' % target)
+
+    # TODO: Fix the checks below not to use pytest or asserts, so it can run in production
+    # This way the check is faster and we check that the hours are identical (no extra hours)
+    # start = data['schedules'][0]['date']
+    # end = data['schedules'][-1]['date']
+    # daily_hours = groupby(list(DailyHours.objects.filter(
+    #     date__gte=start, date__lte=end, target=target
+    #     ).select_related('opening').order_by(
+    #         'date','opening__opens','opening__closes','opening__status'
+    #         )), key=lambda x: x.date)
+    # for day_in_data, day_in_db in zip_longest(data['schedules'], daily_hours, fillvalue=None):
+    #     if day_in_data == None:
+    #         raise Exception('Missing day in incoming data')
+    #     if day_in_db == None:
+    #         raise Exception('Missing hours in database')
+    #     if type(day_in_data['date']) != date:
+    #         day_in_data['date'] = parse_date(day_in_data['date'])
+    #     assert day_in_data['date'] == day_in_db[0]
+    #     times_in_data = sorted(day_in_data['times'], key=itemgetter('from', 'to', 'status'))
+    #     if not times_in_data:
+    #         hours_in_db = next(day_in_db[1])
+    #         with pytest.raises(StopIteration):
+    #             next(day_in_db[1])
+    #         assert Status.CLOSED == hours_in_db.opening.status
+    #         assert str(day_in_data['period']) == hours_in_db.opening.period.origin_id
+    #     for hours_in_data, hours_in_db in zip_longest(times_in_data, day_in_db[1], fillvalue=None):
+    #         if hours_in_data == None:
+    #             raise Exception('Extra hours in database')
+    #         if hours_in_db == None:
+    #             raise Exception('Missing hours in database')
+    #         assert parse_time(hours_in_data['from']) == hours_in_db.opening.opens
+    #         assert parse_time(hours_in_data['to']) == hours_in_db.opening.closes
+    #         assert KIRKANTA_STATUS_MAP[hours_in_data['status']] == hours_in_db.opening.status
+    #         assert str(day_in_data['period']) == hours_in_db.opening.period.origin_id
+
+    for day in data['schedules']:
         if day['times']:
             for opening in day['times']:
                 daily_hours = DailyHours.objects.get(date=day['date'],
@@ -33,6 +81,14 @@ def check_all_opening_hours(test_file_name, target):
                                                  target=target,
                                                  opening__status=Status.CLOSED,
                                                  opening__period__origin_id=day['period'])
+
+def check_opening_hours_from_file(test_file_name):
+    # Check that all opening hours were saved
+    test_data = []
+    test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
+    with open(test_file_path) as f:
+        test_data = json.load(f)['data']
+    check_opening_hours(test_data)
 
 @pytest.fixture
 def mock_tprek_data(requests_mock):
@@ -94,8 +150,7 @@ def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
     assert DailyHours.objects.count() == 12
 
     # Check daily opening hours
-    kallio = Target.objects.all()[0]
-    check_all_opening_hours(test_file_name, kallio)
+    check_opening_hours_from_file(test_file_name)
 
 @pytest.mark.django_db
 def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
@@ -110,8 +165,7 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     assert midsummer_period.openings.count() == 5
 
     # Check daily opening hours
-    kallio = Target.objects.all()[0]
-    check_all_opening_hours(test_file_name, kallio)
+    check_opening_hours_from_file(test_file_name)
 
 @pytest.mark.django_db
 def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
@@ -126,9 +180,21 @@ def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
     assert midsummer_period.openings.count() == 5
 
     # Check daily opening hours
-    kallio = Target.objects.all()[0]
-    check_all_opening_hours(test_file_name, kallio)
+    check_opening_hours_from_file(test_file_name)
 
 @pytest.mark.django_db
-def test_import_kirjastot_update(mock_tprek_data, requests_mock):
+def test_import_kirjastot_update(get_mock_library_data, mock_tprek_data, requests_mock):
+    test_file_name = 'test_import_kirjastot_data_simple.json'
+    get_mock_library_data(test_file_name)
+
+    # Check daily opening hours
+    check_opening_hours_from_file(test_file_name)
+    
+    # Change the imported data bounds (as will happen at change of month)
+    # Ensure the periods are updated sensibly
+    #test_file_name = 'test_import_kirjastot_data_changed.json'
+    #get_mock_library_data(test_file_name)
+
+    # Check daily opening hours again
+    #check_all_opening_hours(test_file_name, kallio)
     assert False

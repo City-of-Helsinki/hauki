@@ -13,7 +13,8 @@ import holidays
 from django import db
 from django.conf import settings
 
-from ..models import Target, TargetIdentifier, DataSource, Period, Status, Weekday
+from ..models import Target, TargetIdentifier, DataSource, Period, Status, Weekday, DailyHours
+from ..tests.test_import import check_opening_hours
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -247,7 +248,10 @@ class KirjastotImporter(Importer):
                     periods = self.get_periods(library, data)
                     for period_data in periods:
                         period = self.save_period(period_data)
-                    # TODO: synching for existing periods!
+                    check_opening_hours(data)
+                    # TODO: cannot use syncher here, past periods are still valid even though not present in data
+                    # TODO: however, we should delete periods that have no active openings, they are remnants from
+                    # previous imports
                 except Exception as e:
                     import traceback
                     print("Problem in processing data of library ", library, traceback.format_exc())

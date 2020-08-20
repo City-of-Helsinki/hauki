@@ -41,7 +41,7 @@ class TPRekImporter(Importer):
         obj_id = 'tprek:%s' % str(data['id'])
         obj_organization, created = Organization.objects.get_or_create(data_source=self.data_source, origin_id=data['dept_id'])
         if created:
-            logger.debug('Created missing organization tprek:%s' % data['dept_id'])
+            self.logger.debug('Created missing organization tprek:%s' % data['dept_id'])
         unit_data = {
             'id': obj_id,
             'data_source': self.data_source,

@@ -1,4 +1,6 @@
 Django
+django-cors-headers
+django-environ
 django-reversion
 psycopg2
 djangorestframework
@@ -10,3 +12,5 @@ numpy
 pandas
 holidays
 delorean
+sentry-sdk
+whitenoise

@@ -14,7 +14,7 @@ from django import db
 from django.conf import settings
 
 from ..models import Target, TargetIdentifier, DataSource, Period, Status, Weekday, DailyHours
-from ..tests.test_import import check_opening_hours
+from ..tests.utils import check_opening_hours
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 

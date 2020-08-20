@@ -9,7 +9,7 @@ from hours.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import data for opening hours"
 
-    importer_types = ['units', 'connections', 'targets', 'openings']
+    importer_types = ['connections', 'targets', 'openings']
 
     def __init__(self):
         super().__init__()

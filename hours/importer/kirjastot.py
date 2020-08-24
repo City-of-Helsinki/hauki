@@ -45,7 +45,7 @@ class KirjastotImporter(Importer):
         """
         Returns a date range of "back" months before and "forward" months after given date, or today.
         """
-        base = delorean.Delorean(start)
+        base = delorean.Delorean(start, timezone=settings.TIME_ZONE)
         begin = base.last_month(back).date.replace(day=1)
         end = base.next_month(forward).date.replace(day=1)
         return begin, end
@@ -239,8 +239,11 @@ class KirjastotImporter(Importer):
         if self.options.get('single', None):
             obj_id = self.options['single']
             libraries = libraries.filter(id=obj_id)
+        start = self.options.get('date', None)
+        if start:
+            start = datetime.strptime(start, '%Y-%m-%d')
         print('%s libraries found' % libraries.count())
-        begin, end = self.get_date_range()
+        begin, end = self.get_date_range(start=start)
         for library in libraries:
             data = self.get_hours_from_api(library, begin, end)
             if data:

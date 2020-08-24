@@ -24,6 +24,7 @@ class Command(BaseCommand):
         parser.add_argument('--all', action='store_true', dest='all', help='Import all entities')
         parser.add_argument('--url', action='store', dest='url', help='Import from a given URL')
         parser.add_argument('--single', action='store', dest='single', help='Import only single entity')
+        parser.add_argument('--date', action='store', dest='date', help='Import data starting at given date')
         parser.add_argument('--remap', action='store_true', dest='remap', help='Remap all deleted entities to new ones')
         parser.add_argument('--force', action='store_true', dest='force', help='Allow deleting any number of entities if necessary')
 

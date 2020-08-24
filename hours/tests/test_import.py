@@ -8,7 +8,7 @@ from operator import itemgetter
 from django.core.management import call_command
 from hours.models import Target, DataSource, TargetIdentifier, TargetType, Period, Opening, DailyHours, Status
 from django_orghierarchy.models import Organization
-from .utils import check_opening_hours, KIRKANTA_STATUS_MAP
+from hours.tests.utils import check_opening_hours, KIRKANTA_STATUS_MAP
 
 
 def parse_date(date: str) -> date:
@@ -52,7 +52,7 @@ def get_mock_library_data(mock_tprek_data, requests_mock):
         with open(test_file_path) as f:
             mock_data = f.read()
             requests_mock.get(url_to_mock, text=mock_data)
-        call_command('hours_import', 'kirjastot', '--openings', '--single', kallio.id)
+        call_command('hours_import', 'kirjastot', '--openings', '--single', kallio.id, '--date', '2020-07-15')
     return _mock_library_data
 
 @pytest.mark.django_db

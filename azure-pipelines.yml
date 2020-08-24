@@ -28,13 +28,6 @@ stages:
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         tags: |
           $(tag)
-- stage: Test
-  displayName: Test image
-  dependsOn: Build
-  jobs:
-  - job: Test
-    displayName: Test
-    steps:
     - task: DockerCompose@0
       displayName: Run tests
       inputs:

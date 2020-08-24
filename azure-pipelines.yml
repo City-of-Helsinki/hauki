@@ -38,7 +38,7 @@ stages:
     - task: DockerCompose@0
       displayName: Run tests
       inputs:
-        command: run test
+        dockerComposeCommand: run test
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         tags: |
           $(tag)

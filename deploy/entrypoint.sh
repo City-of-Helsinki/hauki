@@ -27,7 +27,7 @@ if [ "$1" = "help" ]; then
     _log "In addition to the production server, there are several task commands:"
     _log "start_django_development_server: runs Django development server at port 8000"
     _log "migrate: runs Django migrations (manage.py migrate)"
-    _log ""
+    _log "test: runs Django tests (pytest)"
     _log "start_production_server: run production server (based on UWSGI) at port 8000"
     _log "maintenance_tasks: run periodic maintenance tasks, with level as parameter"
     _log ""
@@ -51,6 +51,9 @@ elif [ "$1" = "migrate" ]; then
     ./manage.py migrate
     _log_boxed "Updating language fields & installing templates"
     deploy/init_application.sh
+elif [ "$1" = "test" ]; then
+    _log_boxed "Running tests"
+    exec pytest
 elif [ "$1" = "e" ]; then
     shift
     _log_boxed "exec'n $@"

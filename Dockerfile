@@ -1,7 +1,7 @@
 # Dockerfile for Hauki backend
 # Attemps to provide for both local development and server usage
 
-FROM python:3.7-buster
+FROM python:3.7-buster as appbase
 
 RUN useradd -ms /bin/bash -d /hauki hauki
 
@@ -27,7 +27,7 @@ RUN curl -sL https://sentry.io/get-cli/ | bash
 
 # Copy requirements files to image for preloading dependencies
 # in their own layer
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt ./
 
 # deploy/requirements.txt must reference the base requirements
 RUN pip install --no-cache-dir -r requirements.txt
@@ -42,6 +42,16 @@ RUN mkdir -p /srv/static && python manage.py collectstatic
 # Usually this would be some sort of volume
 # RUN mkdir -p /srv/media && chown hauki:hauki /srv/media
 
-USER hauki
-
 ENTRYPOINT ["deploy/entrypoint.sh"]
+
+# Next, the development & testing extras
+
+FROM appbase as development
+
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+# And the production image
+
+FROM appbase as production
+
+USER hauki

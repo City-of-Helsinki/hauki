@@ -21,11 +21,11 @@ stages:
   - job: Build
     displayName: Build
     steps:
-    - task: Docker@2
+    - task: DockerCompose@0
       displayName: Build an image
       inputs:
-        command: build
-        dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        dockerComposeCommand: build
+        dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         tags: |
           $(tag)
 - stage: Test

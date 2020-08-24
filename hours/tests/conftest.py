@@ -103,11 +103,11 @@ def period_second_monthly_opening(data_source):
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=3, month=1)
     return _opening
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def module_data_source():
     return DataSource.objects.create(id='sds1')
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def module_target(module_data_source):
     def _target(origin_id):
         target_id = f'{module_data_source.id}:{origin_id}'
@@ -115,14 +115,14 @@ def module_target(module_data_source):
                       name='Kallion kirjasto')
     return _target
 
-@pytest.fixture(scope='module')
-def targets(module_target):
+@pytest.fixture
+def targets(db, module_target):
     values = []
     for id in range(1,11):
         values.append(module_target(str(id)))
     return Target.objects.bulk_create(values)
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def module_long_period(module_data_source):
     def _long_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
@@ -132,7 +132,7 @@ def module_long_period(module_data_source):
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _long_period
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def module_medium_period(module_data_source):
     def _medium_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
@@ -142,7 +142,7 @@ def module_medium_period(module_data_source):
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _medium_period
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def module_short_period(module_data_source):
     def _short_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
@@ -152,7 +152,7 @@ def module_short_period(module_data_source):
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _short_period
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def periods(targets, module_long_period, module_medium_period, module_short_period):
     values = []
     for target in targets:
@@ -163,7 +163,7 @@ def periods(targets, module_long_period, module_medium_period, module_short_peri
         values.append(module_short_period(target, f'{target.origin_id}-short2'))
     return Period.objects.bulk_create(values)
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def first_opening():
     def _first_opening(period, weekday):
         opens = random_hour(time(7), time(8))
@@ -171,7 +171,7 @@ def first_opening():
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _first_opening
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def second_opening():
     def _second_opening(period, weekday):
         opens = random_hour(time(14), time(16))
@@ -179,7 +179,7 @@ def second_opening():
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _second_opening
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def third_opening():
     def _third_opening(period, weekday):
         opens = random_hour(time(21), time(23))
@@ -187,7 +187,7 @@ def third_opening():
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _third_opening
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def openings(periods, first_opening, second_opening, third_opening):
     values = []
     for index, period in enumerate(periods):

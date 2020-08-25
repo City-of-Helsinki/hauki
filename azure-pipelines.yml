@@ -43,22 +43,21 @@ stages:
         command: save
         arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_test.image.tar $(ImageName)_test:latest'
         addPipelineData: false
-    - task: PublishPipelineArtifact@1
-      displayName: Publishing Image as Pipeline Artifact
-      inputs:
-        path: $(build.artifactstagingdirectory)
-        artifact: 'ContainerImage'
+    - publish: $(build.artifactstagingdirectory)
+      artifact: ContainerImages
 - stage: Test
   displayName: Test
   jobs:
   - job: Test
     displayName: Test
     steps:
+      - download: $(Pipeline.Workspace)
+        artifact: ContainerImages
       - task: Docker@2
         displayName: Load test image from Tar
         inputs:
           command: load
-          arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName)_test.image.tar'
+          arguments: '--input $(Pipeline.Workspace)/ContainerImages/$(ImageName)_test.image.tar'
       - task: DockerCompose@0
         displayName: Run tests
         inputs:

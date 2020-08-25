@@ -11,7 +11,7 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
-  ImageName: 'Hauki'
+  ImageName: 'hauki'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -42,6 +42,9 @@ stages:
       inputs:
         path: $(build.artifactstagingdirectory)
         artifact: 'ContainerImage'
+- stage: Test
+  displayName: Test
+  jobs:
   - deployment: Test
     displayName: Test
     environment: HaukiTest

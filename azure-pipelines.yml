@@ -28,8 +28,7 @@ stages:
       inputs:
         dockerComposeCommand: build
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-        tags: |
-          $(tag)
+        additionalImageTags: $(tag)
     - task: Docker@2
       displayName: Save image to TAR
       inputs:

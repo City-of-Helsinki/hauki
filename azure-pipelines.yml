@@ -11,7 +11,7 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
-  ImageName: 'hauki'
+  ImageName: 'cityofhelsinkihauki_django'
 
 pool:
   vmImage: 'ubuntu-latest'

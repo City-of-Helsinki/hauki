@@ -11,30 +11,37 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
-  ImageName: 'cityofhelsinkihauki_django'
+  ImageName: 'cityofhelsinkihauki'
 
 pool:
   vmImage: 'ubuntu-latest'
 
 stages:
 - stage: Build
-  displayName: Build and test the image
+  displayName: Build the images
   jobs:  
   - job: Build
     displayName: Build
     steps:
     - task: DockerCompose@0
-      displayName: Build an image
+      displayName: Build images
       inputs:
         dockerComposeCommand: build
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         additionalImageTags: $(tag)
     - task: Docker@2
-      displayName: Save image to TAR
+      displayName: Save django image to TAR
       inputs:
-        repository: '$(ImageName)'
+        repository: '$(ImageName)_django'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName):$(tag)'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_django.image.tar $(ImageName)_django:$(tag)'
+        addPipelineData: false
+    - task: Docker@2
+      displayName: Save test image to TAR
+      inputs:
+        repository: '$(ImageName)_test'
+        command: save
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_test.image.tar $(ImageName)_test:$(tag)'
         addPipelineData: false
     - task: PublishPipelineArtifact@1
       displayName: Publishing Image as Pipeline Artifact
@@ -52,10 +59,10 @@ stages:
         deploy:
           steps:
             - task: Docker@2
-              displayName: Load Image from Tar
+              displayName: Load test image from Tar
               inputs:
                 command: load
-                arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName).image.tar'
+                arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName)_test.image.tar'
             - task: DockerCompose@0
               displayName: Run tests
               inputs:

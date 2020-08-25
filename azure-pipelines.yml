@@ -17,7 +17,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- stage: Build & test
+- stage: Build
   displayName: Build and test the image
   jobs:  
   - job: Build

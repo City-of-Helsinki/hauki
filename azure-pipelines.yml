@@ -1,6 +1,7 @@
 # Docker
 # Build a Docker image 
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+# https://dev.to/n3wt0n/container-image-promotion-across-environments-yaml-1ca6
 
 trigger:
 - master
@@ -10,13 +11,14 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
+  ImageName: 'Hauki'
 
 pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- stage: Build
-  displayName: Build image
+- stage: Build & test
+  displayName: Build and test the image
   jobs:  
   - job: Build
     displayName: Build
@@ -28,10 +30,34 @@ stages:
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         tags: |
           $(tag)
-    - task: DockerCompose@0
-      displayName: Run tests
+    - task: Docker@2
+      displayName: Save image to TAR
       inputs:
-        dockerComposeCommand: run test
-        dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-        tags: |
-          $(tag)
+        repository: '$(ImageName)'
+        command: save
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName):$(tag)'
+        addPipelineData: false
+    - task: PublishPipelineArtifact@1
+      displayName: Publishing Image as Pipeline Artifact
+      inputs:
+        path: $(build.artifactstagingdirectory)
+        artifact: 'ContainerImage'
+  - deployment: Test
+    displayName: Test
+    environment: HaukiTest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - task: Docker@2
+              displayName: Load Image from Tar
+              inputs:
+                command: load
+                arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName).image.tar'
+            - task: DockerCompose@0
+              displayName: Run tests
+              inputs:
+                dockerComposeCommand: run test
+                dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
+                tags: |
+                  $(tag)

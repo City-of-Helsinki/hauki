@@ -34,14 +34,14 @@ stages:
       inputs:
         repository: '$(ImageName)_django'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_django.image.tar $(ImageName)_django:$(tag)'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_django.image.tar $(ImageName)_django:latest'
         addPipelineData: false
     - task: Docker@2
       displayName: Save test image to TAR
       inputs:
         repository: '$(ImageName)_test'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_test.image.tar $(ImageName)_test:$(tag)'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_test.image.tar $(ImageName)_test:latest'
         addPipelineData: false
     - task: PublishPipelineArtifact@1
       displayName: Publishing Image as Pipeline Artifact

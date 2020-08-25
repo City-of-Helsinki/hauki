@@ -51,22 +51,16 @@ stages:
 - stage: Test
   displayName: Test
   jobs:
-  - deployment: Test
+  - job: Test
     displayName: Test
-    environment: HaukiTest
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-            - task: Docker@2
-              displayName: Load test image from Tar
-              inputs:
-                command: load
-                arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName)_test.image.tar'
-            - task: DockerCompose@0
-              displayName: Run tests
-              inputs:
-                dockerComposeCommand: run test
-                dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-                tags: |
-                  $(tag)
+    steps:
+      - task: Docker@2
+        displayName: Load test image from Tar
+        inputs:
+          command: load
+          arguments: '--input $(Pipeline.Workspace)/ContainerImage/$(ImageName)_test.image.tar'
+      - task: DockerCompose@0
+        displayName: Run tests
+        inputs:
+          dockerComposeCommand: run test
+          dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'

@@ -92,4 +92,3 @@ stages:
           containerRegistry: Docker hub upload
           repository: $(ImageName)
           command: push
-          tags: $(Build.BuildId)

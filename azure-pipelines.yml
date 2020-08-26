@@ -10,7 +10,7 @@ resources:
 - repo: self
 
 variables:
-  tag: '$(Build.BuildId)'
+  tag: '$(Build.SourceVersion)'
   ImageName: 'hauki'
 
 pool:
@@ -34,7 +34,8 @@ stages:
       inputs:
         dockerComposeCommand: build
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-        additionalImageTags: $(tag)
+        includeSourceTags: true
+        includeLatestTag: true
     - task: Docker@2
       displayName: Save deployment image to TAR
       inputs:
@@ -62,7 +63,7 @@ stages:
         inputs:
           artifact: ContainerImages
       - task: Docker@2
-        displayName: Load test image from Tar
+        displayName: Load dev image from Tar
         inputs:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName)_dev.image.tar'
@@ -92,3 +93,6 @@ stages:
           containerRegistry: Docker hub upload
           repository: $(ImageName)
           command: push
+          tags: |
+            latest
+            $(tag)

@@ -55,9 +55,10 @@ stages:
         displayName: Download images
         inputs:
           artifact: ContainerImages
-      - task: CmdLine@2
-        inputs:
-          script: 'ls -la'
+      - script: |
+          pwd
+          ls -la /home/vsts/work/1
+          ls -la
       - task: Docker@2
         displayName: Load test image from Tar
         inputs:

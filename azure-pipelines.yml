@@ -88,17 +88,24 @@ stages:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - task: Docker@2
-        displayName: Give the image correct name
+        displayName: Name the image
         inputs:
           containerRegistry: Docker hub upload
           repository: $(ImageName)
           command: tag
           arguments: $(ImageName):latest helsinki/$(ImageName):latest
       - task: Docker@2
-        displayName: Push image to Docker hub
+        displayName: Name the image
         inputs:
           containerRegistry: Docker hub upload
           repository: $(ImageName)
+          command: tag
+          arguments: $(ImageName):$(tag) helsinki/$(ImageName):$(tag)
+      - task: Docker@2
+        displayName: Push image to Docker hub
+        inputs:
+          containerRegistry: Docker hub upload
+          repository: helsinki/$(ImageName)
           command: push
           tags: |
             latest

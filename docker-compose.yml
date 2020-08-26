@@ -13,7 +13,8 @@ services:
         volumes:
             - postgres-data-volume:/var/lib/postgresql/data
 
-    django:
+    dev:
+        image: hauki_dev
         depends_on:
             - postgres
         build:
@@ -35,18 +36,13 @@ services:
         ports:
             - "127.0.0.1:8000:8000"
 
-    test:
-        depends_on:
-            - postgres
+    deploy:
+        image: hauki
         build:
             context: ./
             dockerfile: ./Dockerfile
-            target: development
-        environment:
-            - DEBUG=true
-            - DATABASE_URL=postgres://hauki:hauki@postgres/hauki
-            - WAIT_FOR_IT_ADDRESS=postgres:5432
-        command: ["test"]
+            target: production
+
 
 volumes:
         postgres-data-volume:

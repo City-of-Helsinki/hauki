@@ -11,7 +11,7 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
-  ImageName: 'cityofhelsinkihauki'
+  ImageName: 'hauki'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -23,6 +23,12 @@ stages:
   - job: Build
     displayName: Build
     steps:
+    - script: |
+          echo 'Running in workspace $(Pipeline.Workspace)'
+          echo 'Build.SourceVersion: $(Build.SourceVersion)'
+          echo 'Build.SourceVersionMessage: $(Build.SourceVersionMessage)'
+          echo 'Build.SourcesDirectory: $(Build.SourcesDirectory)'
+          echo 'Build.ArtifactStagingDirectory: $(build.artifactstagingdirectory)'
     - task: DockerCompose@0
       displayName: Build images
       inputs:
@@ -30,18 +36,18 @@ stages:
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
         additionalImageTags: $(tag)
     - task: Docker@2
-      displayName: Save django image to TAR
+      displayName: Save deployment image to TAR
       inputs:
-        repository: '$(ImageName)_django'
+        repository: '$(ImageName)'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_django.image.tar $(ImageName)_django:latest'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName):latest'
         addPipelineData: false
     - task: Docker@2
-      displayName: Save test image to TAR
+      displayName: Save dev/test image to TAR
       inputs:
-        repository: '$(ImageName)_test'
+        repository: '$(ImageName)_dev'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_test.image.tar $(ImageName)_test:latest'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_dev.image.tar $(ImageName)_dev:latest'
         addPipelineData: false
     - publish: $(build.artifactstagingdirectory)
       artifact: ContainerImages
@@ -49,23 +55,41 @@ stages:
   displayName: Test
   jobs:
   - job: Test
-    displayName: Test
+    displayName: Test the dev image
     steps:
       - task: DownloadPipelineArtifact@2
         displayName: Download images
         inputs:
           artifact: ContainerImages
-      - script: |
-          pwd
-          ls -la /home/vsts/work/1
-          ls -la
       - task: Docker@2
         displayName: Load test image from Tar
         inputs:
           command: load
-          arguments: '--input $(Pipeline.Workspace)/$(ImageName)_test.image.tar'
+          arguments: '--input $(Pipeline.Workspace)/$(ImageName)_dev.image.tar'
       - task: DockerCompose@0
         displayName: Run tests
         inputs:
-          dockerComposeCommand: run test
+          dockerComposeCommand: run dev test
           dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
+- stage: Deploy
+  displayName: Deploy
+  jobs:
+  - job: Deploy
+    displayName: Deploy image
+    steps:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download images
+        inputs:
+          artifact: ContainerImages
+      - task: Docker@2
+        displayName: Load production image from Tar
+        inputs:
+          command: load
+          arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
+      - task: Docker@2
+        displayName: Push image to Docker hub
+        inputs:
+          containerRegistry: $(dockerHub)
+          repository: $(ImageName)
+          command: push
+          tags: $(Build.BuildId)

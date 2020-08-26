@@ -63,7 +63,7 @@ stages:
         displayName: Load test image from Tar
         inputs:
           command: load
-          arguments: '--input $(Pipeline.Workspace)/ContainerImages/$(ImageName)_test.image.tar'
+          arguments: '--input $(Pipeline.Workspace)/$(ImageName)_test.image.tar'
       - task: DockerCompose@0
         displayName: Run tests
         inputs:

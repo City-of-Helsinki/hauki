@@ -51,8 +51,10 @@ stages:
   - job: Test
     displayName: Test
     steps:
-      - download: $(Pipeline.Workspace)
-        artifact: ContainerImages
+      - task: DownloadPipelineArtifact@2
+        displayName: Download images
+        inputs:
+          artifact: ContainerImages
       - task: Docker@2
         displayName: Load test image from Tar
         inputs:

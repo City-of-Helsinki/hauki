@@ -89,7 +89,7 @@ stages:
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:
-          containerRegistry: $(dockerHub)
+          containerRegistry: Docker hub upload
           repository: $(ImageName)
           command: push
           tags: $(Build.BuildId)

@@ -41,14 +41,14 @@ stages:
       inputs:
         repository: '$(ImageName)'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName):latest'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName)'
         addPipelineData: false
     - task: Docker@2
       displayName: Save dev/test image to TAR
       inputs:
         repository: '$(ImageName)_dev'
         command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_dev.image.tar $(ImageName)_dev:latest'
+        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_dev.image.tar $(ImageName)_dev'
         addPipelineData: false
     - publish: $(build.artifactstagingdirectory)
       artifact: ContainerImages
@@ -72,11 +72,11 @@ stages:
         inputs:
           dockerComposeCommand: run dev test
           dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-- stage: Deploy
-  displayName: Deploy
+- stage: Push
+  displayName: Push
   jobs:
-  - job: Deploy
-    displayName: Deploy image
+  - job: Push
+    displayName: Push deploy image to registry
     steps:
       - task: DownloadPipelineArtifact@2
         displayName: Download images
@@ -88,14 +88,14 @@ stages:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - task: Docker@2
-        displayName: Name the image
+        displayName: Rename the image
         inputs:
           containerRegistry: Docker hub upload
           repository: $(ImageName)
           command: tag
           arguments: $(ImageName):latest helsinki/$(ImageName):latest
       - task: Docker@2
-        displayName: Name the image
+        displayName: Rename the image
         inputs:
           containerRegistry: Docker hub upload
           repository: $(ImageName)

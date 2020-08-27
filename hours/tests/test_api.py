@@ -95,7 +95,7 @@ def test_generate_and_get_daily_hours_list(api_client, django_assert_max_num_que
         period.update_daily_hours()
     print('daily hours generated')
     print(time.process_time() - start_time)
-    assert (time.process_time() - start_time < 20)
+    assert (time.process_time() - start_time < 25)
 
     # check fetch performance
     start_time = time.process_time()

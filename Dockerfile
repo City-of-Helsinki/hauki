@@ -55,3 +55,5 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 FROM appbase as production
 
 USER hauki
+
+EXPOSE 8000

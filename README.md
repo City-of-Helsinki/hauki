@@ -7,19 +7,17 @@ Jira: https://helsinkisolutionoffice.atlassian.net/projects/HAUKI/issues/?filter
 
 ## Prerequisites
 
-* PostgreSQL (>= 10)
-* Python (>= 3.7)
-
-OR
-
 * Docker
 * Docker Compose
 
-## Installation
+OR
 
-### Docker
+* PostgreSQL (>= 10)
+* Python (>= 3.7)
 
-#### Development
+## Docker Installation
+
+### Development
 
 The easiest way to develop is
 
@@ -42,7 +40,7 @@ cp config_dev.env.example config_dev.env
 Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate
 configuring the dev environment with a local file.
 
-#### Production
+### Production
 
 Correspondingly, production container can be brought up with
 
@@ -52,9 +50,9 @@ docker-compose run deploy
 
 In production, configuration is done with corresponding environment variables.
 
-### Local installation
+## Local installation
 
-#### Database
+### Database
 
 hauki runs on PostgreSQL. Install the server on Debian-based systems with:
 
@@ -69,7 +67,7 @@ createuser <your username>
 createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 ```
 
-#### Development
+### Development
 
 Clone the repo:
 ```

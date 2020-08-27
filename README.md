@@ -22,10 +22,14 @@ OR
 The easiest way to develop is
 
 ```
+git clone https://github.com/City-of-Helsinki/hauki.git
+cd hauki
 docker-compose run dev
 ```
 
-and run tests with 
+and open your browser to http://127.0.0.1:8000/.
+
+Run tests with 
 
 ```
 docker-compose run dev test

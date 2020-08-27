@@ -12,7 +12,7 @@ resources:
 variables:
   tag: '$(Build.SourceVersion)'
   ImageName: 'hauki'
-  azureSubscription: Azure HKI-kanslia-standalone
+  azureSubscription: HKI-kanslia-standalone
   appName: hauki
   containerRegistry: registry.hub.docker.com
 

@@ -19,6 +19,8 @@ OR
 
 ### Docker
 
+#### Development
+
 The easiest way to develop is
 
 ```
@@ -39,6 +41,8 @@ cp config_dev.env.example config_dev.env
 
 Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate
 configuring the dev environment with a local file.
+
+#### Production
 
 Correspondingly, production container can be brought up with
 

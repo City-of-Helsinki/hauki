@@ -7,26 +7,68 @@ Jira: https://helsinkisolutionoffice.atlassian.net/projects/HAUKI/issues/?filter
 
 ## Prerequisites
 
-* PostgreSQL (>= 10) with PostGIS extension
+* Docker
+* Docker Compose
+
+OR
+
+* PostgreSQL (>= 10)
 * Python (>= 3.7)
 
-## Installation
+## Docker Installation
+
+### Development
+
+The easiest way to develop is
+
+```
+git clone https://github.com/City-of-Helsinki/hauki.git
+cd hauki
+docker-compose run dev
+```
+
+and open your browser to http://127.0.0.1:8000/.
+
+Run tests with 
+
+```
+docker-compose run dev test
+```
+
+If you wish to change settings when developing, copy the development config file example `config_dev.env.example`
+to `config_dev.env`:
+```
+cp config_dev.env.example config_dev.env
+```
+
+Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate
+configuring the dev environment with a local file.
+
+### Production
+
+Correspondingly, production container can be brought up with
+
+```
+docker-compose run deploy
+```
+
+In production, configuration is done with corresponding environment variables.
+
+## Local installation
 
 ### Database
 
-hauki runs on PostgreSQL with the PostGIS extension. Install the server on Debian-based systems with:
+hauki runs on PostgreSQL. Install the server on Debian-based systems with:
 
 ```bash
 sudo apt install postgresql
-sudo apt install postgresql-10-postgis-2.4 
 ```
 
-Then create a database user and the database itself as the `postgres` system user, and add the PostGIS extension:
+Then create a database user and the database itself as the `postgres` system user:
 
 ```bash
 createuser <your username>
-createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki
-psql -d hauki -c 'CREATE EXTENSION postgis;'
+createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 ```
 
 ### Development
@@ -37,16 +79,18 @@ git clone https://github.com/City-of-Helsinki/hauki.git
 cd hauki
 ```
 
-Initiate a virtualenv and install the Python development requirements:
+Initiate a virtualenv and install the Python requirements plus development requirements:
 ```
 pyenv virtualenv hauki-env
 pyenv local hauki-env
+pip install -r requirements.txt
 pip install -r dev-requirements.txt
 ```
 
-Create `local_settings.py` in the repo base dir containing the following line:
+Copy the development config file example `config_dev.env.example` to `config_dev.env` 
+(feel free to edit the configuration file if you have any settings you wish to change):
 ```
-DEBUG = True
+cp config_dev.env.example config_dev.env
 ```
 
 Run tests:
@@ -59,13 +103,8 @@ Run migrations:
 python manage.py migrate
 ```
 
-Create admin user:
-```
-python manage.py createsuperuser
-```
-
 Run dev server:
 ```
 python manage.py runserver
 ```
-and open your browser to http://127.0.0.1:8000/admin/ using the admin user credentials.
+and open your browser to http://127.0.0.1:8000/.

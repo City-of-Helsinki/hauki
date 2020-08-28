@@ -113,11 +113,14 @@ and open your browser to http://127.0.0.1:8000/.
 
 ## Importing data
 
-Currently, importing units from City of Helsinki unit registry (TPREK) is supported. Import all units from TPREK API by
+Currently, importing targets from City of Helsinki unit registry (TPREK) is supported. Import all targets from TPREK API by
 ```
-python manage.py hours_import tprek --all
+python manage.py hours_import tprek --targets
 ```
-Opening hours may be imported for any Finnish libraries. This requires that the libraries are already present in the database (imported from TPREK or created by other means) with correct kirjastot.fi ids set. The kirjastot.fi importer doesn't currently import any libraries into the database. Import library opening hours from kirjastot.fi API by
+
+Opening hours may be imported for any Finnish libraries.
+
+This requires that libraries already exist in the database (imported from TPREK or created by other means), with correct kirkanta ids in the `identifiers` field. The kirjastot.fi importer doesn't currently import any libraries into the database, but you may suggest a PR that imports all libraries as targets. Import library opening hours from the kirjastot.fi API for all targets that have kirkanta identifiers by
 ```
 python manage.py hours_import kirjastot --openings
 ```

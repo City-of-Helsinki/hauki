@@ -108,3 +108,14 @@ Run dev server:
 python manage.py runserver
 ```
 and open your browser to http://127.0.0.1:8000/.
+
+## Importing data
+
+Currently, importing units from City of Helsinki unit registry (TPREK) is supported. Import all units from TPREK API by
+```
+python manage.py hours_import tprek --all
+```
+Opening hours may be imported from Helmet libraries. This requires that the libraries are already present in the database (e.g. imported from TPREK). Import future opening hours from Helmet API by
+```
+python manage.py hours_import kirjastot --openings
+```

@@ -117,7 +117,7 @@ Currently, importing units from City of Helsinki unit registry (TPREK) is suppor
 ```
 python manage.py hours_import tprek --all
 ```
-Opening hours may be imported from Helmet libraries. This requires that the libraries are already present in the database (e.g. imported from TPREK). Import future opening hours from Helmet API by
+Opening hours may be imported for any Finnish libraries. This requires that the libraries are already present in the database (imported from TPREK or created by other means) with correct kirjastot.fi ids set. The kirjastot.fi importer doesn't currently import any libraries into the database. Import library opening hours from kirjastot.fi API by
 ```
 python manage.py hours_import kirjastot --openings
 ```

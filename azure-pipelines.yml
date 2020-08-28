@@ -114,22 +114,10 @@ stages:
             latest
             $(tag)
 - stage: Deploy
-  displayName: Deploy to Azure Webapp
+  displayName: Deploy to Openshift
   jobs:
-    - deployment: DeployWeb
-      displayName: Deploy Web App
-      pool:
-        vmImage: Ubuntu-18.04
-      # creates an environment if it doesn't exist
-      environment: $(appName)Test
-      strategy:
-        # default deployment strategy, more coming...
-        runOnce:
-          deploy:
-            steps:
-              - task: AzureWebAppContainer@1
-                displayName: Azure Web App on Container Deploy
-                inputs:
-                  appName: $(appName)-test
-                  azureSubscription: $(azureSubscription)
-                  imageName: $(containerRegistry)/helsinki/$(imageName)
+    - task: oc-cmd@2
+      displayName: Roll out
+      inputs:
+        openshiftService: 'Azure OpenShift'
+        cmd: 'rollout latest dc/hauki-backend'

@@ -116,11 +116,11 @@ stages:
 - stage: Deploy
   displayName: Deploy to Openshift
   jobs:
-  - job: Deploy
-    displayName: Deploy to Openshift
+  - job: Update
+    displayName: Update OC Imagestream
     steps:
       - task: oc-cmd@2
-        displayName: Roll out
+        displayName: Add OC tag to latest image
         inputs:
           openshiftService: 'Azure OpenShift'
-          cmd: 'rollout latest dc/hauki-backend'
+          cmd: 'oc tag docker.io/helsinki/hauki:$(tag) hauki-backend:latest'

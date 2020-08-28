@@ -116,8 +116,11 @@ stages:
 - stage: Deploy
   displayName: Deploy to Openshift
   jobs:
-    - task: oc-cmd@2
-      displayName: Roll out
-      inputs:
-        openshiftService: 'Azure OpenShift'
-        cmd: 'rollout latest dc/hauki-backend'
+  - job: Deploy
+    displayName: Deploy to Openshift
+    steps:
+      - task: oc-cmd@2
+        displayName: Roll out
+        inputs:
+          openshiftService: 'Azure OpenShift'
+          cmd: 'rollout latest dc/hauki-backend'

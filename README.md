@@ -1,5 +1,7 @@
 # hauki
 
+[![Build Status](https://dev.azure.com/City-of-Helsinki/infra/_apis/build/status/hauki/City-of-Helsinki.hauki?branchName=master)](https://dev.azure.com/City-of-Helsinki/infra/_build/latest?definitionId=14&branchName=master)
+
 Django application and REST API for managing opening hours across all services
 
 ## Issue tracking

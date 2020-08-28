@@ -36,6 +36,7 @@ def get_git_revision_hash() -> str:
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
+    DJANGO_LOG_LEVEL=(str, 'INFO'),
     SYSTEM_DATA_SOURCE_ID=(str, 'hauki'),
     LANGUAGES=(list, ['fi', 'sv', 'en']),
     DATABASE_URL=(str, 'postgres:///hauki'),
@@ -113,7 +114,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        '': {
+        'django': {
             'handlers': ['console'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
         },

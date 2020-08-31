@@ -53,7 +53,9 @@ elif [ "$1" = "migrate" ]; then
     deploy/init_application.sh
 elif [ "$1" = "test" ]; then
     _log_boxed "Running tests"
-    exec pytest
+    pytest
+    _log_boxed "Running lint"
+    flake8
 elif [ "$1" = "e" ]; then
     shift
     _log_boxed "exec'n $@"

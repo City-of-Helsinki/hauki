@@ -1,5 +1,7 @@
 # hauki
 
+[![Build Status](https://dev.azure.com/City-of-Helsinki/infra/_apis/build/status/hauki/City-of-Helsinki.hauki?branchName=master)](https://dev.azure.com/City-of-Helsinki/infra/_build/latest?definitionId=14&branchName=master)
+
 Django application and REST API for managing opening hours across all services
 
 ## Issue tracking
@@ -108,3 +110,19 @@ Run dev server:
 python manage.py runserver
 ```
 and open your browser to http://127.0.0.1:8000/.
+
+## Importing data
+
+Currently, importing targets from Helsinki metropolitan area unit registry (TPREK) is supported. Import all targets from [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) by
+```
+python manage.py hours_import tprek --targets
+```
+
+Opening hours may be imported for any Finnish libraries from the [kirjastot.fi API](https://api.kirjastot.fi/).
+
+This requires that libraries already exist in the database (imported from TPREK or created by other means), with correct kirkanta ids in the `identifiers` field. The kirjastot.fi importer doesn't currently import any libraries into the database, but you may suggest a PR that imports all libraries as targets, if you wish to import libraries outside the Helsinki area from the kirjastot.fi API.
+
+Import library opening hours from the kirjastot.fi API for all targets that have kirkanta identifiers by
+```
+python manage.py hours_import kirjastot --openings
+```

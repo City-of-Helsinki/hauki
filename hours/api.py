@@ -46,6 +46,38 @@ class IdentifierSerializer(serializers.HyperlinkedModelSerializer):
         fields = ['data_source', 'origin_id']
 
 
+class OpeningSerializer(serializers.HyperlinkedModelSerializer):
+    status = IntegerChoiceField(choices=Status)
+    weekday = IntegerChoiceField(choices=Weekday)
+
+    class Meta:
+        model = Opening
+        fields = ['status', 'opens', 'closes', 'description', 'period', 'weekday',
+                  'week', 'month', 'created_time', 'last_modified_time']
+
+
+class DailyHoursSerializer(serializers.HyperlinkedModelSerializer):
+    opening = OpeningSerializer()
+
+    class Meta:
+        model = DailyHours
+        fields = ['date', 'target', 'opening']
+
+
+# class DailyHoursRelatedField(serializers.RelatedField):
+#     # Only display one week by default
+#     # TODO: Currently no easy way of doing this in django, get_queryset doesn't exist :(
+#     def get_queryset(self):
+#         print('getting queryset')
+#         today = datetime.date(datetime.now())
+#         print(today)
+#         return super().get_queryset().filter(date__range=(today, today))
+
+#     def to_representation(self, value):
+#         print('representing')
+#         return DailyHoursSerializer(context=self.context).to_representation(value)
+
+
 class TargetSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -54,10 +86,22 @@ class TargetSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Target
-        fields = ['id', 'data_source', 'origin_id', 'organization','same_as', 'target_type',
-              'parent', 'second_parent', 'name', 'description',
-              'created_time', 'last_modified_time', 'publication_time',
-              'hours_updated', 'identifiers']
+        fields = ['id', 'data_source', 'origin_id', 'organization', 'same_as', 'target_type',
+                  'parent', 'second_parent', 'name', 'description',
+                  'created_time', 'last_modified_time', 'publication_time',
+                  'hours_updated', 'identifiers']
+
+
+class PeriodSerializer(serializers.HyperlinkedModelSerializer):
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    openings = OpeningSerializer(many=True)
+    status = IntegerChoiceField(choices=Status)
+
+    class Meta:
+        model = Period
+        fields = ['id', 'data_source', 'origin_id', 'target', 'name', 'description',
+                  'status', 'override', 'period', 'created_time', 'last_modified_time',
+                  'publication_time', 'openings']
 
 
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
@@ -69,28 +113,6 @@ class TargetViewSet(viewsets.ReadOnlyModelViewSet):
 register_view(TargetViewSet, 'target')
 
 
-class OpeningSerializer(serializers.HyperlinkedModelSerializer):
-    status = IntegerChoiceField(choices=Status)
-    weekday = IntegerChoiceField(choices=Weekday)
-
-    class Meta:
-        model = Opening
-        fields = ['status', 'opens', 'closes', 'description', 'period', 'weekday',
-            'week', 'month', 'created_time', 'last_modified_time']
-
-
-class PeriodSerializer(serializers.HyperlinkedModelSerializer):
-    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
-    openings = OpeningSerializer(many=True)
-    status = IntegerChoiceField(choices=Status)
-
-    class Meta:
-        model = Period
-        fields = ['id', 'data_source', 'origin_id', 'target', 'name', 'description',
-            'status', 'override', 'period', 'created_time', 'last_modified_time',
-            'publication_time', 'openings']
-
-
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Period.objects.all().prefetch_related('openings')
     serializer_class = PeriodSerializer
@@ -99,14 +121,6 @@ class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 register_view(PeriodViewSet, 'period')
-
-
-class DailyHoursSerializer(serializers.HyperlinkedModelSerializer):
-    opening = OpeningSerializer()
-
-    class Meta:
-        model = DailyHours
-        fields = ['date', 'target', 'opening']
 
 
 class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):

@@ -1,17 +1,13 @@
-import base64
 import logging
 import os
 import re
-import struct
-import time
-import functools
 import requests
 
-from django.conf import settings
 from django import db
 
 
 from hours.models import BaseModel, Target, TargetIdentifier, DataSource, Period, Opening
+
 
 class Importer(object):
     def __init__(self, options):
@@ -19,13 +15,13 @@ class Importer(object):
         self.options = options
         self.setup()
 
-    def get_url(self, resource_name: str, res_id: str=None) -> str:
+    def get_url(self, resource_name: str, res_id: str = None) -> str:
         url = "%s%s/" % (self.URL_BASE, resource_name)
         if res_id is not None:
             url = "%s%s/" % (url, res_id)
         return url
 
-    def api_get(self, resource_name: str, res_id: str=None, params: dict=None) -> dict:
+    def api_get(self, resource_name: str, res_id: str = None, params: dict = None) -> dict:
         url = self.get_url(resource_name, res_id)
         self.logger.info("Fetching URL %s with params %s " % (url, params))
         resp = requests.get(url, params)
@@ -41,7 +37,7 @@ class Importer(object):
         return obj.deleted
 
     @staticmethod
-    def clean_text(text:str, strip_newlines: bool=False) -> str:
+    def clean_text(text: str, strip_newlines: bool = False) -> str:
         # remove non-breaking spaces and separators
         text = text.replace('\xa0', ' ').replace('\x1f', '')
         # remove nil bytes

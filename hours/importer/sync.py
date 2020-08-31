@@ -3,6 +3,7 @@ import logging
 # Per module logger
 logger = logging.getLogger(__name__)
 
+
 class ModelSyncher(object):
 
     def __init__(self, queryset, generate_obj_id,

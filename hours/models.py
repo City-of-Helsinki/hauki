@@ -1,12 +1,11 @@
-from datetime import timedelta, datetime
+from datetime import datetime
 from collections import OrderedDict
 from django.db import models
-from django.db.models import Count, F, Max
+from django.db.models import Max
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.indexes import GistIndex
 from psycopg2.extras import DateRange
 import pandas as pd
-import time
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
@@ -15,6 +14,7 @@ from django_orghierarchy.models import Organization
 
 
 User = settings.AUTH_USER_MODEL
+
 
 class Status(models.IntegerChoices):
     CLOSED = 0, _('closed')
@@ -49,7 +49,7 @@ class Weekday(models.IntegerChoices):
     THURSDAY = 4, _('Thursday')
     FRIDAY = 5, _('Friday')
     SATURDAY = 6, _('Saturday')
-    SUNDAY= 7, _('Sunday')
+    SUNDAY = 7, _('Sunday')
 
 
 class DataSource(models.Model):
@@ -70,7 +70,8 @@ class BaseModel(models.Model):
     # Both fields are required
     data_source = models.ForeignKey(
         DataSource, on_delete=models.PROTECT, related_name='provided_%(class)s_data', db_index=True)
-    origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=100, db_index=True)
+    origin_id = models.CharField(
+        verbose_name=_('Origin ID'), max_length=100, db_index=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, blank=True, default="")
@@ -124,20 +125,25 @@ class BaseModel(models.Model):
         self.deleted = False
         self.save()
 
+
 class Target(BaseModel):
-    parent = models.ForeignKey('self', on_delete=models.PROTECT, related_name='first_children', db_index=True, null=True)
-    second_parent = models.ForeignKey('self', on_delete=models.PROTECT, related_name='second_children', db_index=True, null=True)
+    parent = models.ForeignKey(
+        'self', on_delete=models.PROTECT, related_name='first_children', db_index=True, null=True)
+    second_parent = models.ForeignKey(
+        'self', on_delete=models.PROTECT, related_name='second_children', db_index=True, null=True)
     hours_updated = models.DateTimeField(null=True, blank=True, db_index=True)
     default_status = models.IntegerField(choices=Status.choices, default=Status.UNDEFINED)
     target_type = models.IntegerField(choices=TargetType.choices, default=TargetType.UNIT)
-    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name='targets', db_index=True, null=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name='targets', db_index=True, null=True)
 
     class Meta(BaseModel.Meta):
         verbose_name = _('Target')
         verbose_name_plural = _('Targets')
 
     def get_periods_for_range(self, start, end=None, include_drafts=False, include_deleted=False, period_type=None):
-        """Returns the period, annotated with rotation metadata and prefetched opening hours, that determines the opening hours for each date in the range, or None
+        """Returns the period, annotated with rotation metadata and prefetched opening hours, that determines the
+        opening hours for each date in the range, or None
 
         Parameters:
         start (date): Starting date for requested date range
@@ -147,22 +153,24 @@ class Target(BaseModel):
         period_type (string): Only consider 'normal' or 'override' periods, or None (override overrides normal).
 
         Returns:
-        OrderedDict[Period]: The period that determines opening hours for each date, with max_month and max_week metadata, and prefetched opening hours data.
+        OrderedDict[Period]: The period that determines opening hours for each date, with max_month and max_week
+        metadata, and prefetched opening hours data.
         """
         if not end:
             # default only returns single day
             end = start
         potential_periods = self.periods.filter(period__overlap=DateRange(lower=start, upper=end, bounds='[]'))
         if period_type:
-            if period_type=='normal':
+            if period_type == 'normal':
                 potential_periods.filter(override=False)
-            if period_type=='override':
+            if period_type == 'override':
                 potential_periods.filter(override=True)
         if not include_drafts:
             potential_periods = potential_periods.filter(published=True)
         if not include_deleted:
             potential_periods = potential_periods.filter(deleted=False)
-        periods = [p for p in potential_periods.prefetch_related('openings__daily_hours')] # 1 query + join all openings and linked hours
+        # 1 query + join all openings and linked hours
+        periods = [p for p in potential_periods.prefetch_related('openings__daily_hours')]
         # store the rotation metadata per period
         for period in periods:
             # Weekly rotation is subordinate to monthly rotation, if present.
@@ -173,7 +181,7 @@ class Target(BaseModel):
         # shorter periods always take precedence
         periods.sort(key=lambda x: (-x.override, x.period.upper - x.period.lower))
         dates = pd.date_range(start, end).date
-        active_periods = OrderedDict()  
+        active_periods = OrderedDict()
         for date in dates:
             for period in periods:
                 if date in period.period:
@@ -183,7 +191,8 @@ class Target(BaseModel):
                 active_periods[date] = None
         return active_periods
 
-    def get_openings_for_range(self, start, end=None, include_drafts=False, include_deleted=False, period_type=None, period=None):
+    def get_openings_for_range(self, start, end=None, include_drafts=False,
+                               include_deleted=False, period_type=None, period=None):
         """Returns the opening hours for each date in the range, or None
 
         Parameters:
@@ -208,7 +217,8 @@ class Target(BaseModel):
                 openings[date] = Opening.objects.none()
                 continue
             # get number of requested month since start of active period
-            date_month_number = (date.year - active_periods[date].period.lower.year)*12 + date.month - active_periods[date].period.lower.month + 1
+            date_month_number = ((date.year - active_periods[date].period.lower.year)*12 + date.month
+                                 - active_periods[date].period.lower.month + 1)
             # get number of requested month modulo repetition
             max_month = active_periods[date].max_month
             max_week = active_periods[date].max_week
@@ -234,7 +244,8 @@ class Target(BaseModel):
                     opening_week_number = date_week_number % max_week if date_week_number % max_week else max_week
                 else:
                     opening_week_number = 0
-            openings[date] = active_periods[date].openings.filter(weekday=date.isoweekday(), week=opening_week_number, month=opening_month_number)
+            openings[date] = active_periods[date].openings.filter(
+                weekday=date.isoweekday(), week=opening_week_number, month=opening_month_number)
         return openings
 
 
@@ -255,6 +266,7 @@ class TargetIdentifier(models.Model):
 
     def __str__(self):
         return f'{self.data_source}:{self.origin_id} ({self.target})'
+
 
 class Keyword(BaseModel):
     targets = models.ManyToManyField(Target, related_name='keywords', db_index=True)
@@ -292,38 +304,38 @@ class Period(BaseModel):
         This method is called at each Period save, because Period range dictates the range of
         dates that must be updated. Changing an opening within a period also triggers an update.
         """
-        #print('updating daily hours, current:')
+        # print('updating daily hours, current:')
         current_daily_hours = self.target.daily_hours.filter(date__contained_by=self.period)
-        #print(current_daily_hours.query)
-        #print(current_daily_hours)
+        # print(current_daily_hours.query)
+        # print(current_daily_hours)
         new_openings = self.target.get_openings_for_range(self.period.lower, self.period.upper)
-        #print('openings needed:')
-        #print(new_openings)
+        # print('openings needed:')
+        # print(new_openings)
         to_delete = set(current_daily_hours.values_list('pk', flat=True))
-        #print('delete list:')
-        #print(to_delete)
+        # print('delete list:')
+        # print(to_delete)
         to_add = []
         for date, openings in new_openings.items():
-            #print(date)
+            # print(date)
             for opening in openings:
-                #print(opening)
-                #print(current_daily_hours.filter(date=date))
-                #print(opening.daily_hours)
+                # print(opening)
+                # print(current_daily_hours.filter(date=date))
+                # print(opening.daily_hours)
                 try:
                     existing = current_daily_hours.get(date=date, opening=opening)
-                    #print(existing.pk)
-                    #print('opening exists already')
+                    # print(existing.pk)
+                    # print('opening exists already')
                     # if any opening is still valid, retain it
                     to_delete.discard(existing.pk)
                 except DailyHours.DoesNotExist:
                     # if any opening was not found, add it
-                    #print('opening should be added')
+                    # print('opening should be added')
                     to_add.append(DailyHours(target=self.target, date=date, opening=opening))
-        #print('deleting')
-        #print(to_delete)
+        # print('deleting')
+        # print(to_delete)
         DailyHours.objects.filter(id__in=to_delete).delete()
-        #print('creating')
-        #print(to_add)
+        # print('creating')
+        # print(to_add)
         DailyHours.objects.bulk_create(to_add)
         target = self.target
         target.hours_updated = datetime.now()
@@ -355,21 +367,25 @@ class Opening(models.Model):
         verbose_name_plural = _('Openings')
 
     def __str__(self):
-        return f'{self.period}: {self.week},{self.month}: {Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
+        return f'{self.period}: {self.week}, {self.month}:'\
+            f'{Weekday(self.weekday).label} {Status(self.status).label} {self.opens}-{self.closes}'
 
     def save(self, *args, **kwargs):
+        # TODO: add constraint to prevent identical openings (same status) overlapping?
         super().save(*args, **kwargs)
         self.period.update_daily_hours()
 
 
 class DailyHours(models.Model):
+    # TODO: would it make more sense to have all openings under the same dailyhours, i.e unique target+date?
     target = models.ForeignKey(Target, on_delete=models.CASCADE, related_name='daily_hours', db_index=True)
     date = models.DateField(db_index=True)
     opening = models.ForeignKey(Opening, on_delete=models.CASCADE, related_name='daily_hours', db_index=True)
     last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
     def __str__(self):
-        return f'{self.target}: {self.date} {Status(self.opening.status).label} {self.opening.opens}-{self.opening.closes}'
+        return f'{self.target}:'\
+            f'{self.date} {Status(self.opening.status).label} {self.opening.opens}-{self.opening.closes}'
 
     class Meta:
         constraints = [

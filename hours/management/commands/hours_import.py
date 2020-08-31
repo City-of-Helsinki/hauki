@@ -1,7 +1,5 @@
 import requests_cache
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 
 from hours.importer.base import get_importers
 
@@ -25,8 +23,10 @@ class Command(BaseCommand):
         parser.add_argument('--url', action='store', dest='url', help='Import from a given URL')
         parser.add_argument('--single', action='store', dest='single', help='Import only single entity')
         parser.add_argument('--date', action='store', dest='date', help='Import data starting at given date')
-        parser.add_argument('--remap', action='store_true', dest='remap', help='Remap all deleted entities to new ones')
-        parser.add_argument('--force', action='store_true', dest='force', help='Allow deleting any number of entities if necessary')
+        parser.add_argument('--remap', action='store_true', dest='remap',
+                            help='Remap all deleted entities to new ones')
+        parser.add_argument('--force', action='store_true', dest='force',
+                            help='Allow deleting any number of entities if necessary')
 
         for imp in self.importer_types:
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
@@ -42,8 +42,8 @@ class Command(BaseCommand):
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.
-        #old_lang = get_language()
-        #activate(settings.LANGUAGES[0][0])
+        # old_lang = get_language()
+        # activate(settings.LANGUAGES[0][0])
         for imp_type in self.importer_types:
             print(imp_type)
             name = "import_%s" % imp_type

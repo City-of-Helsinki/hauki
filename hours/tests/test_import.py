@@ -1,23 +1,22 @@
 import pytest
-import requests
 import os
 import json
 from datetime import datetime, date, time
-from itertools import groupby, zip_longest
-from operator import itemgetter
 from django.core.management import call_command
-from hours.models import Target, DataSource, TargetIdentifier, TargetType, Period, Opening, DailyHours, Status
+from hours.models import Target, DataSource, TargetIdentifier, TargetType, Period, Opening, DailyHours
 from django_orghierarchy.models import Organization
-from hours.tests.utils import check_opening_hours, KIRKANTA_STATUS_MAP
+from hours.tests.utils import check_opening_hours
 
 
 def parse_date(date: str) -> date:
     date = datetime.strptime(date, '%Y-%m-%d').date()
     return date
 
+
 def parse_time(time: str) -> time:
     time = datetime.strptime(time, '%H:%M').time()
     return time
+
 
 def check_opening_hours_from_file(test_file_name):
     # Check that all opening hours were saved
@@ -26,6 +25,7 @@ def check_opening_hours_from_file(test_file_name):
     with open(test_file_path) as f:
         test_data = json.load(f)['data']
     check_opening_hours(test_data)
+
 
 @pytest.fixture
 def mock_tprek_data(requests_mock):
@@ -38,6 +38,7 @@ def mock_tprek_data(requests_mock):
     with open(test_file_path) as f:
         return json.load(f)[0]
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def get_mock_library_data(mock_tprek_data, requests_mock):
@@ -46,7 +47,8 @@ def get_mock_library_data(mock_tprek_data, requests_mock):
         kallio = Target.objects.all()[0]
         kallio_kirkanta_id = kallio.identifiers.get(data_source='kirkanta').origin_id
         print(kallio_kirkanta_id)
-        url_to_mock = 'https://api.kirjastot.fi/v4/library/%s/?with=schedules&period.start=2020-06-01&period.end=2021-07-01' % kallio_kirkanta_id
+        url_to_mock = 'https://api.kirjastot.fi/v4/library/%s/'\
+            '?with=schedules&period.start=2020-06-01&period.end=2021-07-01' % kallio_kirkanta_id
         test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
         print(url_to_mock)
         with open(test_file_path) as f:
@@ -54,6 +56,7 @@ def get_mock_library_data(mock_tprek_data, requests_mock):
             requests_mock.get(url_to_mock, text=mock_data)
         call_command('hours_import', 'kirjastot', '--openings', '--single', kallio.id, '--date', '2020-07-15')
     return _mock_library_data
+
 
 @pytest.mark.django_db
 def test_import_tprek(mock_tprek_data):
@@ -76,6 +79,7 @@ def test_import_tprek(mock_tprek_data):
         assert source['source'] in identifiers
         assert identifiers[source['source']].origin_id == source['id']
 
+
 @pytest.mark.django_db
 def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
     test_file_name = 'test_import_kirjastot_data_simple.json'
@@ -88,6 +92,7 @@ def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
 
     # Check daily opening hours
     check_opening_hours_from_file(test_file_name)
+
 
 @pytest.mark.django_db
 def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
@@ -103,6 +108,7 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
 
     # Check daily opening hours
     check_opening_hours_from_file(test_file_name)
+
 
 @pytest.mark.django_db
 def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
@@ -126,7 +132,7 @@ def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
 
 #     # Check daily opening hours
 #     check_opening_hours_from_file(test_file_name)
-    
+
 #     # Change the imported data bounds (as will happen at change of month)
 #     # Ensure the periods are updated sensibly
 #     #test_file_name = 'test_import_kirjastot_data_changed.json'

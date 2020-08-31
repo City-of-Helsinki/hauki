@@ -1,10 +1,12 @@
-from hours.models import Target, DataSource, TargetIdentifier, TargetType, Period, Opening, DailyHours, Status
+from hours.models import Target, DailyHours, Status
+
 
 KIRKANTA_STATUS_MAP = {
     0: Status.CLOSED,
     1: Status.OPEN,
     2: Status.SELF_SERVICE
 }
+
 
 def check_opening_hours(data):
     # Check that all library hours from data are found in db
@@ -52,14 +54,19 @@ def check_opening_hours(data):
     for day in data['schedules']:
         if day['times']:
             for opening in day['times']:
-                daily_hours = DailyHours.objects.get(date=day['date'],
-                                                     target=target,
-                                                     opening__opens=opening['from'],
-                                                     opening__closes=opening['to'],
-                                                     opening__status=KIRKANTA_STATUS_MAP[opening['status']],
-                                                     opening__period__origin_id=day['period'])
+                DailyHours.objects.get(date=day['date'],
+                                       target=target,
+                                       opening__opens=opening['from'],
+                                       opening__closes=opening['to'],
+                                       opening__status=KIRKANTA_STATUS_MAP[opening['status']],
+                                       opening__period__origin_id=day['period'])
         else:
-            daily_hours = DailyHours.objects.get(date=day['date'],
-                                                 target=target,
-                                                 opening__status=Status.CLOSED,
-                                                 opening__period__origin_id=day['period'])
+            print('closed for the day')
+            print(day)
+            try:
+                DailyHours.objects.get(date=day['date'],
+                                       target=target,
+                                       opening__status=Status.CLOSED,
+                                       opening__period__origin_id=day['period'])
+            except DailyHours.DoesNotExist:
+                print('DATA NOT FOUND IN HAUKI')

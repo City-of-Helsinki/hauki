@@ -1,12 +1,10 @@
-import logging
-
 from django import db
-from django.conf import settings
 
-from ..models import Target, TargetIdentifier, DataSource, TargetType
+from ..models import Target, DataSource, TargetType
 from django_orghierarchy.models import Organization
 from .base import Importer, register_importer
 from .sync import ModelSyncher
+
 
 @register_importer
 class TPRekImporter(Importer):
@@ -39,7 +37,8 @@ class TPRekImporter(Importer):
         Takes unit data dict in TPREK v4 API format and returns the corresponding serialized Target data.
         """
         obj_id = 'tprek:%s' % str(data['id'])
-        obj_organization, created = Organization.objects.get_or_create(data_source=self.data_source, origin_id=data['dept_id'])
+        obj_organization, created = Organization.objects.get_or_create(data_source=self.data_source,
+                                                                       origin_id=data['dept_id'])
         if created:
             self.logger.debug('Created missing organization tprek:%s' % data['dept_id'])
         unit_data = {

@@ -5,10 +5,12 @@ from psycopg2.extras import DateRange
 from random import randrange
 from datetime import timedelta, date, time
 
+
 def random_date(start, end):
     delta = end - start
     random_date = randrange(delta.days)
     return start + timedelta(days=random_date)
+
 
 def random_hour(start, end):
     start_hour = start.hour
@@ -19,13 +21,16 @@ def random_hour(start, end):
     random_time = randrange(delta)
     return time((start_hour+random_time) % 24)
 
+
 @pytest.fixture
 def api_client():
-   return APIClient()
+    return APIClient()
+
 
 @pytest.fixture
 def data_source():
     return DataSource.objects.create(id='ds1')
+
 
 @pytest.fixture
 def target(data_source):
@@ -35,35 +40,39 @@ def target(data_source):
                       name='Kallion kirjasto')
     return _target
 
+
 @pytest.fixture
 def long_period(data_source):
     def _long_period(target, origin_id):
         period_id = f'{data_source.id}:{origin_id}'
-        start = random_date(date(2020,1,1), date(2020,12,31))
-        end = random_date(date(2022,1,1), date(2022,12,31))
+        start = random_date(date(2020, 1, 1), date(2020, 12, 31))
+        end = random_date(date(2022, 1, 1), date(2022, 12, 31))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
                       target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _long_period
+
 
 @pytest.fixture
 def medium_period(data_source):
     def _medium_period(target, origin_id):
         period_id = f'{data_source.id}:{origin_id}'
-        start = random_date(date(2021,1,1), date(2021,5,31))
-        end = random_date(date(2021,9,1), date(2021,12,31))
+        start = random_date(date(2021, 1, 1), date(2021, 5, 31))
+        end = random_date(date(2021, 9, 1), date(2021, 12, 31))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
                       target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _medium_period
+
 
 @pytest.fixture
 def short_period(data_source):
     def _short_period(target, origin_id):
         period_id = f'{data_source.id}:{origin_id}'
-        start = random_date(date(2021,7,10), date(2021,7,15))
-        end = random_date(date(2021,7,16), date(2021,7,20))
+        start = random_date(date(2021, 7, 10), date(2021, 7, 15))
+        end = random_date(date(2021, 7, 16), date(2021, 7, 20))
         return Period(id=period_id, data_source=data_source, origin_id=origin_id,
                       target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _short_period
+
 
 @pytest.fixture
 def period_first_week_opening(data_source):
@@ -73,6 +82,7 @@ def period_first_week_opening(data_source):
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _opening
 
+
 @pytest.fixture
 def period_second_week_opening(data_source):
     def _opening(period, weekday):
@@ -81,11 +91,13 @@ def period_second_week_opening(data_source):
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=2)
     return _opening
 
+
 @pytest.fixture
 def period_second_week_closing(data_source):
     def _opening(period, weekday):
         return Opening(weekday=weekday, period=period, status=Status.CLOSED, week=2)
     return _opening
+
 
 @pytest.fixture
 def period_monthly_opening(data_source):
@@ -95,6 +107,7 @@ def period_monthly_opening(data_source):
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=1, month=1)
     return _opening
 
+
 @pytest.fixture
 def period_second_monthly_opening(data_source):
     def _opening(period, weekday):
@@ -103,9 +116,11 @@ def period_second_monthly_opening(data_source):
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes, week=3, month=1)
     return _opening
 
+
 @pytest.fixture
 def module_data_source():
     return DataSource.objects.create(id='sds1')
+
 
 @pytest.fixture
 def module_target(module_data_source):
@@ -115,42 +130,47 @@ def module_target(module_data_source):
                       name='Kallion kirjasto')
     return _target
 
+
 @pytest.fixture
 def targets(db, module_target):
     values = []
-    for id in range(1,11):
+    for id in range(1, 11):
         values.append(module_target(str(id)))
     return Target.objects.bulk_create(values)
+
 
 @pytest.fixture
 def module_long_period(module_data_source):
     def _long_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2020,1,1), date(2020,12,31))
-        end = random_date(date(2022,1,1), date(2022,12,31))
+        start = random_date(date(2020, 1, 1), date(2020, 12, 31))
+        end = random_date(date(2022, 1, 1), date(2022, 12, 31))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _long_period
+
 
 @pytest.fixture
 def module_medium_period(module_data_source):
     def _medium_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2021,1,1), date(2021,5,31))
-        end = random_date(date(2021,9,1), date(2021,12,31))
+        start = random_date(date(2021, 1, 1), date(2021, 5, 31))
+        end = random_date(date(2021, 9, 1), date(2021, 12, 31))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _medium_period
+
 
 @pytest.fixture
 def module_short_period(module_data_source):
     def _short_period(module_target, origin_id):
         period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2021,7,10), date(2021,7,15))
-        end = random_date(date(2021,7,16), date(2021,7,20))
+        start = random_date(date(2021, 7, 10), date(2021, 7, 15))
+        end = random_date(date(2021, 7, 16), date(2021, 7, 20))
         return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
                       target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
     return _short_period
+
 
 @pytest.fixture
 def periods(targets, module_long_period, module_medium_period, module_short_period):
@@ -163,6 +183,7 @@ def periods(targets, module_long_period, module_medium_period, module_short_peri
         values.append(module_short_period(target, f'{target.origin_id}-short2'))
     return Period.objects.bulk_create(values)
 
+
 @pytest.fixture
 def first_opening():
     def _first_opening(period, weekday):
@@ -170,6 +191,7 @@ def first_opening():
         closes = random_hour(time(10), time(13))
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _first_opening
+
 
 @pytest.fixture
 def second_opening():
@@ -179,6 +201,7 @@ def second_opening():
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _second_opening
 
+
 @pytest.fixture
 def third_opening():
     def _third_opening(period, weekday):
@@ -186,6 +209,7 @@ def third_opening():
         closes = random_hour(time(1), time(4))
         return Opening(weekday=weekday, period=period, opens=opens, closes=closes)
     return _third_opening
+
 
 @pytest.fixture
 def openings(periods, first_opening, second_opening, third_opening):

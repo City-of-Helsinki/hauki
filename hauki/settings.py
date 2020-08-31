@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 CONFIG_FILE_NAME = "config_dev.env"
 
+
 def get_git_revision_hash() -> str:
     """
     Retrieve the git hash for the underlying git repository or die trying
@@ -32,6 +33,7 @@ def get_git_revision_hash() -> str:
         # Ditto
         git_hash = "no_repository"
     return git_hash.rstrip()
+
 
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
@@ -142,10 +144,6 @@ INSTALLED_APPS = [
     'hours'
 ] + env('EXTRA_INSTALLED_APPS')
 
-# django-extensions is a set of developer friendly tools
-if env('ENABLE_DJANGO_EXTENSIONS'):
-    MIDDLEWARE.append('django_extensions')
-
 if env('SENTRY_DSN'):
     sentry_sdk.init(
         dsn=env('SENTRY_DSN'),
@@ -175,6 +173,10 @@ if env('ENABLE_WHITENOISE'):
     # Whitenoisemiddleware needs to be installed after securitymiddleware and corsmiddleware
     place = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
     MIDDLEWARE.insert(place, 'whitenoise.middleware.WhiteNoiseMiddleware')
+
+# django-extensions is a set of developer friendly tools
+if env('ENABLE_DJANGO_EXTENSIONS'):
+    MIDDLEWARE.append('django_extensions')
 
 
 ROOT_URLCONF = 'hauki.urls'
@@ -224,7 +226,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # thus some gyrations
 language_map = {x: y for x, y in GLOBAL_LANGUAGES}
 try:
-    LANGUAGES = tuple((l, language_map[l]) for l in env('LANGUAGES'))
+    LANGUAGES = tuple((lang, language_map[lang]) for lang in env('LANGUAGES'))
 except KeyError as e:
     raise ImproperlyConfigured(f"unknown language code \"{e.args[0]}\"")
 LANGUAGE_CODE = env('LANGUAGES')[0]
@@ -302,7 +304,8 @@ if 'SECRET_KEY' not in locals():
         import random
         system_random = random.SystemRandom()
         try:
-            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(64)])
+            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
+                                 for i in range(64)])
             secret = open(secret_file, 'w')
             os.chmod(secret_file, 0o0600)
             secret.write(SECRET_KEY)

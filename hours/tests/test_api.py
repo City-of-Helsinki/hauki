@@ -8,6 +8,7 @@ def assert_data_has_fields(data, fields):
         assert field in data
     assert len(data) == len(fields)
 
+
 def assert_target_has_fields(target):
     fields = (
         'id',
@@ -28,6 +29,7 @@ def assert_target_has_fields(target):
         )
     assert_data_has_fields(target, fields)
 
+
 def assert_period_has_fields(period):
     fields = (
         'id',
@@ -46,6 +48,7 @@ def assert_period_has_fields(period):
         )
     assert_data_has_fields(period, fields)
 
+
 def assert_daily_hours_has_fields(daily_hours):
     fields = (
         'target',
@@ -53,6 +56,7 @@ def assert_daily_hours_has_fields(daily_hours):
         'opening'
         )
     assert_data_has_fields(daily_hours, fields)
+
 
 @pytest.mark.django_db
 def test_get_target_list(api_client, django_assert_max_num_queries, targets):
@@ -64,12 +68,14 @@ def test_get_target_list(api_client, django_assert_max_num_queries, targets):
     for target in response.data['results']:
         assert_target_has_fields(target)
 
+
 @pytest.mark.django_db
 def test_get_target_detail(api_client, targets):
     url = reverse('target-detail', kwargs={'pk': targets[0].id})
     response = api_client.get(url)
     assert response.status_code == 200
     assert_target_has_fields(response.data)
+
 
 @pytest.mark.django_db
 def test_get_period_list(api_client, django_assert_max_num_queries, periods):
@@ -81,12 +87,14 @@ def test_get_period_list(api_client, django_assert_max_num_queries, periods):
     for period in response.data['results']:
         assert_period_has_fields(period)
 
+
 @pytest.mark.django_db
 def test_get_period_detail(api_client, periods):
     url = reverse('period-detail', kwargs={'pk': periods[0].id})
     response = api_client.get(url)
     assert response.status_code == 200
     assert_period_has_fields(response.data)
+
 
 def test_generate_and_get_daily_hours_list(api_client, django_assert_max_num_queries, periods, openings):
     # check generate performance

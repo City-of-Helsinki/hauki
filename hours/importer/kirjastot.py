@@ -1,7 +1,5 @@
-import logging
 from itertools import groupby
 from operator import itemgetter
-from collections import OrderedDict
 from datetime import date, datetime
 from psycopg2.extras import DateRange
 import pandas as pd
@@ -13,10 +11,9 @@ import holidays
 from django import db
 from django.conf import settings
 
-from ..models import Target, TargetIdentifier, DataSource, Period, Status, Weekday, DailyHours
+from ..models import Target, DataSource, Period, Status, Weekday, DailyHours
 from ..tests.utils import check_opening_hours
 from .base import Importer, register_importer
-from .sync import ModelSyncher
 
 KIRKANTA_STATUS_MAP = {
     0: Status.CLOSED,
@@ -24,6 +21,7 @@ KIRKANTA_STATUS_MAP = {
     2: Status.SELF_SERVICE
 }
 fi_holidays = holidays.Finland()
+
 
 @register_importer
 class KirjastotImporter(Importer):
@@ -41,7 +39,7 @@ class KirjastotImporter(Importer):
         return date
 
     @staticmethod
-    def get_date_range(start: date=None, back: int = 1, forward: int = 12) -> (date, date):
+    def get_date_range(start: date = None, back: int = 1, forward: int = 12) -> (date, date):
         """
         Returns a date range of "back" months before and "forward" months after given date, or today.
         """
@@ -49,7 +47,7 @@ class KirjastotImporter(Importer):
         begin = base.last_month(back).date.replace(day=1)
         end = base.next_month(forward).date.replace(day=1)
         return begin, end
-            
+
     def get_hours_from_api(self, target: Target, start: date, end: date) -> dict:
         """
         Fetch opening hours for Target from kirjastot.fi's v4 API for the given date range.
@@ -82,8 +80,8 @@ class KirjastotImporter(Importer):
             first_opening['times'].sort(key=itemgetter('status', 'from', 'to'))
             second_opening['times'].sort(key=itemgetter('status', 'from', 'to'))
             if (first_opening['period'] == period_id and
-                second_opening['period'] == period_id and
-                first_opening['times'] != second_opening['times']):
+                    second_opening['period'] == period_id and
+                    first_opening['times'] != second_opening['times']):
                 return False
         return True
 
@@ -92,7 +90,7 @@ class KirjastotImporter(Importer):
         Returns the pattern for n consecutive weeks from weekday_openings_by_date,
         merging data from several repetitions to find all n weeks with period_id.
         """
-        first_n_weeks =  weekday_openings_by_date[0:n]
+        first_n_weeks = weekday_openings_by_date[0:n]
         weeks_to_return = []
         for index, weekly_opening in enumerate(first_n_weeks):
             try:
@@ -122,7 +120,7 @@ class KirjastotImporter(Importer):
         # 1st (preprocess): group by differing times for the same weekday, if found, and find the repetitions
         repetition_pattern = {}
         for weekday, openings_by_date in openings_by_weekday:
-            openings_by_date=list(openings_by_date)
+            openings_by_date = list(openings_by_date)
             n_weeks = len(openings_by_date)
             pattern_candidate = []
             # starting from the assumption that the openings repeat weekly, we increase the repetition by
@@ -145,7 +143,7 @@ class KirjastotImporter(Importer):
         max_week = np.lcm.reduce(repetition_lengths)
         # however, len(data) is the maximum, no need to do more than that!
         if max_week > len(data)/7:
-             max_week = int(ceil(len(data)/7))
+            max_week = int(ceil(len(data)/7))
         if max_week > 1:
             self.logger.debug("Detected repetition of %s weeks in period %s" % (max_week, period_id))
         # first week may be partial, so openings for some weekdays start from the second week,
@@ -250,12 +248,12 @@ class KirjastotImporter(Importer):
                 try:
                     periods = self.get_periods(library, data)
                     for period_data in periods:
-                        period = self.save_period(period_data)
+                        self.save_period(period_data)
                     check_opening_hours(data)
                     # TODO: cannot use syncher here, past periods are still valid even though not present in data
                     # TODO: however, we should delete periods that have no active openings, they are remnants from
                     # previous imports
-                except Exception as e:
+                except Exception:
                     import traceback
                     print("Problem in processing data of library ", library, traceback.format_exc())
             else:

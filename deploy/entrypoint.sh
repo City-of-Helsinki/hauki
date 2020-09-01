@@ -54,8 +54,16 @@ elif [ "$1" = "migrate" ]; then
 elif [ "$1" = "test" ]; then
     _log_boxed "Running tests"
     pytest
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
     _log_boxed "Running lint"
     flake8
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
 elif [ "$1" = "e" ]; then
     shift
     _log_boxed "exec'n $@"

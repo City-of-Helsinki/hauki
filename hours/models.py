@@ -277,11 +277,11 @@ class Keyword(BaseModel):
 
 
 class Period(BaseModel):
+    # TODO: allow periods without target! i.e. saved period drafts that can be copied to target
     target = models.ForeignKey(Target, on_delete=models.PROTECT, related_name='periods', db_index=True)
     status = models.IntegerField(choices=Status.choices, default=Status.OPEN, db_index=True)
     override = models.BooleanField(default=False, db_index=True)
     period = DateRangeField()
-
 
     class Meta(BaseModel.Meta):
         verbose_name = _('Period')
@@ -289,7 +289,7 @@ class Period(BaseModel):
         indexes = [
             GistIndex(fields=['period'])
         ]
-    
+
     def __str__(self):
         return f'{self.target}:{self.period})'
 

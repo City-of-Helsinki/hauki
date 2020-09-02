@@ -2,7 +2,6 @@ from itertools import groupby
 from operator import itemgetter
 from datetime import date, datetime
 from psycopg2.extras import DateRange
-import pandas as pd
 import numpy as np
 from math import ceil
 import delorean
@@ -11,7 +10,7 @@ import holidays
 from django import db
 from django.conf import settings
 
-from ..models import Target, DataSource, Period, Status, Weekday, DailyHours
+from ..models import Target, DataSource, Status, Weekday
 from ..tests.utils import check_opening_hours
 from .base import Importer, register_importer
 

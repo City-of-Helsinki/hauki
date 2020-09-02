@@ -205,7 +205,9 @@ class Importer(object):
         # Saving updates the daily hours for the duration of the period
         obj.save()
 
+
 importers = {}
+
 
 def register_importer(klass):
     importers[klass.name] = klass

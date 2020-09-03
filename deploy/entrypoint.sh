@@ -52,6 +52,18 @@ elif [ "$1" = "migrate" ]; then
     _log_boxed "Updating language fields & installing templates"
     deploy/init_application.sh
 elif [ "$1" = "test" ]; then
+    _log_boxed "Running safety"
+    safety check
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
+    _log_boxed "Running bandit"
+    bandit -r . -ll
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
     _log_boxed "Running tests"
     pytest
     exitcode=$?

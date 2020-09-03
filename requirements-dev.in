@@ -7,3 +7,5 @@ pytest-django
 requests-mock
 django-extensions
 jupyter
+safety
+bandit

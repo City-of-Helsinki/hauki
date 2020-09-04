@@ -39,6 +39,7 @@ root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
     DJANGO_LOG_LEVEL=(str, 'INFO'),
+    CONN_MAX_AGE=(str, 0),
     SYSTEM_DATA_SOURCE_ID=(str, 'hauki'),
     LANGUAGES=(list, ['fi', 'sv', 'en']),
     DATABASE_URL=(str, 'postgres:///hauki'),
@@ -88,6 +89,8 @@ INTERNAL_IPS = env('INTERNAL_IPS',
 DATABASES = {
     'default': env.db()
 }
+
+CONN_MAX_AGE = env('CONN_MAX_AGE')
 
 AUTH_USER_MODEL = 'users.User'
 

@@ -1,0 +1,4 @@
+Elastic APM injection
+---------------------
+Files in this folder inject Elastic APM support into Hauki Docker image.
+That is they generate an additional image containing APM support.

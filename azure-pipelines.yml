@@ -40,18 +40,23 @@ stages:
         includeSourceTags: true
         includeLatestTag: true
     - task: Docker@2
-      displayName: Save deployment image to TAR
+      displayName: Build APM enhanced image
+      inputs:
+        repository: '$(ImageName)'
+        command: build
+        tags: 'apm'
+        Dockerfile: deploy/elastic_apm_injection/Dockerfile
+        arguments: --build-arg BASE_IMAGE=$(ImageName)
+    - script: |
+        docker tag hauki_dev:latest hauki:dev_latest
+        docker rmi hauki_dev
+      displayName:
+    - task: Docker@2
+      displayName: Save hauki image repository to TAR
       inputs:
         repository: '$(ImageName)'
         command: save
         arguments: '--output $(build.artifactstagingdirectory)/$(ImageName).image.tar $(ImageName)'
-        addPipelineData: false
-    - task: Docker@2
-      displayName: Save dev/test image to TAR
-      inputs:
-        repository: '$(ImageName)_dev'
-        command: save
-        arguments: '--output $(build.artifactstagingdirectory)/$(ImageName)_dev.image.tar $(ImageName)_dev'
         addPipelineData: false
     - publish: $(build.artifactstagingdirectory)
       artifact: ContainerImages
@@ -62,14 +67,17 @@ stages:
     displayName: Test the dev image
     steps:
       - task: DownloadPipelineArtifact@2
-        displayName: Download images
+        displayName: Download hauki repository TAR
         inputs:
           artifact: ContainerImages
       - task: Docker@2
-        displayName: Load dev image from Tar
+        displayName: Load hauki repository from TAR
         inputs:
           command: load
-          arguments: '--input $(Pipeline.Workspace)/$(ImageName)_dev.image.tar'
+          arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
+      - script: |
+          docker tag hauki:dev_latest hauki_dev:latest
+        displayName: Add hauki_dev name back to image for docker-compose
       - task: DockerCompose@0
         displayName: Run tests
         inputs:
@@ -82,28 +90,20 @@ stages:
     displayName: Push deploy image to registry
     steps:
       - task: DownloadPipelineArtifact@2
-        displayName: Download images
+        displayName: Download image repo TAR
         inputs:
           artifact: ContainerImages
       - task: Docker@2
-        displayName: Load production image from Tar
+        displayName: Load image repository from TAR
         inputs:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
-      - task: Docker@2
-        displayName: Rename the image
-        inputs:
-          containerRegistry: Docker hub upload
-          repository: $(ImageName)
-          command: tag
-          arguments: $(ImageName):latest helsinki/$(ImageName):latest
-      - task: Docker@2
-        displayName: Rename the image
-        inputs:
-          containerRegistry: Docker hub upload
-          repository: $(ImageName)
-          command: tag
-          arguments: $(ImageName):latest helsinki/$(ImageName):$(tag)
+      - script: |
+          docker tag $(ImageName):latest helsinki/$(ImageName):latest
+          docker tag $(ImageName):latest helsinki/$(ImageName):$(tag)
+          docker tag $(ImageName):apm helsinki/$(ImageName):latest_apm
+          docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_apm
+        displayName: Do image retagging for helsinki repo
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:
@@ -113,6 +113,8 @@ stages:
           tags: |
             latest
             $(tag)
+            latest_apm
+            $(tag)_apm
 - stage: Deploy
   displayName: Deploy to Openshift
   jobs:

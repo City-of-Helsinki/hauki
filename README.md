@@ -91,7 +91,7 @@ Initiate a virtualenv and install the Python requirements plus development requi
 pyenv virtualenv hauki-env
 pyenv local hauki-env
 pip install -r requirements.txt
-pip install -r dev-requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 Copy the development config file example `config_dev.env.example` to `config_dev.env` 

@@ -75,6 +75,11 @@ createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 
 ### Development
 
+#### Prerequisites
+
+* [Pyenv](https://github.com/pyenv/pyenv)
+* [Pyenv virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+
 Clone the repo:
 ```
 git clone https://github.com/City-of-Helsinki/hauki.git

@@ -29,18 +29,18 @@ cd hauki
 docker-compose run dev
 ```
 
+Copy the development config file example `config_dev.env.example`
+to `config_dev.env` (edit if you want to change dev settings):
+```
+cp config_dev.env.example config_dev.env
+```
+
 and open your browser to http://127.0.0.1:8000/.
 
 Run tests with 
 
 ```
 docker-compose run dev test
-```
-
-If you wish to change settings when developing, copy the development config file example `config_dev.env.example`
-to `config_dev.env`:
-```
-cp config_dev.env.example config_dev.env
 ```
 
 Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate

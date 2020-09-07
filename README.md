@@ -75,6 +75,11 @@ createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 
 ### Development
 
+#### Prerequisites
+
+* [Pyenv](https://github.com/pyenv/pyenv)
+* [Pyenv virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+
 Clone the repo:
 ```
 git clone https://github.com/City-of-Helsinki/hauki.git
@@ -86,7 +91,7 @@ Initiate a virtualenv and install the Python requirements plus development requi
 pyenv virtualenv hauki-env
 pyenv local hauki-env
 pip install -r requirements.txt
-pip install -r dev-requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 Copy the development config file example `config_dev.env.example` to `config_dev.env` 

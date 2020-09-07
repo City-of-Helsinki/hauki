@@ -30,7 +30,7 @@ docker-compose run dev
 ```
 
 Copy the development config file example `config_dev.env.example`
-to `config_dev.env` (edit if you want to change dev settings):
+to `config_dev.env` (feel free to edit the configuration file if you have any settings you wish to change):
 ```
 cp config_dev.env.example config_dev.env
 ```

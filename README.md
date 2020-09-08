@@ -26,7 +26,13 @@ The easiest way to develop is
 ```
 git clone https://github.com/City-of-Helsinki/hauki.git
 cd hauki
-docker-compose run dev
+```
+
+Copy the development config file example `config_dev.env.example`
+to `config_dev.env` (feel free to edit the configuration file if you have any settings you wish to change):
+```
+cp config_dev.env.example config_dev.env
+docker-compose up dev
 ```
 
 and open your browser to http://127.0.0.1:8000/.
@@ -35,12 +41,6 @@ Run tests with
 
 ```
 docker-compose run dev test
-```
-
-If you wish to change settings when developing, copy the development config file example `config_dev.env.example`
-to `config_dev.env`:
-```
-cp config_dev.env.example config_dev.env
 ```
 
 Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate
@@ -75,6 +75,11 @@ createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 
 ### Development
 
+#### Prerequisites
+
+* [Pyenv](https://github.com/pyenv/pyenv)
+* [Pyenv virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+
 Clone the repo:
 ```
 git clone https://github.com/City-of-Helsinki/hauki.git
@@ -86,7 +91,7 @@ Initiate a virtualenv and install the Python requirements plus development requi
 pyenv virtualenv hauki-env
 pyenv local hauki-env
 pip install -r requirements.txt
-pip install -r dev-requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 Copy the development config file example `config_dev.env.example` to `config_dev.env` 

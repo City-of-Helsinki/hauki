@@ -294,7 +294,9 @@ local_settings_path = os.path.join(BASE_DIR, "local_settings.py")
 if os.path.exists(local_settings_path):
     with open(local_settings_path) as fp:
         code = compile(fp.read(), local_settings_path, 'exec')
-    exec(code, globals(), locals())
+    # Here, we execute local code on the server. Luckily, local_settings.py and BASE_DIR
+    # are hard-coded above, so this cannot be used to execute any other files.
+    exec(code, globals(), locals())  # nosec
 
 
 # If a secret key was not supplied from elsewhere, generate a random one

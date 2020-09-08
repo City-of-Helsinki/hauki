@@ -26,13 +26,13 @@ The easiest way to develop is
 ```
 git clone https://github.com/City-of-Helsinki/hauki.git
 cd hauki
-docker-compose run dev
 ```
 
 Copy the development config file example `config_dev.env.example`
 to `config_dev.env` (feel free to edit the configuration file if you have any settings you wish to change):
 ```
 cp config_dev.env.example config_dev.env
+docker-compose up dev
 ```
 
 and open your browser to http://127.0.0.1:8000/.

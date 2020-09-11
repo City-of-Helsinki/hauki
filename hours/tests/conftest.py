@@ -33,11 +33,25 @@ def data_source():
 
 
 @pytest.fixture
+def another_data_source():
+    return DataSource.objects.create(id='ds2')
+
+
+@pytest.fixture
 def target(data_source):
     def _target(origin_id):
         target_id = f'{data_source.id}:{origin_id}'
         return Target(id=target_id, data_source=data_source, origin_id=origin_id,
                       name='Kallion kirjasto')
+    return _target
+
+
+@pytest.fixture
+def another_target(another_data_source):
+    def _target(origin_id):
+        target_id = f'{another_data_source.id}:{origin_id}'
+        return Target(id=target_id, data_source=another_data_source, origin_id=origin_id,
+                      name='Ryhmätyötila Otso')
     return _target
 
 
@@ -118,69 +132,30 @@ def period_second_monthly_opening(data_source):
 
 
 @pytest.fixture
-def module_data_source():
-    return DataSource.objects.create(id='sds1')
-
-
-@pytest.fixture
-def module_target(module_data_source):
-    def _target(origin_id):
-        target_id = f'{module_data_source.id}:{origin_id}'
-        return Target(id=target_id, data_source=module_data_source, origin_id=origin_id,
-                      name='Kallion kirjasto')
-    return _target
-
-
-@pytest.fixture
-def targets(db, module_target):
+def targets(db, target):
     values = []
     for id in range(1, 11):
-        values.append(module_target(str(id)))
+        values.append(target(str(id)))
     return Target.objects.bulk_create(values)
 
 
 @pytest.fixture
-def module_long_period(module_data_source):
-    def _long_period(module_target, origin_id):
-        period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2020, 1, 1), date(2020, 12, 31))
-        end = random_date(date(2022, 1, 1), date(2022, 12, 31))
-        return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
-    return _long_period
+def more_targets(db, another_target):
+    values = []
+    for id in range(1, 11):
+        values.append(another_target(str(id)))
+    return Target.objects.bulk_create(values)
 
 
 @pytest.fixture
-def module_medium_period(module_data_source):
-    def _medium_period(module_target, origin_id):
-        period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2021, 1, 1), date(2021, 5, 31))
-        end = random_date(date(2021, 9, 1), date(2021, 12, 31))
-        return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
-    return _medium_period
-
-
-@pytest.fixture
-def module_short_period(module_data_source):
-    def _short_period(module_target, origin_id):
-        period_id = f'{module_data_source.id}:{origin_id}'
-        start = random_date(date(2021, 7, 10), date(2021, 7, 15))
-        end = random_date(date(2021, 7, 16), date(2021, 7, 20))
-        return Period(id=period_id, data_source=module_data_source, origin_id=origin_id,
-                      target=module_target, period=DateRange(lower=start, upper=end, bounds='[]'))
-    return _short_period
-
-
-@pytest.fixture
-def periods(targets, module_long_period, module_medium_period, module_short_period):
+def periods(targets, long_period, medium_period, short_period):
     values = []
     for target in targets:
         # each target should have long and medium range and some exceptions
-        values.append(module_long_period(target, target.origin_id))
-        values.append(module_medium_period(target, f'{target.origin_id}-medium'))
-        values.append(module_short_period(target, f'{target.origin_id}-short1'))
-        values.append(module_short_period(target, f'{target.origin_id}-short2'))
+        values.append(long_period(target, target.origin_id))
+        values.append(medium_period(target, f'{target.origin_id}-medium'))
+        values.append(short_period(target, f'{target.origin_id}-short1'))
+        values.append(short_period(target, f'{target.origin_id}-short2'))
     return Period.objects.bulk_create(values)
 
 

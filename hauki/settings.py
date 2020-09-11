@@ -90,7 +90,7 @@ DATABASES = {
     'default': env.db()
 }
 
-CONN_MAX_AGE = env('CONN_MAX_AGE')
+DATABASES['default']['CONN_MAX_AGE'] = env('CONN_MAX_AGE')
 
 AUTH_USER_MODEL = 'users.User'
 

@@ -1,4 +1,5 @@
 from rest_framework import routers, serializers, viewsets
+from drf_extra_fields.fields import DateRangeField
 
 from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
 
@@ -94,13 +95,14 @@ class TargetSerializer(serializers.HyperlinkedModelSerializer):
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    period = DateRangeField()
     openings = OpeningSerializer(many=True)
     status = IntegerChoiceField(choices=Status)
 
     class Meta:
         model = Period
-        fields = ['id', 'data_source', 'origin_id', 'target', 'name', 'description',
-                  'status', 'override', 'period', 'created_time', 'last_modified_time',
+        fields = ['id', 'data_source', 'origin_id', 'target',  'period', 'name', 'description',
+                  'status', 'override', 'created_time', 'last_modified_time',
                   'publication_time', 'openings']
 
 

@@ -4,6 +4,7 @@ django-environ
 django-reversion
 psycopg2
 djangorestframework
+django-extra-fields
 django-filter
 django-helusers
 django-orghierarchy

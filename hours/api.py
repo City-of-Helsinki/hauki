@@ -1,4 +1,4 @@
-from rest_framework import routers, serializers, viewsets, filters
+from rest_framework import routers, serializers, viewsets
 
 from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
 
@@ -107,7 +107,7 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Target.objects.all().prefetch_related('identifiers')
     serializer_class = TargetSerializer
-    filter_backends = [filters.OrderingFilter]
+    filterset_fields = ['data_source']
 
 
 register_view(TargetViewSet, 'target')
@@ -116,8 +116,8 @@ register_view(TargetViewSet, 'target')
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Period.objects.all().prefetch_related('openings')
     serializer_class = PeriodSerializer
-    filter_backends = [filters.OrderingFilter]
     ordering = ['target']
+    filterset_fields = ['target']
 
 
 register_view(PeriodViewSet, 'period')
@@ -126,8 +126,8 @@ register_view(PeriodViewSet, 'period')
 class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DailyHours.objects.all().select_related('opening')
     serializer_class = DailyHoursSerializer
-    filter_backends = [filters.OrderingFilter]
     ordering = ['date', 'target']
+    filterset_fields = ['target']
 
 
 register_view(DailyHoursViewSet, 'daily_hours')

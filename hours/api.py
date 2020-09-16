@@ -1,5 +1,9 @@
-from rest_framework import routers, serializers, viewsets
+from rest_framework import routers, serializers, viewsets, filters
+from django.forms import TextInput
+import django_filters
 from drf_extra_fields.fields import DateRangeField
+from datetime import datetime, date, MINYEAR, MAXYEAR
+from psycopg2.extras import DateRange
 
 from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
 
@@ -11,6 +15,17 @@ def register_view(klass, name, basename=None):
     if basename is not None:
         entry['basename'] = basename
     all_views.append(entry)
+
+
+def parse_date(date: str) -> date:
+    """
+    Parses given string as python date.
+    """
+    if not date:
+        return None
+    if date == 'today':
+        return datetime.now().date()
+    return datetime.strptime(date, '%Y-%m-%d').date()
 
 
 class APIRouter(routers.DefaultRouter):
@@ -115,21 +130,64 @@ class TargetViewSet(viewsets.ReadOnlyModelViewSet):
 register_view(TargetViewSet, 'target')
 
 
+class DateFilterBackend(filters.BaseFilterBackend):
+    """
+    Filters periods and daily hours based on date overlap.
+    """
+    def filter_queryset(self, request, queryset, view):
+        start = parse_date(request.query_params.get('start', None))
+        end = parse_date(request.query_params.get('end', None))
+        if not start:
+            start = date(MINYEAR, 1, 1)
+        if not end:
+            end = date(MAXYEAR, 12, 31)
+        query_period = DateRange(start, end, bounds='[]')
+        if hasattr(queryset.model, 'period'):
+            return queryset.filter(period__overlap=query_period)
+        if hasattr(queryset.model, 'date'):
+            return queryset.filter(date__contained_by=query_period)
+        return queryset
+
+
+class PeriodFilterSet(django_filters.FilterSet):
+    target = django_filters.ModelChoiceFilter(queryset=Target.objects.all(),
+                                              widget=TextInput())
+
+    class Meta:
+        model = Period
+        fields = ['target']
+
+
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Period.objects.all().prefetch_related('openings')
     serializer_class = PeriodSerializer
     ordering = ['target']
-    filterset_fields = ['target']
+    filterset_class = PeriodFilterSet
+    filter_backends = [filters.OrderingFilter,
+                       django_filters.rest_framework.DjangoFilterBackend,
+                       DateFilterBackend]
 
 
 register_view(PeriodViewSet, 'period')
+
+
+class DailyHoursFilterSet(django_filters.FilterSet):
+    target = django_filters.ModelChoiceFilter(queryset=Target.objects.all(),
+                                              widget=TextInput())
+
+    class Meta:
+        model = DailyHours
+        fields = ['target']
 
 
 class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DailyHours.objects.all().select_related('opening')
     serializer_class = DailyHoursSerializer
     ordering = ['date', 'target']
-    filterset_fields = ['target']
+    filterset_class = DailyHoursFilterSet
+    filter_backends = [filters.OrderingFilter,
+                       django_filters.rest_framework.DjangoFilterBackend,
+                       DateFilterBackend]
 
 
 register_view(DailyHoursViewSet, 'daily_hours')

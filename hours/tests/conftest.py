@@ -89,6 +89,17 @@ def short_period(data_source):
 
 
 @pytest.fixture
+def late_period(data_source):
+    def _late_period(target, origin_id):
+        period_id = f'{data_source.id}:{origin_id}'
+        start = random_date(date(2022, 7, 1), date(2022, 9, 30))
+        end = random_date(date(2022, 10, 1), date(2022, 12, 31))
+        return Period(id=period_id, data_source=data_source, origin_id=origin_id,
+                      target=target, period=DateRange(lower=start, upper=end, bounds='[]'))
+    return _late_period
+
+
+@pytest.fixture
 def period_first_week_opening(data_source):
     def _opening(period, weekday):
         opens = random_hour(time(7), time(8))
@@ -148,7 +159,7 @@ def more_targets(db, another_target):
 
 
 @pytest.fixture
-def periods(targets, long_period, medium_period, short_period):
+def periods(targets, long_period, medium_period, short_period, late_period):
     values = []
     for target in targets:
         # each target should have long and medium range and some exceptions
@@ -156,6 +167,7 @@ def periods(targets, long_period, medium_period, short_period):
         values.append(medium_period(target, f'{target.origin_id}-medium'))
         values.append(short_period(target, f'{target.origin_id}-short1'))
         values.append(short_period(target, f'{target.origin_id}-short2'))
+        values.append(late_period(target, f'{target.origin_id}-late'))
     return Period.objects.bulk_create(values)
 
 

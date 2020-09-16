@@ -1,6 +1,13 @@
 import pytest
 import time
+from datetime import date, datetime
 from django.urls import reverse
+from freezegun import freeze_time
+
+
+first_date = date(2020, 12, 31)
+second_date = date(2022, 1, 1)
+third_date = date(2022, 6, 30)
 
 
 def assert_data_has_fields(data, fields):
@@ -95,7 +102,7 @@ def test_get_period_list(api_client, django_assert_max_num_queries, periods):
     with django_assert_max_num_queries(3):
         response = api_client.get(url)
     assert response.status_code == 200
-    assert response.data['count'] == 40
+    assert response.data['count'] == 50
     for period in response.data['results']:
         assert_period_has_fields(period)
 
@@ -106,10 +113,78 @@ def test_filter_period_list(api_client, django_assert_max_num_queries, periods):
     with django_assert_max_num_queries(4):
         response = api_client.get(url)
     assert response.status_code == 200
-    assert response.data['count'] == 4
+    assert response.data['count'] == 5
     for period in response.data['results']:
         assert_period_has_fields(period)
         assert reverse('target-detail', kwargs={'pk': 'ds1:1'}) in period['target']
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('input_string', ('?start=today', '?start=' + str(second_date)))
+@freeze_time(second_date)
+def test_start_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
+    print(input_string)
+    url = reverse('period-list') + input_string
+    with django_assert_max_num_queries(4):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    assert response.data['count'] == 20
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we only return ongoing and future periods
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= second_date
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('input_string', ('?end=today', '?end=' + str(first_date)))
+@freeze_time(first_date)
+def test_end_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
+    print(input_string)
+    url = reverse('period-list') + input_string
+    with django_assert_max_num_queries(4):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    assert response.data['count'] == 10
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we only return ongoing and past periods
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= first_date
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('input_string', ('?start=today&end=' + str(third_date),
+                                          '?start=' + str(second_date) + '&end=' + str(third_date)))
+@freeze_time(second_date)
+def test_start_today_end_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
+    print(input_string)
+    url = reverse('period-list') + input_string
+    with django_assert_max_num_queries(4):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    assert response.data['count'] == 10
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for first part of 2022
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= second_date
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= third_date
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('input_string', ('?start=' + str(second_date) + '&end=today',
+                                          '?start=' + str(second_date) + '&end=' + str(third_date)))
+@freeze_time(third_date)
+def test_end_today_start_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
+    print(input_string)
+    url = reverse('period-list') + input_string
+    with django_assert_max_num_queries(4):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    assert response.data['count'] == 10
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for first part of 2022
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= second_date
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= third_date
 
 
 @pytest.mark.django_db
@@ -120,6 +195,8 @@ def test_get_period_detail(api_client, periods):
     assert_period_has_fields(response.data)
 
 
+@pytest.mark.django_db
+@freeze_time(first_date)
 def test_generate_get_and_filter_daily_hours_list(api_client, django_assert_max_num_queries, periods, openings):
     # check generate performance
     start_time = time.process_time()
@@ -144,7 +221,7 @@ def test_generate_get_and_filter_daily_hours_list(api_client, django_assert_max_
     for daily_hours in response.data['results']:
         assert_daily_hours_has_fields(daily_hours)
 
-    # check filter performance
+    # check target filter performance
     start_time = time.process_time()
     url = reverse('dailyhours-list') + '?target=ds1:1'
     with django_assert_max_num_queries(3):
@@ -159,3 +236,20 @@ def test_generate_get_and_filter_daily_hours_list(api_client, django_assert_max_
     for daily_hours in response.data['results']:
         assert_daily_hours_has_fields(daily_hours)
         assert reverse('target-detail', kwargs={'pk': 'ds1:1'}) in daily_hours['target']
+
+    # check date filter performance
+    start_time = time.process_time()
+    url = reverse('dailyhours-list') + '?start=today&end=' + str(second_date)
+    with django_assert_max_num_queries(3):
+        response = api_client.get(url)
+    print('daily hours filtered')
+    print(time.process_time() - start_time)
+    assert (time.process_time() - start_time < 0.02)
+
+    # check first 100 items
+    assert response.status_code == 200
+    assert response.data['count'] < 4000
+    for daily_hours in response.data['results']:
+        assert_daily_hours_has_fields(daily_hours)
+        assert datetime.strptime(daily_hours['date'], '%Y-%m-%d').date() >= first_date
+        assert datetime.strptime(daily_hours['date'], '%Y-%m-%d').date() <= second_date

@@ -5,6 +5,7 @@ pytest
 pytest-cov
 pytest-django
 requests-mock
+freezegun
 django-extensions
 jupyter
 safety

@@ -15,6 +15,7 @@ variables:
   azureSubscription: HKI-kanslia-standalone
   appName: hauki
   containerRegistry: registry.hub.docker.com
+  tag_postfix: '_apm'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -125,4 +126,4 @@ stages:
         displayName: Add OC tag to latest image
         inputs:
           openshiftService: 'Azure OpenShift'
-          cmd: 'tag docker.io/helsinki/hauki:$(tag) hauki-backend:latest'
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:latest'

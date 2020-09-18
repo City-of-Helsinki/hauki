@@ -4,6 +4,7 @@ Django settings for hauki project.
 
 import os
 import environ
+import logging
 import sentry_sdk
 import subprocess
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -12,6 +13,9 @@ from django.core.exceptions import ImproperlyConfigured
 
 CONFIG_FILE_NAME = "config_dev.env"
 
+# This will get default settings, as Django has not yet initialized
+# logging when importing this file
+logger = logging.getLogger(__name__)
 
 def get_git_revision_hash() -> str:
     """
@@ -296,7 +300,7 @@ SECRET_KEY = env('SECRET_KEY')
 # expecting SECRET_KEY to stay same will break upon restart. Should not be a
 # problem for development.
 if not SECRET_KEY:
-    print("WARNING: SECRET_KEY was not defined in configuration. Generating a temporary key for dev.")
+    logger.warn("SECRET_KEY was not defined in configuration. Generating a temporary key for dev.")
     import random
     system_random = random.SystemRandom()
     SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')

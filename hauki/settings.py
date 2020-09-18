@@ -130,8 +130,8 @@ LOGGING = {
 # Application definition
 
 INSTALLED_APPS = [
-    'helusers',
-    'django.contrib.admin',
+    'helusers.apps.HelusersConfig',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',

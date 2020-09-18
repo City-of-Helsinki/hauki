@@ -6,6 +6,6 @@ fi
 
 ./manage.py migrate
 
-$HOME/deploy/init_application.sh
+deploy/init_application.sh
 
 exec ./manage.py runserver 0:8000

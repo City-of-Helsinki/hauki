@@ -1,6 +1,6 @@
 import pytest
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from django.urls import reverse
 from freezegun import freeze_time
 
@@ -120,12 +120,12 @@ def test_filter_period_list(api_client, django_assert_max_num_queries, periods):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('input_string', ('?start=today', '?start=' + str(second_date)))
+@pytest.mark.parametrize('input_string', ('?start=today', '?start=-0d', '?start=' + str(second_date)))
 @freeze_time(second_date)
 def test_start_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
     print(input_string)
     url = reverse('period-list') + input_string
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(3):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 20
@@ -136,12 +136,11 @@ def test_start_filter_period_list(api_client, django_assert_max_num_queries, per
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('input_string', ('?end=today', '?end=' + str(first_date)))
+@pytest.mark.parametrize('input_string', ('?end=today', '?end=-0d', '?end=' + str(first_date)))
 @freeze_time(first_date)
 def test_end_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
-    print(input_string)
     url = reverse('period-list') + input_string
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(3):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 10
@@ -156,9 +155,8 @@ def test_end_filter_period_list(api_client, django_assert_max_num_queries, perio
                                           '?start=' + str(second_date) + '&end=' + str(third_date)))
 @freeze_time(second_date)
 def test_start_today_end_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
-    print(input_string)
     url = reverse('period-list') + input_string
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(3):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 10
@@ -174,9 +172,8 @@ def test_start_today_end_filter_period_list(api_client, django_assert_max_num_qu
                                           '?start=' + str(second_date) + '&end=' + str(third_date)))
 @freeze_time(third_date)
 def test_end_today_start_filter_period_list(api_client, django_assert_max_num_queries, periods, input_string):
-    print(input_string)
     url = reverse('period-list') + input_string
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(3):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 10
@@ -185,6 +182,71 @@ def test_end_today_start_filter_period_list(api_client, django_assert_max_num_qu
         # check that we return periods for first part of 2022
         assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= second_date
         assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= third_date
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('input_string', ('?start=today&end=today', '?start=-0d&end=+0d'))
+@freeze_time(first_date)
+def test_get_periods_for_today(api_client, django_assert_max_num_queries, periods, input_string):
+    url = reverse('period-list') + input_string
+    with django_assert_max_num_queries(3):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    # 31 Dec 2020 only has one period
+    assert response.data['count'] == 10
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for today only
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= first_date
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= first_date
+
+
+@pytest.mark.django_db
+@freeze_time(first_date)
+def test_get_periods_for_this_week(api_client, django_assert_max_num_queries, periods):
+    url = reverse('period-list') + '?start=-0w&end=+0w'
+    with django_assert_max_num_queries(3):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    # Week might extend into 2021
+    assert response.data['count'] <= 20
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for the week only
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= first_date - timedelta(days=7)
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= first_date + timedelta(days=7)
+
+
+@pytest.mark.django_db
+@freeze_time(first_date)
+def test_get_periods_for_this_month(api_client, django_assert_max_num_queries, periods):
+    url = reverse('period-list') + '?start=-0m&end=+0m'
+    with django_assert_max_num_queries(3):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    # December 2020 only has one period
+    assert response.data['count'] == 10
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for the month only
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= first_date - timedelta(days=30)
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= first_date
+
+
+@pytest.mark.django_db
+@freeze_time(third_date)
+def test_get_periods_for_this_year(api_client, django_assert_max_num_queries, periods):
+    url = reverse('period-list') + '?start=-0y&end=+0y'
+    with django_assert_max_num_queries(3):
+        response = api_client.get(url)
+    assert response.status_code == 200
+    # 2022 has two periods
+    assert response.data['count'] == 20
+    for period in response.data['results']:
+        assert_period_has_fields(period)
+        # check that we return periods for the year only
+        assert datetime.strptime(period['period']['upper'], '%Y-%m-%d').date() >= third_date - timedelta(days=181)
+        assert datetime.strptime(period['period']['lower'], '%Y-%m-%d').date() <= third_date + timedelta(days=184)
 
 
 @pytest.mark.django_db

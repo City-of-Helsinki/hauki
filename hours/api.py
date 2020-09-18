@@ -1,8 +1,10 @@
 from rest_framework import routers, serializers, viewsets, filters
 from django.forms import TextInput
 import django_filters
+import re
 from drf_extra_fields.fields import DateRangeField
-from datetime import datetime, date, MINYEAR, MAXYEAR
+from datetime import datetime, date, MINYEAR, MAXYEAR, timedelta
+from calendar import monthrange
 from psycopg2.extras import DateRange
 
 from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
@@ -17,15 +19,73 @@ def register_view(klass, name, basename=None):
     all_views.append(entry)
 
 
-def parse_date(date: str) -> date:
+def parse_date(date_string: str, end_date: bool = False) -> date:
     """
     Parses given string as python date.
+
+    Parameters:
+    input (str): String to parse
+    end_date (bool): For relative shorthands, whether we should return the end date of the specified interval.
+    The default behavior is to return the start date of weeks, months or years.
+
+    We support shorthands for commonly requested start and end dates (e.g. -7d, -1w, +1y), e.g.
+        * start date of this week is returned by +0w or -0w
+        * end date of this week is returned by +0w or -0w, end_date=True
+        * start date of last month is returned by -1m
+        * start date of next month is returned by +1m
+        * end date of last month is returned by -1m, end_date=True
+        * start date of this year is returned by +0y or -0y
+        * end date of this year is returned by +0y or -0y, end_date=True
     """
-    if not date:
+
+    if not date_string:
         return None
-    if date == 'today':
-        return datetime.now().date()
-    return datetime.strptime(date, '%Y-%m-%d').date()
+    today = datetime.now().date()
+
+    # special strings
+    if date_string == 'today':
+        return today
+
+    # shorthands
+    timedelta_pattern = re.compile(r'([-+\s]?)([0-9]+)([dwmy])')
+    match = timedelta_pattern.fullmatch(date_string)
+    if match:
+        sign = -1 if match.group(1) == '-' else 1
+        multiplier = sign*int(match.group(2))
+        if match.group(3) == 'd':
+            return today + timedelta(days=multiplier)
+        if match.group(3) == 'w':
+            # return start or end of week
+            if end_date:
+                weekday_offset = 6 - today.weekday()
+            else:
+                weekday_offset = -today.weekday()
+            return today + timedelta(days=7 * multiplier + weekday_offset)
+        if match.group(3) == 'm':
+            # check if the year changes
+            if sign == 1:
+                year_offset = (multiplier + today.month - 1) // 12
+            else:
+                year_offset = (multiplier + today.month - 12) // 12
+            # the remainder is the change in months
+            month_offset = multiplier - 12 * year_offset
+
+            year_to_return = today.year + year_offset
+            month_to_return = today.month + month_offset
+
+            # return start or end of month
+            day_to_return = monthrange(year_to_return, month_to_return)[1] if end_date else 1
+            return date(year_to_return, month_to_return, day_to_return)
+        if match.group(3) == 'y':
+            year_to_return = today.year + multiplier
+
+            # return start or end of year
+            month_to_return = 12 if end_date else 1
+            day_to_return = monthrange(year_to_return, month_to_return)[1] if end_date else 1
+            return date(year_to_return, month_to_return, day_to_return)
+
+    # standard iso dates
+    return datetime.strptime(date_string, '%Y-%m-%d').date()
 
 
 class APIRouter(routers.DefaultRouter):
@@ -136,7 +196,7 @@ class DateFilterBackend(filters.BaseFilterBackend):
     """
     def filter_queryset(self, request, queryset, view):
         start = parse_date(request.query_params.get('start', None))
-        end = parse_date(request.query_params.get('end', None))
+        end = parse_date(request.query_params.get('end', None), end_date=True)
         if not start:
             start = date(MINYEAR, 1, 1)
         if not end:

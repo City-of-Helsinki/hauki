@@ -242,6 +242,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+# Django SECRET_KEY setting, used for password reset links and such
+SECRET_KEY = env('SECRET_KEY')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -300,22 +302,13 @@ if os.path.exists(local_settings_path):
     exec(code, globals(), locals())  # nosec
 
 
-# If a secret key was not supplied from elsewhere, generate a random one
-# and store it into a file called .django_secret.
+# If a secret key was not supplied elsewhere, generate a random one and print
+# a warning (logging is not configured yet?). This means that any functionality
+# expecting SECRET_KEY to stay same will break upon restart. Should not be a
+# problem for development.
 if 'SECRET_KEY' not in locals():
-    secret_file = os.path.join(BASE_DIR, '.django_secret')
-    try:
-        SECRET_KEY = open(secret_file).read().strip()
-    except IOError:
-        import random
-        system_random = random.SystemRandom()
-        try:
-            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
-                                 for i in range(64)])
-            secret = open(secret_file, 'w')
-            os.chmod(secret_file, 0o0600)
-            secret.write(SECRET_KEY)
-            secret.close()
-        except IOError:
-            raise Exception('Please create a %s file with random characters to generate your secret key!' %
-                            secret_file)
+    print("WARNING: SECRET_KEY was not defined in configuration. Generating a temporary key for dev.")
+    import random
+    system_random = random.SystemRandom()
+    SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
+                         for i in range(64)])

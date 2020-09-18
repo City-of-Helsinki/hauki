@@ -241,9 +241,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-# Django SECRET_KEY setting, used for password reset links and such
-SECRET_KEY = env('SECRET_KEY')
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
@@ -301,11 +298,13 @@ if os.path.exists(local_settings_path):
     exec(code, globals(), locals())  # nosec
 
 
+# Django SECRET_KEY setting, used for password reset links and such
+SECRET_KEY = env('SECRET_KEY')
 # If a secret key was not supplied elsewhere, generate a random one and print
 # a warning (logging is not configured yet?). This means that any functionality
 # expecting SECRET_KEY to stay same will break upon restart. Should not be a
 # problem for development.
-if 'SECRET_KEY' not in locals():
+if not SECRET_KEY:
     print("WARNING: SECRET_KEY was not defined in configuration. Generating a temporary key for dev.")
     import random
     system_random = random.SystemRandom()

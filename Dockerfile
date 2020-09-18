@@ -52,6 +52,8 @@ FROM appbase as development
 
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
+USER hauki
+
 # And the production image
 FROM appbase as production
 

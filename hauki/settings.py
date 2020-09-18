@@ -56,7 +56,6 @@ env = environ.Env(
     TRUST_X_FORWARDED_HOST=(bool, False),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
-    ENABLE_WHITENOISE=(bool, False),
     COOKIE_PREFIX=(str, 'hauki'),
     INTERNAL_IPS=(list, []),
     INSTANCE_NAME=(str, 'Hauki'),
@@ -159,7 +158,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     # Ditto for securitymiddleware
     'django.middleware.security.SecurityMiddleware',
-
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -167,14 +166,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-# Whitenoise serves the static files directly out from Django, adding
-# expires headers and such for cacheability. Very nice for working out
-# of a single process container (the usual kind)
-if env('ENABLE_WHITENOISE'):
-    # Whitenoisemiddleware needs to be installed after securitymiddleware and corsmiddleware
-    place = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
-    MIDDLEWARE.insert(place, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # django-extensions is a set of developer friendly tools
 if env('ENABLE_DJANGO_EXTENSIONS'):

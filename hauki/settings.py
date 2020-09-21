@@ -17,6 +17,7 @@ CONFIG_FILE_NAME = "config_dev.env"
 # logging when importing this file
 logger = logging.getLogger(__name__)
 
+
 def get_git_revision_hash() -> str:
     """
     Retrieve the git hash for the underlying git repository or die trying

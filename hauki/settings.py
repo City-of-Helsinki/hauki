@@ -296,6 +296,8 @@ if os.path.exists(local_settings_path):
 
 # Django SECRET_KEY setting, used for password reset links and such
 SECRET_KEY = env('SECRET_KEY')
+if not DEBUG and not SECRET_KEY:
+    raise Exception("In production, SECRET_KEY must be provided in the environment.")
 # If a secret key was not supplied elsewhere, generate a random one and print
 # a warning (logging is not configured yet?). This means that any functionality
 # expecting SECRET_KEY to stay same will break upon restart. Should not be a

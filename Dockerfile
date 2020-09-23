@@ -35,6 +35,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Statics are kept inside container image for serving using whitenoise
+ENV DEBUG=True
 RUN mkdir -p /srv/static && python manage.py collectstatic
 
 # Keep media in its own directory outside home, in case home

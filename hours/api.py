@@ -163,7 +163,7 @@ class TargetSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Target
         fields = ['id', 'data_source', 'origin_id', 'organization', 'same_as', 'target_type',
-                  'parent', 'second_parent', 'name', 'description',
+                  'parent', 'second_parent', 'name', 'address', 'description',
                   'created_time', 'last_modified_time', 'publication_time',
                   'hours_updated', 'identifiers']
 

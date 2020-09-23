@@ -27,6 +27,7 @@ def assert_target_has_fields(target):
         'parent',
         'second_parent',
         'name',
+        'address',
         'description',
         'created_time',
         'last_modified_time',

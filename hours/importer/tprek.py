@@ -47,6 +47,7 @@ class TPRekImporter(Importer):
             'origin_id': str(data['id']),
             'name': self.clean_text(data['name_fi']),
             'description': self.clean_text(data.get('desc_fi', "")),
+            'address': self.clean_text(data.get('street_address_fi', "") + ', ' + data.get('address_city_fi', "")),
             'same_as': self.get_url('unit', data['id']),
             'organization': obj_organization,
             'identifiers': self.get_unit_identifiers(obj_id, data)

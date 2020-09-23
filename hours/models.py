@@ -131,6 +131,7 @@ class Target(BaseModel):
         'self', on_delete=models.PROTECT, related_name='first_children', db_index=True, null=True)
     second_parent = models.ForeignKey(
         'self', on_delete=models.PROTECT, related_name='second_children', db_index=True, null=True)
+    address = models.TextField(verbose_name=_('Street address'), blank=True, default="")
     hours_updated = models.DateTimeField(null=True, blank=True, db_index=True)
     default_status = models.IntegerField(choices=Status.choices, default=Status.UNDEFINED)
     target_type = models.IntegerField(choices=TargetType.choices, default=TargetType.UNIT)

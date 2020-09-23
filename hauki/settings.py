@@ -4,6 +4,7 @@ Django settings for hauki project.
 
 import os
 import environ
+import logging
 import sentry_sdk
 import subprocess
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -11,6 +12,10 @@ from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
 
 CONFIG_FILE_NAME = "config_dev.env"
+
+# This will get default settings, as Django has not yet initialized
+# logging when importing this file
+logger = logging.getLogger(__name__)
 
 
 def get_git_revision_hash() -> str:
@@ -56,7 +61,6 @@ env = environ.Env(
     TRUST_X_FORWARDED_HOST=(bool, False),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
-    ENABLE_WHITENOISE=(bool, False),
     COOKIE_PREFIX=(str, 'hauki'),
     INTERNAL_IPS=(list, []),
     INSTANCE_NAME=(str, 'Hauki'),
@@ -66,7 +70,6 @@ env = environ.Env(
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, '')
 )
-print(env('STATIC_ROOT'))
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = root()
@@ -128,8 +131,8 @@ LOGGING = {
 # Application definition
 
 INSTALLED_APPS = [
-    'helusers',
-    'django.contrib.admin',
+    'helusers.apps.HelusersConfig',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -160,7 +163,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     # Ditto for securitymiddleware
     'django.middleware.security.SecurityMiddleware',
-
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -168,14 +171,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-# Whitenoise serves the static files directly out from Django, adding
-# expires headers and such for cacheability. Very nice for working out
-# of a single process container (the usual kind)
-if env('ENABLE_WHITENOISE'):
-    # Whitenoisemiddleware needs to be installed after securitymiddleware and corsmiddleware
-    place = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
-    MIDDLEWARE.insert(place, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # django-extensions is a set of developer friendly tools
 if env('ENABLE_DJANGO_EXTENSIONS'):
@@ -242,7 +237,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
@@ -300,22 +294,15 @@ if os.path.exists(local_settings_path):
     exec(code, globals(), locals())  # nosec
 
 
-# If a secret key was not supplied from elsewhere, generate a random one
-# and store it into a file called .django_secret.
-if 'SECRET_KEY' not in locals():
-    secret_file = os.path.join(BASE_DIR, '.django_secret')
-    try:
-        SECRET_KEY = open(secret_file).read().strip()
-    except IOError:
-        import random
-        system_random = random.SystemRandom()
-        try:
-            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
-                                 for i in range(64)])
-            secret = open(secret_file, 'w')
-            os.chmod(secret_file, 0o0600)
-            secret.write(SECRET_KEY)
-            secret.close()
-        except IOError:
-            raise Exception('Please create a %s file with random characters to generate your secret key!' %
-                            secret_file)
+# Django SECRET_KEY setting, used for password reset links and such
+SECRET_KEY = env('SECRET_KEY')
+# If a secret key was not supplied elsewhere, generate a random one and print
+# a warning (logging is not configured yet?). This means that any functionality
+# expecting SECRET_KEY to stay same will break upon restart. Should not be a
+# problem for development.
+if not SECRET_KEY:
+    logger.warn("SECRET_KEY was not defined in configuration. Generating a temporary key for dev.")
+    import random
+    system_random = random.SystemRandom()
+    SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
+                         for i in range(64)])

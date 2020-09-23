@@ -1,6 +1,9 @@
 # Backups
 *~
 
+# Development config file
+config_dev.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -56,8 +56,8 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 USER hauki
 
 # And the production image
-ENV DEBUG=False
-
 FROM appbase as production
+
+ENV DEBUG=False
 
 USER hauki

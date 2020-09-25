@@ -7,7 +7,7 @@ from datetime import datetime, date, MINYEAR, MAXYEAR, timedelta
 from calendar import monthrange
 from psycopg2.extras import DateRange
 
-from .models import Target, TargetIdentifier, DailyHours, Opening, Period, Status, TargetType, Weekday
+from .models import Target, TargetIdentifier, TargetLink, DailyHours, Opening, Period, Status, TargetType, Weekday
 
 all_views = []
 
@@ -122,6 +122,13 @@ class IdentifierSerializer(serializers.HyperlinkedModelSerializer):
         fields = ['data_source', 'origin_id']
 
 
+class LinkSerializer(serializers.HyperlinkedModelSerializer):
+
+    class Meta:
+        model = TargetLink
+        fields = ['link_type', 'url']
+
+
 class OpeningSerializer(serializers.HyperlinkedModelSerializer):
     status = IntegerChoiceField(choices=Status)
     weekday = IntegerChoiceField(choices=Weekday)
@@ -159,13 +166,14 @@ class TargetSerializer(serializers.HyperlinkedModelSerializer):
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
     target_type = IntegerChoiceField(choices=TargetType)
     identifiers = IdentifierSerializer(many=True)
+    links = LinkSerializer(many=True)
 
     class Meta:
         model = Target
         fields = ['id', 'data_source', 'origin_id', 'organization', 'same_as', 'target_type',
                   'parent', 'second_parent', 'name', 'address', 'description',
                   'created_time', 'last_modified_time', 'publication_time',
-                  'hours_updated', 'identifiers']
+                  'hours_updated', 'identifiers', 'links']
 
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
@@ -182,7 +190,7 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Target.objects.all().prefetch_related('identifiers')
+    queryset = Target.objects.all().prefetch_related('identifiers', 'links')
     serializer_class = TargetSerializer
     filterset_fields = ['data_source']
 

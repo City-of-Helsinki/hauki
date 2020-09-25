@@ -52,6 +52,11 @@ class Weekday(models.IntegerChoices):
     SUNDAY = 7, _('Sunday')
 
 
+class LinkType(models.TextChoices):
+    ADMIN = 'ADMIN', 'admin'
+    CITIZEN = 'CITIZEN', 'citizen'
+
+
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
@@ -267,6 +272,19 @@ class TargetIdentifier(models.Model):
 
     def __str__(self):
         return f'{self.data_source}:{self.origin_id} ({self.target})'
+
+
+class TargetLink(models.Model):
+    target = models.ForeignKey(Target, on_delete=models.CASCADE, related_name='links', db_index=True)
+    link_type = models.TextField(choices=LinkType.choices, default=LinkType.CITIZEN)
+    url = models.URLField(verbose_name=_('Link URL'), max_length=1000, null=False, blank=False, unique=True)
+
+    class Meta:
+        verbose_name = _('Target link')
+        verbose_name_plural = _('Target links')
+
+    def __str__(self):
+        return f'{self.target} {self.link_type}: {self.url})'
 
 
 class Keyword(BaseModel):

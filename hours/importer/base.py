@@ -6,7 +6,7 @@ import requests
 from django import db
 
 
-from hours.models import BaseModel, Target, TargetIdentifier, DataSource, Period, Opening
+from hours.models import BaseModel, Target, TargetIdentifier, TargetLink, DataSource, Period, Opening
 
 
 class Importer(object):
@@ -161,6 +161,25 @@ class Importer(object):
                 new_identifier.save()
                 obj._changed = True
                 obj._changed_fields.append('identifiers')
+
+        # Update related links after the target has been created
+        # Only check one admin and one citizen link at the moment
+        links = {x.link_type: x for x in obj.links.all()}
+        for link in data.get('links', []):
+            link_type = link['link_type']
+            url = link['url']
+            if link_type in links:
+                existing_link = links[link_type]
+                if existing_link.url != url:
+                    existing_link.url = url
+                    existing_link.save()
+                    obj._changed = True
+                    obj._changed_fields.append('links')
+            else:
+                new_link = TargetLink(target=obj, link_type=link_type, url=url)
+                new_link.save()
+                obj._changed = True
+                obj._changed_fields.append('links')
 
         if obj._changed:
             if not obj._created:

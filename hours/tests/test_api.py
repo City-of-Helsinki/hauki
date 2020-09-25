@@ -33,7 +33,8 @@ def assert_target_has_fields(target):
         'last_modified_time',
         'publication_time',
         'hours_updated',
-        'identifiers'
+        'identifiers',
+        'links'
         )
     assert_data_has_fields(target, fields)
 
@@ -69,7 +70,7 @@ def assert_daily_hours_has_fields(daily_hours):
 @pytest.mark.django_db
 def test_get_target_list(api_client, django_assert_max_num_queries, targets, more_targets):
     url = reverse('target-list')
-    with django_assert_max_num_queries(3):
+    with django_assert_max_num_queries(4):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 20
@@ -80,7 +81,7 @@ def test_get_target_list(api_client, django_assert_max_num_queries, targets, mor
 @pytest.mark.django_db
 def test_filter_target_list(api_client, django_assert_max_num_queries, data_source, targets, more_targets):
     url = reverse('target-list') + '?data_source=' + data_source.id
-    with django_assert_max_num_queries(4):
+    with django_assert_max_num_queries(5):
         response = api_client.get(url)
     assert response.status_code == 200
     assert response.data['count'] == 10

@@ -108,7 +108,7 @@ stages:
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:
-          containerRegistry: Docker hub upload
+          containerRegistry: Docker hub upload-hauki
           repository: helsinki/$(ImageName)
           command: push
           tags: |
@@ -125,5 +125,5 @@ stages:
       - task: oc-cmd@2
         displayName: Add OC tag to latest image
         inputs:
-          openshiftService: 'Azure OpenShift'
+          openshiftService: Azure OpenShift-hauki
           cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:latest'

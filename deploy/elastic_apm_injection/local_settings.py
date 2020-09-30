@@ -1,3 +1,3 @@
-INSTALLED_APPS += [   # noqa: F821
-   'elasticapm.contrib.django',
+INSTALLED_APPS += [  # noqa: F821
+    "elasticapm.contrib.django",
 ]

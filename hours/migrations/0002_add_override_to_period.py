@@ -6,28 +6,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('hours', '0001_initial'),
+        ("hours", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='period',
-            name='override',
+            model_name="period",
+            name="override",
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AlterField(
-            model_name='opening',
-            name='month',
-            field=models.IntegerField(db_index=True, default=0, verbose_name='Month number'),
+            model_name="opening",
+            name="month",
+            field=models.IntegerField(
+                db_index=True, default=0, verbose_name="Month number"
+            ),
         ),
         migrations.AlterField(
-            model_name='opening',
-            name='week',
-            field=models.IntegerField(db_index=True, default=1, verbose_name='Week number'),
+            model_name="opening",
+            name="week",
+            field=models.IntegerField(
+                db_index=True, default=1, verbose_name="Week number"
+            ),
         ),
         migrations.AlterField(
-            model_name='opening',
-            name='weekday',
-            field=models.IntegerField(choices=[(1, 'Monday'), (2, 'Tuesday'), (3, 'Wednesday'), (4, 'Thursday'), (5, 'Friday'), (6, 'Saturday'), (7, 'Sunday')], db_index=True),
+            model_name="opening",
+            name="weekday",
+            field=models.IntegerField(
+                choices=[
+                    (1, "Monday"),
+                    (2, "Tuesday"),
+                    (3, "Wednesday"),
+                    (4, "Thursday"),
+                    (5, "Friday"),
+                    (6, "Saturday"),
+                    (7, "Sunday"),
+                ],
+                db_index=True,
+            ),
         ),
     ]

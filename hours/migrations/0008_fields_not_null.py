@@ -6,38 +6,56 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('hours', '0007_add_organization_to_target'),
+        ("hours", "0007_add_organization_to_target"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='keyword',
-            name='description',
-            field=models.TextField(blank=True, default='', verbose_name='Description'),
+            model_name="keyword",
+            name="description",
+            field=models.TextField(blank=True, default="", verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='name',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=255, verbose_name='Name'),
+            model_name="keyword",
+            name="name",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                default="",
+                max_length=255,
+                verbose_name="Name",
+            ),
         ),
         migrations.AlterField(
-            model_name='period',
-            name='description',
-            field=models.TextField(blank=True, default='', verbose_name='Description'),
+            model_name="period",
+            name="description",
+            field=models.TextField(blank=True, default="", verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='period',
-            name='name',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=255, verbose_name='Name'),
+            model_name="period",
+            name="name",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                default="",
+                max_length=255,
+                verbose_name="Name",
+            ),
         ),
         migrations.AlterField(
-            model_name='target',
-            name='description',
-            field=models.TextField(blank=True, default='', verbose_name='Description'),
+            model_name="target",
+            name="description",
+            field=models.TextField(blank=True, default="", verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='target',
-            name='name',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=255, verbose_name='Name'),
+            model_name="target",
+            name="name",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                default="",
+                max_length=255,
+                verbose_name="Name",
+            ),
         ),
     ]

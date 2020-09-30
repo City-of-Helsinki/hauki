@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 from django.views.generic.base import RedirectView
 
 from hours.api import APIRouter
@@ -24,7 +24,7 @@ admin.autodiscover()
 router = APIRouter()
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('v1/', include(router.urls)),
-    path('', RedirectView.as_view(url='v1/'))
+    path("admin/", admin.site.urls),
+    path("v1/", include(router.urls)),
+    path("", RedirectView.as_view(url="v1/")),
 ]

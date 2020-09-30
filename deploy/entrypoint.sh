@@ -56,6 +56,24 @@ elif [ "$1" = "migrate" ]; then
     _log_boxed "Updating language fields & installing templates"
     deploy/init_application.sh
 elif [ "$1" = "test" ]; then
+    _log_boxed "Running flake8"
+    flake8
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
+    _log_boxed "Running black"
+    black --check .
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
+    _log_boxed "Running isort"
+    isort --check-only --diff .
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+        exit $exitcode
+    fi
     _log_boxed "Running safety"
     safety check
     exitcode=$?
@@ -70,12 +88,6 @@ elif [ "$1" = "test" ]; then
     fi
     _log_boxed "Running tests"
     pytest
-    exitcode=$?
-    if [ $exitcode -ne 0 ]; then
-        exit $exitcode
-    fi
-    _log_boxed "Running lint"
-    flake8
     exitcode=$?
     if [ $exitcode -ne 0 ]; then
         exit $exitcode

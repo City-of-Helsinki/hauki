@@ -46,6 +46,10 @@ if [ "$1" = "start_django_development_server" ]; then
 elif [ "$1" = 'maintenance_tasks' ]; then
     shift
     exec deploy/run_maintenance.sh "$@"
+elif [ "$1" = 'initial_data' ]; then
+    _log_boxed "Running initial imports to get test data"
+    ./manage.py hours_import tprek --all
+    ./manage.py hours_import kirjastot --all
 elif [ "$1" = "migrate" ]; then
     _log_boxed "Running migrations"
     ./manage.py migrate

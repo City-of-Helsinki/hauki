@@ -174,7 +174,7 @@ MIDDLEWARE = [
 
 # django-extensions is a set of developer friendly tools
 if env('ENABLE_DJANGO_EXTENSIONS'):
-    MIDDLEWARE.append('django_extensions')
+    INSTALLED_APPS.append('django_extensions')
 
 
 ROOT_URLCONF = 'hauki.urls'

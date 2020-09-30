@@ -1,12 +1,19 @@
 import logging
 import os
 import re
-import requests
 
+import requests
 from django import db
 
-
-from hours.models import BaseModel, Target, TargetIdentifier, TargetLink, DataSource, Period, Opening
+from hours.models import (
+    BaseModel,
+    DataSource,
+    Opening,
+    Period,
+    Target,
+    TargetIdentifier,
+    TargetLink,
+)
 
 
 class Importer(object):
@@ -21,7 +28,9 @@ class Importer(object):
             url = "%s%s/" % (url, res_id)
         return url
 
-    def api_get(self, resource_name: str, res_id: str = None, params: dict = None) -> dict:
+    def api_get(
+        self, resource_name: str, res_id: str = None, params: dict = None
+    ) -> dict:
         url = self.get_url(resource_name, res_id)
         self.logger.info("Fetching URL %s with params %s " % (url, params))
         resp = requests.get(url, params)
@@ -39,13 +48,13 @@ class Importer(object):
     @staticmethod
     def clean_text(text: str, strip_newlines: bool = False) -> str:
         # remove non-breaking spaces and separators
-        text = text.replace('\xa0', ' ').replace('\x1f', '')
+        text = text.replace("\xa0", " ").replace("\x1f", "")
         # remove nil bytes
-        text = text.replace(u'\u0000', ' ')
+        text = text.replace(u"\u0000", " ")
         if strip_newlines:
-            text = text.replace('\r', '').replace('\n', ' ')
+            text = text.replace("\r", "").replace("\n", " ")
         # remove consecutive whitespaces
-        return re.sub(r'\s\s+', ' ', text, re.U).strip()
+        return re.sub(r"\s\s+", " ", text, re.U).strip()
 
     def _set_field(self, obj: BaseModel, field_name: str, val: object):
         """
@@ -60,13 +69,17 @@ class Importer(object):
             return
 
         field = obj._meta.get_field(field_name)
-        if getattr(field, 'max_length', None) and val is not None:
+        if getattr(field, "max_length", None) and val is not None:
             if len(val) > field.max_length:
-                raise Exception("field '%s' too long (max. %d): %s" % field_name, field.max_length, val)
+                raise Exception(
+                    "field '%s' too long (max. %d): %s" % field_name,
+                    field.max_length,
+                    val,
+                )
 
         setattr(obj, field_name, val)
         obj._changed = True
-        if not hasattr(obj, '_changed_fields'):
+        if not hasattr(obj, "_changed_fields"):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
 
@@ -110,11 +123,11 @@ class Importer(object):
 
     def _update_or_create_object(self, klass: type, data: dict) -> BaseModel:
         """
-        Takes the class and serialized data, creates and/or updates the BaseModel object and returns it unsaved
-        for class-specific processing and saving.
+        Takes the class and serialized data, creates and/or updates the BaseModel
+        object and returns it unsaved for class-specific processing and saving.
         """
-        args = dict(data_source=data['data_source'], origin_id=data['origin_id'])
-        obj_id = "%s:%s" % (data['data_source'].id, data['origin_id'])
+        args = dict(data_source=data["data_source"], origin_id=data["origin_id"])
+        obj_id = "%s:%s" % (data["data_source"].id, data["origin_id"])
         try:
             obj = klass.objects.get(**args)
             obj._created = False
@@ -125,16 +138,17 @@ class Importer(object):
         obj._changed = False
         obj._changed_fields = []
 
-        skip_fields = ['id', 'data_source', 'origin_id']
+        skip_fields = ["id", "data_source", "origin_id"]
         self._update_fields(obj, data, skip_fields)
-        self._set_field(obj, 'deleted', False)
-        self._set_field(obj, 'published', True)
+        self._set_field(obj, "deleted", False)
+        self._set_field(obj, "published", True)
         return obj
 
     @db.transaction.atomic
     def save_target(self, data: dict) -> Target:
         """
-        Takes the serialized target data, creates and/or updates the corresponding Target object, saves and returns it.
+        Takes the serialized target data, creates and/or updates the corresponding
+        Target object, saves and returns it.
         """
         obj = self._update_or_create_object(Target, data)
         if obj._created:
@@ -143,47 +157,53 @@ class Importer(object):
 
         # Update related identifiers after the target has been created
         identifiers = {x.data_source_id: x for x in obj.identifiers.all()}
-        for identifier in data.get('identifiers', []):
-            data_source_id = identifier['data_source_id']
-            origin_id = identifier['origin_id']
+        for identifier in data.get("identifiers", []):
+            data_source_id = identifier["data_source_id"]
+            origin_id = identifier["origin_id"]
             if data_source_id in identifiers:
                 existing_identifier = identifiers[data_source_id]
                 if existing_identifier.origin_id != origin_id:
                     existing_identifier.origin_id = origin_id
                     existing_identifier.save()
                     obj._changed = True
-                    obj._changed_fields.append('identifiers')
+                    obj._changed_fields.append("identifiers")
             else:
-                data_source, created = DataSource.objects.get_or_create(id=data_source_id)
+                data_source, created = DataSource.objects.get_or_create(
+                    id=data_source_id
+                )
                 if created:
-                    self.logger.debug('Created missing data source %s' % data_source_id)
-                new_identifier = TargetIdentifier(target=obj, data_source=data_source, origin_id=origin_id)
+                    self.logger.debug("Created missing data source %s" % data_source_id)
+                new_identifier = TargetIdentifier(
+                    target=obj, data_source=data_source, origin_id=origin_id
+                )
                 new_identifier.save()
                 obj._changed = True
-                obj._changed_fields.append('identifiers')
+                obj._changed_fields.append("identifiers")
 
         # Update related links after the target has been created
         # Only check one admin and one citizen link at the moment
         links = {x.link_type: x for x in obj.links.all()}
-        for link in data.get('links', []):
-            link_type = link['link_type']
-            url = link['url']
+        for link in data.get("links", []):
+            link_type = link["link_type"]
+            url = link["url"]
             if link_type in links:
                 existing_link = links[link_type]
                 if existing_link.url != url:
                     existing_link.url = url
                     existing_link.save()
                     obj._changed = True
-                    obj._changed_fields.append('links')
+                    obj._changed_fields.append("links")
             else:
                 new_link = TargetLink(target=obj, link_type=link_type, url=url)
                 new_link.save()
                 obj._changed = True
-                obj._changed_fields.append('links')
+                obj._changed_fields.append("links")
 
         if obj._changed:
             if not obj._created:
-                self.logger.debug("%s changed: %s" % (obj, ', '.join(obj._changed_fields)))
+                self.logger.debug(
+                    "%s changed: %s" % (obj, ", ".join(obj._changed_fields))
+                )
             obj.save()
 
         return obj
@@ -191,8 +211,8 @@ class Importer(object):
     @db.transaction.atomic
     def save_period(self, data: dict) -> Period:
         """
-        Takes the serialized Period data with Openings, creates and/or updates the corresponding Period object,
-        saves and returns it.
+        Takes the serialized Period data with Openings, creates and/or updates the
+        corresponding Period object, saves and returns it.
         """
         obj = self._update_or_create_object(Period, data)
         if obj._created:
@@ -203,23 +223,24 @@ class Importer(object):
         openings = obj.openings.all()
         openings.delete()
         new_openings = []
-        for opening in data.get('openings', []):
+        for opening in data.get("openings", []):
             # openings have no identifiers in kirkanta and they are generated from data
             # therefore, we cannot identify existing openings with new ones
-            new_opening = Opening(period=obj,
-                                  weekday=opening['weekday'],
-                                  week=opening['week'],
-                                  status=opening['status'],
-                                  description=opening.get('description', None),
-                                  opens=opening.get('opens', None),
-                                  closes=opening.get('closes', None)
-                                  )
+            new_opening = Opening(
+                period=obj,
+                weekday=opening["weekday"],
+                week=opening["week"],
+                status=opening["status"],
+                description=opening.get("description", None),
+                opens=opening.get("opens", None),
+                closes=opening.get("closes", None),
+            )
             new_openings.append(new_opening)
         Opening.objects.bulk_create(new_openings)
         obj._changed = True
-        obj._changed_fields.append('openings')
+        obj._changed_fields.append("openings")
         if not obj._created:
-            self.logger.debug("%s changed: %s" % (obj, ', '.join(obj._changed_fields)))
+            self.logger.debug("%s changed: %s" % (obj, ", ".join(obj._changed_fields)))
 
         # Saving updates the daily hours for the duration of the period
         obj.save()
@@ -236,14 +257,14 @@ def register_importer(klass):
 def get_importers():
     if importers:
         return importers
-    module_path = __name__.rpartition('.')[0]
+    module_path = __name__.rpartition(".")[0]
     # Importing the packages will cause their register_importer() methods
     # being called.
     for fname in os.listdir(os.path.dirname(__file__)):
         module, ext = os.path.splitext(fname)
-        if ext.lower() != '.py':
+        if ext.lower() != ".py":
             continue
-        if module in ('__init__', 'base'):
+        if module in ("__init__", "base"):
             continue
         full_path = "%s.%s" % (module_path, module)
         ret = __import__(full_path, locals(), globals())

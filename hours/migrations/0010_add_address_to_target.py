@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('hours', '0009_add_extra_identifiers_for_targets'),
+        ("hours", "0009_add_extra_identifiers_for_targets"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='target',
-            name='address',
-            field=models.TextField(blank=True, default='', verbose_name='Street address'),
+            model_name="target",
+            name="address",
+            field=models.TextField(
+                blank=True, default="", verbose_name="Street address"
+            ),
         ),
     ]

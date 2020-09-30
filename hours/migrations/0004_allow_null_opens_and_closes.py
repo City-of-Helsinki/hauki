@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('hours', '0003_add_published_and_target_type_fields'),
+        ("hours", "0003_add_published_and_target_type_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='opening',
-            name='closes',
+            model_name="opening",
+            name="closes",
             field=models.TimeField(db_index=True, null=True),
         ),
         migrations.AlterField(
-            model_name='opening',
-            name='opens',
+            model_name="opening",
+            name="opens",
             field=models.TimeField(db_index=True, null=True),
         ),
     ]

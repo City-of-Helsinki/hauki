@@ -218,9 +218,41 @@ class TargetSerializer(serializers.HyperlinkedModelSerializer):
         ]
 
 
+class PeriodField(DateRangeField):
+    def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            self.fail("not_a_dict", input_type=type(data).__name__)
+        parsed_data = {}
+        # psycopg2 accepts [] bounds
+        parsed_data["bounds"] = "[]"
+        parsed_data["lower"] = data["start_date"]
+        parsed_data["upper"] = data["end_date"]
+        return super().to_internal_value(parsed_data)
+
+    def to_representation(self, value):
+        """
+        Range instances -> dicts of primitive datatypes.
+        """
+        if value.isempty:
+            return {"empty": True}
+        lower = (
+            self.child.to_representation(value.lower)
+            if value.lower is not None
+            else None
+        )
+        # psycopg2 always returns [) bounds (canonical postgres form)
+        # https://docs.djangoproject.com/en/3.1/ref/contrib/postgres/fields/#daterangefield
+        upper = (
+            self.child.to_representation(value.upper - timedelta(days=1))
+            if value.upper is not None
+            else None
+        )
+        return {"start_date": lower, "end_date": upper}
+
+
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
-    period = DateRangeField()
+    period = PeriodField()
     openings = OpeningSerializer(many=True)
     status = IntegerChoiceField(choices=Status)
 

@@ -225,8 +225,8 @@ class PeriodField(DateRangeField):
         parsed_data = {}
         # psycopg2 accepts [] bounds
         parsed_data["bounds"] = "[]"
-        parsed_data["lower"] = data["start_date"]
-        parsed_data["upper"] = data["end_date"]
+        parsed_data["lower"] = data.get("start_date", None)
+        parsed_data["upper"] = data.get("end_date", None)
         return super().to_internal_value(parsed_data)
 
     def to_representation(self, value):

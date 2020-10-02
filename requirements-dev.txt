@@ -6,91 +6,98 @@
 #
 appdirs==1.4.4            # via black
 appnope==0.1.0            # via ipykernel, ipython
-attrs==19.3.0             # via jsonschema, pytest
+argon2-cffi==20.1.0       # via notebook
+async-generator==1.10     # via nbclient
+attrs==20.2.0             # via jsonschema, pytest
 backcall==0.2.0           # via ipython
 bandit==1.6.2             # via -r requirements-dev.in
 black==20.8b1             # via -r requirements-dev.in
-bleach==3.1.5             # via nbconvert
-certifi==2020.4.5.2       # via -c requirements.txt, requests
+bleach==3.2.1             # via nbconvert
+certifi==2020.6.20        # via -c requirements.txt, requests
+cffi==1.14.3              # via argon2-cffi
 chardet==3.0.4            # via -c requirements.txt, requests
 click==7.1.2              # via black, safety
-coverage==5.1             # via pytest-cov
-decorator==4.4.2          # via ipython, traitlets
+coverage==5.3             # via pytest-cov
+decorator==4.4.2          # via ipython
 defusedxml==0.6.0         # via nbconvert
-django-extensions==3.0.2  # via -r requirements-dev.in
+django-extensions==3.0.9  # via -r requirements-dev.in
 dparse==0.5.1             # via safety
 entrypoints==0.3          # via nbconvert
 flake8==3.8.3             # via -r requirements-dev.in
 freezegun==1.0.0          # via -r requirements-dev.in
 gitdb==4.0.5              # via gitpython
-gitpython==3.1.7          # via bandit
-idna==2.9                 # via -c requirements.txt, requests
-importlib-metadata==1.7.0  # via flake8, jsonschema, pluggy, pytest, stevedore
-ipykernel==5.3.0          # via ipywidgets, jupyter, jupyter-console, notebook, qtconsole
+gitpython==3.1.9          # via bandit
+idna==2.10                # via -c requirements.txt, requests
+importlib-metadata==2.0.0  # via flake8, jsonschema, pluggy, pytest, stevedore
+iniconfig==1.0.1          # via pytest
+ipykernel==5.3.4          # via ipywidgets, jupyter, jupyter-console, notebook, qtconsole
 ipython-genutils==0.2.0   # via nbformat, notebook, qtconsole, traitlets
-ipython==7.15.0           # via -r requirements-dev.in, ipykernel, ipywidgets, jupyter-console
+ipython==7.18.1           # via -r requirements-dev.in, ipykernel, ipywidgets, jupyter-console
 ipywidgets==7.5.1         # via jupyter
 isort==5.5.4              # via -r requirements-dev.in
-jedi==0.17.0              # via ipython
+jedi==0.17.2              # via ipython
 jinja2==2.11.2            # via nbconvert, notebook
 jsonschema==3.2.0         # via nbformat
-jupyter-client==6.1.5     # via ipykernel, jupyter-console, notebook, qtconsole
-jupyter-console==6.1.0    # via jupyter
+jupyter-client==6.1.7     # via ipykernel, jupyter-console, nbclient, notebook, qtconsole
+jupyter-console==6.2.0    # via jupyter
 jupyter-core==4.6.3       # via jupyter-client, nbconvert, nbformat, notebook, qtconsole
 jupyter==1.0.0            # via -r requirements-dev.in
+jupyterlab-pygments==0.1.2  # via nbconvert
 markupsafe==1.1.1         # via jinja2
 mccabe==0.6.1             # via flake8
 mistune==0.8.4            # via nbconvert
-more-itertools==8.4.0     # via pytest
 mypy-extensions==0.4.3    # via black
-nbconvert==5.6.1          # via jupyter, notebook
-nbformat==5.0.7           # via ipywidgets, nbconvert, notebook
-notebook==6.0.3           # via jupyter, widgetsnbextension
+nbclient==0.5.0           # via nbconvert
+nbconvert==6.0.6          # via jupyter, notebook
+nbformat==5.0.7           # via ipywidgets, nbclient, nbconvert, notebook
+nest-asyncio==1.4.1       # via nbclient
+notebook==6.1.4           # via jupyter, widgetsnbextension
 packaging==20.4           # via bleach, dparse, pytest, safety
 pandocfilters==1.4.2      # via nbconvert
-parso==0.7.0              # via jedi
+parso==0.7.1              # via jedi
 pathspec==0.8.0           # via black
 pbr==5.5.0                # via stevedore
 pexpect==4.8.0            # via ipython
 pickleshare==0.7.5        # via ipython
 pluggy==0.13.1            # via pytest
 prometheus-client==0.8.0  # via notebook
-prompt-toolkit==3.0.5     # via ipython, jupyter-console
+prompt-toolkit==3.0.7     # via ipython, jupyter-console
 ptyprocess==0.6.0         # via pexpect, terminado
-py==1.8.2                 # via pytest
+py==1.9.0                 # via pytest
 pycodestyle==2.6.0        # via flake8
+pycparser==2.20           # via cffi
 pyflakes==2.2.0           # via flake8
-pygments==2.6.1           # via ipython, jupyter-console, nbconvert, qtconsole
+pygments==2.7.1           # via ipython, jupyter-console, jupyterlab-pygments, nbconvert, qtconsole
 pyparsing==2.4.7          # via packaging
-pyrsistent==0.16.0        # via jsonschema
-pytest-cov==2.10.0        # via -r requirements-dev.in
-pytest-django==3.9.0      # via -r requirements-dev.in
-pytest==5.4.3             # via -r requirements-dev.in, pytest-cov, pytest-django
+pyrsistent==0.17.3        # via jsonschema
+pytest-cov==2.10.1        # via -r requirements-dev.in
+pytest-django==3.10.0     # via -r requirements-dev.in
+pytest==6.1.0             # via -r requirements-dev.in, pytest-cov, pytest-django
 python-dateutil==2.8.1    # via -c requirements.txt, freezegun, jupyter-client
 pyyaml==5.3.1             # via bandit, dparse
-pyzmq==19.0.1             # via jupyter-client, notebook, qtconsole
-qtconsole==4.7.5          # via jupyter
+pyzmq==19.0.2             # via jupyter-client, notebook, qtconsole
+qtconsole==4.7.7          # via jupyter
 qtpy==1.9.0               # via qtconsole
 regex==2020.9.27          # via black
 requests-mock==1.8.0      # via -r requirements-dev.in
-requests==2.23.0          # via -c requirements.txt, requests-mock, safety
+requests==2.24.0          # via -c requirements.txt, requests-mock, safety
 safety==1.9.0             # via -r requirements-dev.in
 send2trash==1.5.0         # via notebook
-six==1.15.0               # via -c requirements.txt, bandit, bleach, django-extensions, jsonschema, packaging, python-dateutil, requests-mock, traitlets
+six==1.15.0               # via -c requirements.txt, argon2-cffi, bandit, bleach, jsonschema, packaging, python-dateutil, requests-mock
 smmap==3.0.4              # via gitdb
-stevedore==3.2.1          # via bandit
-terminado==0.8.3          # via notebook
+stevedore==3.2.2          # via bandit
+terminado==0.9.1          # via notebook
 testpath==0.4.4           # via nbconvert
-toml==0.10.1              # via black, dparse
+toml==0.10.1              # via black, dparse, pytest
 tornado==6.0.4            # via ipykernel, jupyter-client, notebook, terminado
-traitlets==4.3.3          # via ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, nbconvert, nbformat, notebook, qtconsole
+traitlets==5.0.4          # via ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, nbclient, nbconvert, nbformat, notebook, qtconsole
 typed-ast==1.4.1          # via black
 typing-extensions==3.7.4.3  # via black
-urllib3==1.25.9           # via -c requirements.txt, requests
-wcwidth==0.2.4            # via prompt-toolkit, pytest
+urllib3==1.25.10          # via -c requirements.txt, requests
+wcwidth==0.2.5            # via prompt-toolkit
 webencodings==0.5.1       # via bleach
 widgetsnbextension==3.5.1  # via ipywidgets
-zipp==3.1.0               # via importlib-metadata
+zipp==3.2.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

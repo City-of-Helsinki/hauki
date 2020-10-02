@@ -139,7 +139,7 @@ def test_start_filter_period_list(
         assert_period_has_fields(period)
         # check that we only return ongoing and future periods
         assert (
-            datetime.strptime(period["period"]["upper"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["end_date"], "%Y-%m-%d").date()
             >= second_date
         )
 
@@ -161,7 +161,7 @@ def test_end_filter_period_list(
         assert_period_has_fields(period)
         # check that we only return ongoing and past periods
         assert (
-            datetime.strptime(period["period"]["lower"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["start_date"], "%Y-%m-%d").date()
             <= first_date
         )
 
@@ -187,11 +187,11 @@ def test_start_today_end_filter_period_list(
         assert_period_has_fields(period)
         # check that we return periods for first part of 2022
         assert (
-            datetime.strptime(period["period"]["upper"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["end_date"], "%Y-%m-%d").date()
             >= second_date
         )
         assert (
-            datetime.strptime(period["period"]["lower"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["start_date"], "%Y-%m-%d").date()
             <= third_date
         )
 
@@ -217,11 +217,11 @@ def test_end_today_start_filter_period_list(
         assert_period_has_fields(period)
         # check that we return periods for first part of 2022
         assert (
-            datetime.strptime(period["period"]["upper"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["end_date"], "%Y-%m-%d").date()
             >= second_date
         )
         assert (
-            datetime.strptime(period["period"]["lower"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["start_date"], "%Y-%m-%d").date()
             <= third_date
         )
 
@@ -244,11 +244,11 @@ def test_get_periods_for_today(
         assert_period_has_fields(period)
         # check that we return periods for today only
         assert (
-            datetime.strptime(period["period"]["upper"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["end_date"], "%Y-%m-%d").date()
             >= first_date
         )
         assert (
-            datetime.strptime(period["period"]["lower"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["start_date"], "%Y-%m-%d").date()
             <= first_date
         )
 
@@ -266,10 +266,10 @@ def test_get_periods_for_this_week(api_client, django_assert_max_num_queries, pe
         assert_period_has_fields(period)
         # check that we return periods for the week only
         assert datetime.strptime(
-            period["period"]["upper"], "%Y-%m-%d"
+            period["period"]["end_date"], "%Y-%m-%d"
         ).date() >= first_date - timedelta(days=7)
         assert datetime.strptime(
-            period["period"]["lower"], "%Y-%m-%d"
+            period["period"]["start_date"], "%Y-%m-%d"
         ).date() <= first_date + timedelta(days=7)
 
 
@@ -286,10 +286,10 @@ def test_get_periods_for_this_month(api_client, django_assert_max_num_queries, p
         assert_period_has_fields(period)
         # check that we return periods for the month only
         assert datetime.strptime(
-            period["period"]["upper"], "%Y-%m-%d"
+            period["period"]["end_date"], "%Y-%m-%d"
         ).date() >= first_date - timedelta(days=30)
         assert (
-            datetime.strptime(period["period"]["lower"], "%Y-%m-%d").date()
+            datetime.strptime(period["period"]["start_date"], "%Y-%m-%d").date()
             <= first_date
         )
 
@@ -307,10 +307,10 @@ def test_get_periods_for_this_year(api_client, django_assert_max_num_queries, pe
         assert_period_has_fields(period)
         # check that we return periods for the year only
         assert datetime.strptime(
-            period["period"]["upper"], "%Y-%m-%d"
+            period["period"]["end_date"], "%Y-%m-%d"
         ).date() >= third_date - timedelta(days=181)
         assert datetime.strptime(
-            period["period"]["lower"], "%Y-%m-%d"
+            period["period"]["start_date"], "%Y-%m-%d"
         ).date() <= third_date + timedelta(days=184)
 
 

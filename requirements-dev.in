@@ -1,14 +1,17 @@
 -c requirements.txt
+bandit
 black
+django-extensions
+factory_boy
+faker
 flake8
+freezegun
 ipython
 isort
+jupyter
 pytest
 pytest-cov
 pytest-django
+pytest-factoryboy
 requests-mock
-freezegun
-django-extensions
-jupyter
 safety
-bandit

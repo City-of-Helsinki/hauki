@@ -18,6 +18,7 @@ from django.urls import include, path
 from django.views.generic.base import RedirectView
 
 from hours.api import APIRouter
+from hours.views import ResourceOpeningHoursView
 
 admin.autodiscover()
 
@@ -25,6 +26,9 @@ router = APIRouter()
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path(
+        "v1/resource/<resource_id>/opening_hours/", ResourceOpeningHoursView.as_view()
+    ),
     path("v1/", include(router.urls)),
     path("", RedirectView.as_view(url="v1/")),
 ]

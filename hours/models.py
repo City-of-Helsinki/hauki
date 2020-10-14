@@ -1,65 +1,64 @@
-from collections import OrderedDict
-from datetime import datetime
+import datetime
+from calendar import Calendar
+from collections import defaultdict, namedtuple
+from itertools import chain
+from typing import List, Set, Union
 
-import pandas as pd
-from django.contrib.postgres.fields import DateRangeField
-from django.contrib.postgres.indexes import GistIndex
+from dateutil.relativedelta import SU, relativedelta
+from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import Max
-from django.utils.translation import ugettext_lazy as _
+from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
-from psycopg2.extras import DateRange
-from rest_framework.exceptions import ValidationError
+from enumfields import EnumField, EnumIntegerField
+from model_utils.models import SoftDeletableModel, TimeStampedModel
 
-from hauki import settings
+from hours.enums import (
+    FrequencyModifier,
+    PeriodType,
+    ResourceType,
+    RuleContext,
+    RuleSubject,
+    Weekday,
+)
 
-User = settings.AUTH_USER_MODEL
-
-
-class Status(models.IntegerChoices):
-    CLOSED = 0, _("closed")
-    OPEN = 1, _("open")
-    UNDEFINED = 2, _("undefined")
-    SELF_SERVICE = 3, _("self_service")
-    WITH_KEY = 4, _("with key")
-    WITH_RESERVATION = 5, _("with reservation")
-    WITH_KEY_AND_RESERVATION = 6, _("with key and reservation")
-    ONLY_ENTERING = 7, _("only entering")
-    ONLY_LEAVING = 8, _("only leaving")
+TimeElement = namedtuple(
+    "TimeElement",
+    ["start_time", "end_time", "period_type", "override", "full_day"],
+)
 
 
-class TargetType(models.IntegerChoices):
-    UNIT = 0, _("unit")
-    UNIT_SERVICE = 1, _("unit_service")
-    SPECIAL_GROUP = 2, _("special_group")
-    PERSON = 3, _("person")
-    TELEPHONE = 4, _("telephone")
-    SERVICE = 5, _("service")
-    SERVICE_CHANNEL = 6, _("service_channel")
-    SERVICE_AT_UNIT = 7, _("service_at_unit")
-    RESOURCE = 8, _("resource")
-    BUILDING = 9, _("building")
-    AREA = 10, _("area")
+def get_range_overlap(start1, end1, start2, end2):
+    min_end = min(end1, end2) if end1 and end2 else end1 or end2
+    max_start = max(start1, start2) if start1 and start2 else start1 or start2
+
+    return (
+        max_start if min_end >= max_start else None,
+        min_end if max_start <= min_end else None,
+    )
 
 
-class Weekday(models.IntegerChoices):
-    MONDAY = 1, _("Monday")
-    TUESDAY = 2, _("Tuesday")
-    WEDNESDAY = 3, _("Wednesday")
-    THURSDAY = 4, _("Thursday")
-    FRIDAY = 5, _("Friday")
-    SATURDAY = 6, _("Saturday")
-    SUNDAY = 7, _("Sunday")
+def expand_range(start_date, end_date):
+    if end_date < start_date:
+        raise ValueError("Start must be before end")
+
+    date_delta = end_date - start_date
+
+    dates = []
+    for i in range(date_delta.days + 1):
+        dates.append(start_date + datetime.timedelta(days=i))
+
+    return dates
 
 
-class LinkType(models.TextChoices):
-    ADMIN = "ADMIN", "admin"
-    CITIZEN = "CITIZEN", "citizen"
-
-
-class DataSource(models.Model):
+class DataSource(SoftDeletableModel, TimeStampedModel):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=255)
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
+    user_editable = models.BooleanField(
+        default=False, verbose_name=_("Objects may be edited by users")
+    )
 
     class Meta:
         verbose_name = _("Data source")
@@ -69,509 +68,468 @@ class DataSource(models.Model):
         return self.id
 
 
-class BaseModel(models.Model):
-    id = models.CharField(max_length=100, primary_key=True)
-
-    # Both fields are required
-    data_source = models.ForeignKey(
-        DataSource,
-        on_delete=models.PROTECT,
-        related_name="provided_%(class)s_data",
-        db_index=True,
+class Resource(SoftDeletableModel, TimeStampedModel):
+    name = models.CharField(verbose_name=_("Name"), max_length=255)
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
+    address = models.TextField(verbose_name=_("Street address"), null=True, blank=True)
+    resource_type = EnumField(
+        ResourceType,
+        verbose_name=_("Resource type"),
+        max_length=100,
+        default=ResourceType.UNIT,
     )
-    origin_id = models.CharField(
-        verbose_name=_("Origin ID"), max_length=100, db_index=True
-    )
-
-    # Properties from schema.org/Thing
-    name = models.CharField(
-        verbose_name=_("Name"), max_length=255, db_index=True, blank=True, default=""
-    )
-    description = models.TextField(
-        verbose_name=_("Description"), blank=True, default=""
-    )
-    same_as = models.URLField(
-        verbose_name=_("Same object as"), max_length=1000, null=True, blank=True
-    )
-
-    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
-    last_modified_time = models.DateTimeField(
-        null=True, blank=True, auto_now=True, db_index=True
-    )
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="%(app_label)s_%(class)s_created_by",
-    )
-    last_modified_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="%(app_label)s_%(class)s_modified_by",
-    )
-    deleted = models.BooleanField(default=False)
-    published = models.BooleanField(default=True)
-    publication_time = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        abstract = True
-        constraints = [
-            models.UniqueConstraint(
-                fields=["data_source", "origin_id"],
-                name="%(app_label)s_%(class)s_origin_id_unique",
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.name} ({self.id})"
-
-    def save(self, *args, **kwargs):
-        if not self.data_source:
-            raise ValidationError(_("Data source is required."))
-        if not self.origin_id:
-            raise ValidationError(_("Origin ID is required."))
-        if not isinstance(self.origin_id, str):
-            raise ValidationError(_("Origin ID must be a string."))
-        if not self.id:
-            self.id = f"{self.data_source_id}:{self.origin_id}"
-        id_parts = self.id.split(":")
-        if (
-            len(id_parts) < 2
-            or id_parts[0] != self.data_source_id
-            or id_parts[1] != self.origin_id
-        ):
-            raise ValidationError(_("Id must be of the format data_source:origin_id."))
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        raise ValidationError(
-            _("This model does not support hard deletion. Please do soft_delete.")
-        )
-
-    def soft_delete(self, *args, **kwargs):
-        self.deleted = True
-        self.save()
-
-    def undelete(self, *args, **kwargs):
-        self.deleted = False
-        self.save()
-
-
-class Target(BaseModel):
     parent = models.ForeignKey(
         "self",
         on_delete=models.PROTECT,
-        related_name="first_children",
+        related_name="children",
         db_index=True,
         null=True,
-    )
-    second_parent = models.ForeignKey(
-        "self",
-        on_delete=models.PROTECT,
-        related_name="second_children",
-        db_index=True,
-        null=True,
-    )
-    address = models.TextField(verbose_name=_("Street address"), blank=True, default="")
-    hours_updated = models.DateTimeField(null=True, blank=True, db_index=True)
-    default_status = models.IntegerField(
-        choices=Status.choices, default=Status.UNDEFINED
-    )
-    target_type = models.IntegerField(
-        choices=TargetType.choices, default=TargetType.UNIT
+        blank=True,
     )
     organization = models.ForeignKey(
         Organization,
         on_delete=models.PROTECT,
-        related_name="targets",
+        related_name="resources",
         db_index=True,
         null=True,
+        blank=True,
     )
+    data_sources = models.ManyToManyField(DataSource, through="ResourceOrigin")
+    last_modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        editable=False,
+    )
+    extra_data = models.JSONField(verbose_name=_("Extra data"), null=True, blank=True)
 
-    class Meta(BaseModel.Meta):
-        verbose_name = _("Target")
-        verbose_name_plural = _("Targets")
+    class Meta:
+        verbose_name = _("Resource")
+        verbose_name_plural = _("Resources")
 
-    def get_periods_for_range(
-        self,
-        start,
-        end=None,
-        include_drafts=False,
-        include_deleted=False,
-        period_type=None,
-    ):
-        """Returns the period, annotated with rotation metadata and prefetched opening
-        hours, that determines the opening hours for each date in the range, or None
+    def __str__(self):
+        return self.name
 
-        Parameters:
-        start (date): Starting date for requested date range
-        end (date): Ending date for requested date range. If omitted, only return one
-                    date.
-        include_drafts (bool): Whether non-published periods are taken into account,
-                               for preview purposes
-        include_deleted (bool): Whether deleted periods are taken into account
-        period_type (string): Only consider 'normal' or 'override' periods, or None
-                              (override overrides normal).
+    @property
+    def _history_user(self):
+        return self.last_modified_by
 
-        Returns:
-        OrderedDict[Period]: The period that determines opening hours for each date,
-        with max_month and max_week metadata, and prefetched opening hours data.
-        """
-        if not end:
-            # default only returns single day
-            end = start
-        potential_periods = self.periods.filter(
-            period__overlap=DateRange(lower=start, upper=end, bounds="[]")
+    @_history_user.setter
+    def _history_user(self, value):
+        self.last_modified_by = value
+
+    def get_daily_opening_hours(self, start_date, end_date):
+        periods = self.date_periods.filter(
+            Q(
+                Q(Q(end_date=None) | Q(end_date__gte=start_date))
+                & Q(Q(start_date=None) | Q(start_date__lte=end_date))
+            )
         )
-        if period_type:
-            if period_type == "normal":
-                potential_periods.filter(override=False)
-            if period_type == "override":
-                potential_periods.filter(override=True)
-        if not include_drafts:
-            potential_periods = potential_periods.filter(published=True)
-        if not include_deleted:
-            potential_periods = potential_periods.filter(deleted=False)
-        # 1 query + join all openings and linked hours
-        periods = [
-            p for p in potential_periods.prefetch_related("openings__daily_hours")
-        ]
-        # store the rotation metadata per period
+
+        # TODO: This is just an MVP. Things yet to do:
+        #       - Combine multiple times of same types
+        #       - Handle multiple types in the same time period
+        #       - Handle override
+        #       - Support full_day
+
+        all_daily_opening_hours = defaultdict(list)
         for period in periods:
-            # Weekly rotation is subordinate to monthly rotation, if present.
-            # max_month 0 means no monthly rotation (only weekly rotation)
-            period.max_month = period.openings.aggregate(Max("month"))["month__max"]
-            # max_week 0 means no weekly rotation (only monthly rotation)
-            period.max_week = period.openings.aggregate(Max("week"))["week__max"]
-        # shorter periods always take precedence
-        periods.sort(key=lambda x: (-x.override, x.period.upper - x.period.lower))
-        dates = pd.date_range(start, end).date
-        active_periods = OrderedDict()
-        for date in dates:
-            for period in periods:
-                if date in period.period:
-                    active_periods[date] = period
-                    break
-            else:
-                active_periods[date] = None
-        return active_periods
-
-    def get_openings_for_range(
-        self,
-        start,
-        end=None,
-        include_drafts=False,
-        include_deleted=False,
-        period_type=None,
-        period=None,
-    ):
-        """Returns the opening hours for each date in the range, or None
-
-        Parameters:
-        start (date): Starting date for requested date range
-        end (date): Ending date for requested date range. If omitted, only return
-                    one date.
-        include_drafts (bool): Whether non-published periods are taken into account,
-                               for preview purposes
-        include_deleted (bool): Whether deleted periods are taken into account
-        period_type (string): Only consider 'normal' or 'override' periods, or None
-                              (considers both).
-        period (Period): Get openings from a specified period instead.
-
-        Returns:
-        OrderedDict[Queryset[Opening]]: All the opening hours for each date
-        """
-        active_periods = self.get_periods_for_range(
-            start, end, include_drafts, include_deleted, period_type
-        )
-        if not end:
-            # default only returns single day
-            end = start
-        dates = pd.date_range(start, end).date
-        openings = OrderedDict()
-        for date in dates:
-            if not active_periods[date]:
-                openings[date] = Opening.objects.none()
-                continue
-            # get number of requested month since start of active period
-            date_month_number = (
-                (date.year - active_periods[date].period.lower.year) * 12
-                + date.month
-                - active_periods[date].period.lower.month
-                + 1
+            period_daily_opening_hours = period.get_daily_opening_hours(
+                start_date, end_date
             )
-            # get number of requested month modulo repetition
-            max_month = active_periods[date].max_month
-            max_week = active_periods[date].max_week
-            if max_month:
-                # zero remainder is mapped to max_month (range is 1, 2,  ..., max_month)
-                opening_month_number = (
-                    date_month_number % max_month
-                    if date_month_number % max_month
-                    else max_month
-                )
-            else:
-                opening_month_number = 0
+            for the_date, time_items in period_daily_opening_hours.items():
+                all_daily_opening_hours[the_date].extend(time_items)
 
-            # first week of period may be partial, depending on starting weekday
-            period_start_weekday = active_periods[date].period.lower.isoweekday()
-            # get number of requested week since start of active period
-            date_week_number = (
-                int(
-                    (
-                        (date - active_periods[date].period.lower).days
-                        + period_start_weekday
-                        - 1
-                    )
-                    / 7
-                )
-                + 1
-            )
-            # get number of requested weekday in month, or since period start modulo
-            # repetition
-            if max_month:
-                # if max_month > 0, week numbers refer to weekdays from the start of
-                # month.
-                # range is (1, 2, 3, 4) or (1, 2, 3, 4, 5) depending on how long the
-                # month is
-                opening_week_number = int((date.day - 1) / 7) + 1 if max_week else 0
-            else:
-                # if max_month = 0, week numbers refer to weeks since period start
-                if max_week:
-                    # zero remainder is mapped to max_week (range is 1, 2,  ...,
-                    # max_week)
-                    opening_week_number = (
-                        date_week_number % max_week
-                        if date_week_number % max_week
-                        else max_week
-                    )
-                else:
-                    opening_week_number = 0
-            openings[date] = active_periods[date].openings.filter(
-                weekday=date.isoweekday(),
-                week=opening_week_number,
-                month=opening_month_number,
-            )
-        return openings
+        return all_daily_opening_hours
 
 
-class TargetIdentifier(models.Model):
-    target = models.ForeignKey(
-        Target, on_delete=models.CASCADE, related_name="identifiers", db_index=True
-    )
-    data_source = models.ForeignKey(
-        DataSource, on_delete=models.CASCADE, related_name="identifiers", db_index=True
-    )
+class ResourceOrigin(models.Model):
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
     origin_id = models.CharField(
         verbose_name=_("Origin ID"), max_length=100, db_index=True
     )
 
     class Meta:
-        verbose_name = _("Target identifier")
-        verbose_name_plural = _("Target identifiers")
+        verbose_name = _("Resource origin")
+        verbose_name_plural = _("Resource origins")
         constraints = [
             models.UniqueConstraint(
                 fields=["data_source", "origin_id"],
                 name="unique_identifier_per_data_source",
             ),
-            models.UniqueConstraint(
-                fields=["data_source", "target"], name="unique_identifier_per_target"
-            ),
         ]
 
-    def __str__(self):
-        return f"{self.data_source}:{self.origin_id} ({self.target})"
 
-
-class TargetLink(models.Model):
-    target = models.ForeignKey(
-        Target, on_delete=models.CASCADE, related_name="links", db_index=True
+class DatePeriod(SoftDeletableModel, TimeStampedModel):
+    resource = models.ForeignKey(
+        Resource, on_delete=models.PROTECT, related_name="date_periods", db_index=True
     )
-    link_type = models.TextField(choices=LinkType.choices, default=LinkType.CITIZEN)
-    url = models.URLField(
-        verbose_name=_("Link URL"),
-        max_length=1000,
-        null=False,
-        blank=False,
-        unique=True,
+    name = models.CharField(
+        verbose_name=_("Name"), max_length=255, null=True, blank=True
+    )
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
+    start_date = models.DateField(
+        verbose_name=_("Start date"), null=True, blank=True, db_index=True
+    )
+    end_date = models.DateField(
+        verbose_name=_("End date"), null=True, blank=True, db_index=True
+    )
+    period_type = EnumField(
+        PeriodType,
+        verbose_name=_("Period type"),
+        max_length=100,
+        default=PeriodType.UNDEFINED,
+    )
+    override = models.BooleanField(
+        verbose_name=_("Override"), default=False, db_index=True
     )
 
     class Meta:
-        verbose_name = _("Target link")
-        verbose_name_plural = _("Target links")
-
-    def __str__(self):
-        return f"{self.target} {self.link_type}: {self.url})"
-
-
-class Keyword(BaseModel):
-    targets = models.ManyToManyField(Target, related_name="keywords", db_index=True)
-
-    class Meta(BaseModel.Meta):
-        verbose_name = _("Keyword")
-        verbose_name_plural = _("Keywords")
-
-
-class Period(BaseModel):
-    # TODO: allow periods without target! i.e. saved period drafts that can be copied
-    #       to target
-    target = models.ForeignKey(
-        Target, on_delete=models.PROTECT, related_name="periods", db_index=True
-    )
-    status = models.IntegerField(
-        choices=Status.choices, default=Status.OPEN, db_index=True
-    )
-    override = models.BooleanField(default=False, db_index=True)
-    period = DateRangeField()
-
-    class Meta(BaseModel.Meta):
         verbose_name = _("Period")
         verbose_name_plural = _("Periods")
-        indexes = [GistIndex(fields=["period"])]
 
     def __str__(self):
-        return f"{self.target}:{self.period})"
+        return f"{self.name}({self.start_date} - {self.end_date} {self.period_type})"
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self.update_daily_hours()
-
-    def update_daily_hours(self):
-        """
-        Updates the DailyHours table for the duration of the Period.
-
-        This method is called at each Period save, because Period range dictates
-        the range of dates that must be updated. Changing an opening within a period
-        also triggers an update.
-        """
-        # print('updating daily hours, current:')
-        current_daily_hours = self.target.daily_hours.filter(
-            date__contained_by=self.period
+    def get_daily_opening_hours(self, start_date, end_date):
+        overlap = get_range_overlap(
+            start_date, end_date, self.start_date, self.end_date
         )
-        # print(current_daily_hours.query)
-        # print(current_daily_hours)
-        new_openings = self.target.get_openings_for_range(
-            self.period.lower, self.period.upper
-        )
-        # print('openings needed:')
-        # print(new_openings)
-        to_delete = set(current_daily_hours.values_list("pk", flat=True))
-        # print('delete list:')
-        # print(to_delete)
-        to_add = []
-        for date, openings in new_openings.items():
-            # print(date)
-            for opening in openings:
-                # print(opening)
-                # print(current_daily_hours.filter(date=date))
-                # print(opening.daily_hours)
-                try:
-                    existing = current_daily_hours.get(date=date, opening=opening)
-                    # print(existing.pk)
-                    # print('opening exists already')
-                    # if any opening is still valid, retain it
-                    to_delete.discard(existing.pk)
-                except DailyHours.DoesNotExist:
-                    # if any opening was not found, add it
-                    # print('opening should be added')
-                    to_add.append(
-                        DailyHours(target=self.target, date=date, opening=opening)
+
+        all_dates = set(expand_range(overlap[0], overlap[1]))
+
+        rules = self.rules.all()
+        opening_hours = self.opening_hours.all()
+
+        if rules.count():
+            for rule in self.rules.all():
+                matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
+                all_dates &= matching_dates
+
+        result = defaultdict(list)
+        for one_date in all_dates:
+            for opening_hour in opening_hours:
+                if (
+                    not opening_hour.weekdays
+                    or Weekday.from_iso_weekday(one_date.isoweekday())
+                    in opening_hour.weekdays
+                ):
+                    result[one_date].append(
+                        TimeElement(
+                            start_time=opening_hour.start_time,
+                            end_time=opening_hour.end_time,
+                            period_type=self.period_type,
+                            override=self.override,
+                            full_day=opening_hour.full_day,
+                        )
                     )
-        # print('deleting')
-        # print(to_delete)
-        DailyHours.objects.filter(id__in=to_delete).delete()
-        # print('creating')
-        # print(to_add)
-        DailyHours.objects.bulk_create(to_add)
-        target = self.target
-        target.hours_updated = datetime.now()
-        target.save(update_fields=["hours_updated"])
+
+        return result
 
 
-class Opening(models.Model):
+class OpeningHours(SoftDeletableModel, TimeStampedModel):
     period = models.ForeignKey(
-        Period, on_delete=models.CASCADE, related_name="openings", db_index=True
+        DatePeriod, on_delete=models.PROTECT, related_name="opening_hours"
     )
-    weekday = models.IntegerField(choices=Weekday.choices, db_index=True)
-    status = models.IntegerField(
-        choices=Status.choices, default=Status.OPEN, db_index=True
+    name = models.CharField(
+        verbose_name=_("Name"), max_length=255, null=True, blank=True
     )
-    opens = models.TimeField(null=True, db_index=True)
-    closes = models.TimeField(null=True, db_index=True)
     description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
-    # by default, all openings are for the first week of the rule, i.e. rotation
-    # of 1 week.
-    week = models.IntegerField(verbose_name=_("Week number"), default=1, db_index=True)
-    # by default, no monthly rotation. if month > 0,  week number refers to weeks
-    # within month.
-    month = models.IntegerField(
-        verbose_name=_("Month number"), default=0, db_index=True
+    start_time = models.TimeField(
+        verbose_name=_("Start time"), null=True, blank=True, db_index=True
     )
-    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
-    last_modified_time = models.DateTimeField(
-        null=True, blank=True, auto_now=True, db_index=True
+    end_time = models.TimeField(
+        verbose_name=_("End time"), null=True, blank=True, db_index=True
     )
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
+    full_day = models.BooleanField(verbose_name=_("24 hours"), default=False)
+    weekdays = ArrayField(
+        EnumIntegerField(
+            Weekday,
+            verbose_name=_("Weekday"),
+            default=None,
+        ),
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_created_by",
-    )
-    last_modified_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="%(app_label)s_%(class)s_modified_by",
     )
 
     class Meta:
-        verbose_name = _("Opening")
-        verbose_name_plural = _("Openings")
+        verbose_name = _("Opening hours")
+        verbose_name_plural = _("Opening hours")
 
     def __str__(self):
-        return (
-            f"{self.period}: {self.week}, {self.month}:"
-            f"{Weekday(self.weekday).label} "
-            f"{Status(self.status).label} {self.opens}-{self.closes}"
-        )
+        weekdays = ", ".join([str(i) for i in self.weekdays])
 
-    def save(self, *args, **kwargs):
-        # TODO: add constraint to prevent identical openings (same status) overlapping?
-        super().save(*args, **kwargs)
-        self.period.update_daily_hours()
+        return f"{self.name}({self.start_time} - {self.end_time} {weekdays})"
 
 
-class DailyHours(models.Model):
-    # TODO: would it make more sense to have all openings under the same dailyhours,
-    #  i.e unique target+date?
-    target = models.ForeignKey(
-        Target, on_delete=models.CASCADE, related_name="daily_hours", db_index=True
+class Rule(SoftDeletableModel, TimeStampedModel):
+    period = models.ForeignKey(
+        DatePeriod, on_delete=models.PROTECT, related_name="rules"
     )
-    date = models.DateField(db_index=True)
-    opening = models.ForeignKey(
-        Opening, on_delete=models.CASCADE, related_name="daily_hours", db_index=True
+    name = models.CharField(
+        verbose_name=_("Name"), max_length=255, null=True, blank=True
     )
-    last_modified_time = models.DateTimeField(
-        null=True, blank=True, auto_now=True, db_index=True
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
+    context = EnumField(
+        RuleContext,
+        verbose_name=_("Context"),
+        max_length=100,
     )
-
-    def __str__(self):
-        return (
-            f"{self.target}:"
-            f"{self.date} {Status(self.opening.status).label} "
-            f"{self.opening.opens}-{self.opening.closes}"
-        )
+    subject = EnumField(
+        RuleSubject,
+        verbose_name=_("Subject"),
+        max_length=100,
+    )
+    start = models.IntegerField(verbose_name=_("Start"), null=True, blank=True)
+    frequency_ordinal = models.PositiveIntegerField(
+        verbose_name=_("Frequency (ordinal)"), null=True, blank=True
+    )
+    frequency_modifier = EnumField(
+        FrequencyModifier,
+        verbose_name=_("Frequency (modifier)"),
+        max_length=100,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["target", "date", "opening"], name="unique_opening_per_date"
+        verbose_name = _("Rule")
+        verbose_name_plural = _("Rules")
+
+    def get_ordinal_for_item(
+        self, item: Union[List[datetime.date], datetime.date]
+    ) -> Union[None, int]:
+        """Return ordinal for the provided context item"""
+        if not item:
+            return None
+
+        # TODO: Is checking the first item sufficient?
+        if isinstance(item, list):
+            item = item[0]
+
+        if self.subject.is_singular():
+            return item.day
+        if self.subject == RuleSubject.WEEK:
+            return item.isocalendar()[1]
+        if self.subject == RuleSubject.MONTH:
+            return item.month
+
+    def _filter_context_set(self, context_set: list) -> list:
+        """Filter the provided context set by start and frequency"""
+        if not self.frequency_modifier and not self.frequency_ordinal:
+            if self.start is None:
+                return context_set
+
+            # TODO: When the context is YEAR and the subject is WEEK we should probably
+            #       use the iso week number here
+            try:
+                return [context_set[self.start if self.start < 0 else self.start - 1]]
+            except IndexError:
+                return []
+
+        if self.frequency_ordinal:
+            if self.start is None:
+                # TODO: Should we default to start=1?
+                return context_set
+
+            # TODO: When the context is YEAR and the subject is WEEK we should probably
+            #       use the iso week number here
+            try:
+                return context_set[
+                    self.start
+                    if self.start < 0
+                    else self.start - 1 :: self.frequency_ordinal
+                ]
+            except IndexError:
+                return []
+        elif self.frequency_modifier:
+            result = []
+            for item in context_set:
+                num = self.get_ordinal_for_item(item)
+                if self.frequency_modifier == FrequencyModifier.EVEN and num % 2 == 0:
+                    result.append(item)
+                if self.frequency_modifier == FrequencyModifier.ODD and num % 2 == 1:
+                    result.append(item)
+
+            return result
+
+    def get_context_sets(
+        self, start_date: datetime.date, end_date: datetime.date
+    ) -> List:
+        """Get context sets "_defined by the Rules context and subject"""
+        max_start_year = start_date.year
+        if self.period.start_date:
+            max_start_year = max(start_date.year, self.period.start_date.year)
+
+        min_end_year = end_date.year
+        if self.period.end_date:
+            min_end_year = min(end_date.year, self.period.end_date.year)
+
+        if self.context == RuleContext.PERIOD:
+            if self.subject == RuleSubject.DAY:
+                return [expand_range(self.period.start_date, self.period.end_date)]
+
+            elif self.subject == RuleSubject.WEEK:
+                week_start = self.period.start_date - relativedelta(
+                    days=self.period.start_date.weekday()
+                )
+                week_end = week_start + relativedelta(weekday=SU(1))
+
+                weeks = []
+                while week_start <= self.period.end_date:
+                    weeks.append(expand_range(week_start, week_end))
+                    week_start = week_start + relativedelta(weeks=1)
+                    week_end = week_start + relativedelta(weekday=SU(1))
+
+                return [weeks]
+
+            elif self.subject == RuleSubject.MONTH:
+                first_day = datetime.date(
+                    year=self.period.start_date.year,
+                    month=self.period.start_date.month,
+                    day=1,
+                )
+                last_day_of_month = first_day + relativedelta(day=31)
+
+                months = []
+                while last_day_of_month <= self.period.end_date + relativedelta(day=31):
+                    months.append(expand_range(first_day, last_day_of_month))
+                    first_day += relativedelta(months=1)
+                    last_day_of_month = first_day + relativedelta(day=31)
+
+                return [months]
+
+            elif self.subject in RuleSubject.weekday_subjects():
+                dates = []
+                for a_date in expand_range(
+                    self.period.start_date, self.period.end_date
+                ):
+                    if a_date.isoweekday() == self.subject.as_isoweekday():
+                        dates.append(a_date)
+
+                return [dates]
+
+        elif self.context == RuleContext.YEAR:
+            years = range(max_start_year, min_end_year + 1)
+
+            result = []
+            for year in years:
+                if self.subject == RuleSubject.DAY:
+                    result.append(
+                        expand_range(
+                            datetime.date(year=year, month=1, day=1),
+                            datetime.date(year=year, month=12, day=31),
+                        )
+                    )
+                elif self.subject == RuleSubject.WEEK:
+                    year_start_date = datetime.date(year=year, month=1, day=1)
+                    week_start = year_start_date - relativedelta(
+                        days=year_start_date.weekday()
+                    )
+                    week_end = week_start + relativedelta(weekday=SU(1))
+
+                    weeks = []
+                    while week_start <= end_date:
+                        weeks.append(expand_range(week_start, week_end))
+                        week_start = week_start + relativedelta(weeks=1)
+                        week_end = week_start + relativedelta(weekday=SU(1))
+
+                    result.append(weeks)
+                elif self.subject == RuleSubject.MONTH:
+                    months = []
+                    for month_number in range(1, 13):
+                        first_day_of_month = datetime.date(
+                            year=year, month=month_number, day=1
+                        )
+                        last_day_of_month = first_day_of_month + relativedelta(day=31)
+                        months.append(
+                            expand_range(first_day_of_month, last_day_of_month)
+                        )
+
+                    result.append(months)
+                elif self.subject in RuleSubject.weekday_subjects():
+                    days_in_year = expand_range(
+                        datetime.date(year=year, month=1, day=1),
+                        datetime.date(year=year, month=12, day=31),
+                    )
+                    dates = []
+                    for a_date in days_in_year:
+                        if a_date.isoweekday() == self.subject.as_isoweekday():
+                            dates.append(a_date)
+
+                    result.append(dates)
+
+            return result
+
+        elif self.context == RuleContext.MONTH:
+            c = Calendar()
+
+            first_day = datetime.date(
+                year=start_date.year, month=start_date.month, day=1
             )
-        ]
-        verbose_name = _("Daily hours")
-        verbose_name_plural = _("Daily hours")
+            last_day_of_month = first_day + relativedelta(day=31)
+
+            result = []
+            while last_day_of_month <= end_date + relativedelta(day=31):
+                if self.subject == RuleSubject.DAY:
+                    days_in_month = expand_range(first_day, last_day_of_month)
+                    result.append(days_in_month)
+                elif self.subject == RuleSubject.WEEK:
+                    weeks_in_month = c.monthdatescalendar(
+                        first_day.year, first_day.month
+                    )
+                    result.append(weeks_in_month)
+
+                elif self.subject == RuleSubject.MONTH:
+                    raise ValueError("Not applicable")
+
+                elif self.subject in RuleSubject.weekday_subjects():
+                    days_in_month = expand_range(first_day, last_day_of_month)
+
+                    dates = []
+                    for a_date in days_in_month:
+                        if a_date.isoweekday() == self.subject.as_isoweekday():
+                            dates.append(a_date)
+
+                    result.append(dates)
+
+                first_day += relativedelta(months=1)
+                last_day_of_month = first_day + relativedelta(day=31)
+            return result
+
+    def apply_to_date_range(
+        self, start_date: datetime.date, end_date: datetime.date
+    ) -> Set[datetime.date]:
+        """Apply rule to the provided date range"""
+        max_start_date = start_date
+        if self.period.start_date:
+            max_start_date = max(start_date, self.period.start_date)
+
+        min_end_date = end_date
+        if self.period.end_date:
+            min_end_date = min(end_date, self.period.end_date)
+
+        if max_start_date > min_end_date:
+            # Period starts after the filter start date or the period ends before the
+            # filter start date
+            # TODO: Raise error?
+            return set()
+
+        matching_dates = set()
+
+        # Get a set of dates that match the context and subject
+        context_sets = self.get_context_sets(start_date, end_date)
+
+        # Filter every set by start and frequency
+        for context_set in context_sets:
+            filtered_context_set = self._filter_context_set(context_set)
+            # Flatten list of lists
+            if any(isinstance(item, list) for item in filtered_context_set):
+                filtered_context_set = chain(*filtered_context_set)
+
+            matching_dates |= set(filtered_context_set)
+
+        range_dates = set(expand_range(max_start_date, min_end_date))
+
+        return matching_dates & range_dates

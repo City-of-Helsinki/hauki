@@ -60,7 +60,7 @@ stages:
         Dockerfile: deploy/elastic_apm_injection/Dockerfile
         arguments: --build-arg BASE_IMAGE=$(ImageName)
     - script: |
-        docker tag hauki_dev:$(tag) hauki:dev_$(tag)
+        docker tag hauki_dev:latest hauki:dev_latest
         docker rmi hauki_dev
       displayName:
     - task: Docker@2
@@ -88,7 +88,7 @@ stages:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - script: |
-          docker tag hauki:dev_$(tag) hauki_dev:$(tag)
+          docker tag hauki:dev_latest hauki_dev:latest
         displayName: Add hauki_dev name back to image for docker-compose
       - task: DockerCompose@0
         displayName: Run tests

@@ -50,7 +50,6 @@ stages:
       inputs:
         dockerComposeCommand: build
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-        includeSourceTags: true
     - task: Docker@2
       displayName: Build APM enhanced image
       inputs:

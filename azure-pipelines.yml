@@ -117,7 +117,7 @@ stages:
           docker tag $(ImageName):$(tag) helsinki/$(ImageName):latest
           docker tag $(ImageName):apm helsinki/$(ImageName):latest_apm
         displayName: Retag image for Helsinki repo with latest
-        condition: eq($(Build.SourceBranchName), 'master')
+        condition: eq(variables['branch'], 'master')
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:

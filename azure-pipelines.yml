@@ -110,11 +110,11 @@ stages:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - script: |
-          docker tag $(ImageName):$latest helsinki/$(ImageName):$(tag)
+          docker tag $(ImageName):latest helsinki/$(ImageName):$(tag)
           docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_apm
         displayName: Retag image for Helsinki repo with commit hash
       - script: |
-          docker tag $(ImageName):$latest helsinki/$(ImageName):latest
+          docker tag $(ImageName):latest helsinki/$(ImageName):latest
           docker tag $(ImageName):apm helsinki/$(ImageName):latest_apm
         displayName: Retag image for Helsinki repo with latest
         condition: eq(variables['branch'], 'master')

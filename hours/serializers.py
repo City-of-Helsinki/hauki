@@ -2,12 +2,63 @@ from operator import itemgetter
 
 from django_orghierarchy.models import Organization
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
+from modeltranslation import settings as mt_settings
+from modeltranslation.translator import NotRegistered, translator
+from modeltranslation.utils import get_language
 from rest_framework import serializers
 
 from users.serializers import UserSerializer
 
 from .enums import PeriodType
 from .models import DataSource, DatePeriod, OpeningHours, Resource, ResourceOrigin, Rule
+
+
+class TranslationSerializerMixin:
+    def to_representation(self, instance):
+        result = super().to_representation(instance)
+
+        try:
+            translation_options = translator.get_options_for_model(instance.__class__)
+        except NotRegistered:
+            return result
+
+        fields = self._readable_fields
+
+        for field in fields:
+            if field.field_name not in translation_options.fields.keys():
+                continue
+
+            new_value = {}
+            for lang in mt_settings.AVAILABLE_LANGUAGES:
+                key = f"{field.field_name}_{lang}"
+                new_value[lang] = getattr(instance, key)
+
+            result[field.field_name] = new_value
+
+        return result
+
+    def to_internal_value(self, data):
+        try:
+            translation_options = translator.get_options_for_model(self.Meta.model)
+        except NotRegistered:
+            return super().to_internal_value(data)
+
+        current_language = get_language()
+
+        for field_name in translation_options.fields.keys():
+            if field_name not in data.keys():
+                continue
+
+            if not isinstance(data.get(field_name), dict):
+                continue
+
+            for lang in mt_settings.AVAILABLE_LANGUAGES:
+                key = f"{field_name}_{lang}"
+                data[key] = data.get(field_name, {}).get(lang, None)
+
+            data[field_name] = data[f"{field_name}_{current_language}"]
+
+        return super().to_internal_value(data)
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -30,7 +81,9 @@ class ResourceOriginSerializer(serializers.ModelSerializer):
         fields = ["data_source", "origin_id"]
 
 
-class ResourceSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+class ResourceSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
     last_modified_by = UserSerializer(read_only=True)
     organization = OrganizationSerializer(read_only=True)
     resourceorigin_set = ResourceOriginSerializer(
@@ -41,19 +94,9 @@ class ResourceSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer
         model = Resource
         fields = [
             "id",
-            # TODO: Add fields for all of the languages automatically
             "name",
-            "name_fi",
-            "name_sv",
-            "name_en",
             "description",
-            "description_fi",
-            "description_sv",
-            "description_en",
             "address",
-            "address_fi",
-            "address_sv",
-            "address_en",
             "resource_type",
             "parent",
             "organization",
@@ -103,7 +146,7 @@ class DailyOpeningHoursSerializer(serializers.BaseSerializer):
                         **{
                             "date": date.isoformat(),
                         },
-                        **time_element_serializer.data
+                        **time_element_serializer.data,
                     )
                 )
 

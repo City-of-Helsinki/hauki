@@ -5,6 +5,7 @@
 
 trigger:
 - master
+- HAUKI-91-models
 
 resources:
 - repo: self
@@ -135,8 +136,8 @@ stages:
         displayName: Add OC tag to PR image
         inputs:
           openshiftService: Azure OpenShift-hauki
-          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:merge'
-        condition: ne(variables['branch'], 'master')
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:branch'
+        condition: eq(variables['branch'], 'HAUKI-91-models')
       - task: oc-cmd@2
         displayName: Add OC tag to latest image
         inputs:

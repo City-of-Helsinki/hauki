@@ -4,6 +4,7 @@ from datetime import MAXYEAR, MINYEAR, date, datetime, timedelta
 
 import django_filters
 from django.forms import TextInput
+from django_orghierarchy.models import Organization
 from drf_extra_fields.fields import DateRangeField
 from psycopg2.extras import DateRange
 from rest_framework import filters, routers, serializers, viewsets
@@ -190,7 +191,9 @@ class DailyHoursSerializer(serializers.HyperlinkedModelSerializer):
 
 class TargetSerializer(serializers.HyperlinkedModelSerializer):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
-    organization = serializers.PrimaryKeyRelatedField(read_only=True)
+    organization = serializers.HyperlinkedRelatedField(
+        read_only=True, view_name="organization-detail"
+    )
     target_type = IntegerChoiceField(choices=TargetType)
     identifiers = IdentifierSerializer(many=True)
     links = LinkSerializer(many=True)
@@ -275,6 +278,28 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
         ]
 
 
+class OrganizationSerializer(serializers.HyperlinkedModelSerializer):
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    classification = serializers.PrimaryKeyRelatedField(read_only=True)
+    children = serializers.HyperlinkedRelatedField(
+        many=True, read_only=True, view_name="organization-detail"
+    )
+
+    class Meta:
+        model = Organization
+        fields = [
+            "id",
+            "data_source",
+            "origin_id",
+            "name",
+            "classification",
+            "parent",
+            "children",
+            "created_time",
+            "last_modified_time",
+        ]
+
+
 class TargetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Target.objects.all().prefetch_related("identifiers", "links")
     serializer_class = TargetSerializer
@@ -352,3 +377,12 @@ class DailyHoursViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 register_view(DailyHoursViewSet, "daily_hours")
+
+
+class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    filterset_fields = ["parent"]
+
+
+register_view(OrganizationViewSet, "organization")

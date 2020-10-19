@@ -9,9 +9,11 @@ freezegun
 ipython
 isort
 jupyter
+pre-commit
 pytest
 pytest-cov
 pytest-django
 pytest-factoryboy
 requests-mock
 safety
+

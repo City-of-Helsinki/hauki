@@ -252,6 +252,12 @@ class OpeningHours(SoftDeletableModel, TimeStampedModel):
         null=True,
         blank=True,
     )
+    period_type = EnumField(
+        PeriodType,
+        verbose_name=_("Period type"),
+        max_length=100,
+        default=PeriodType.UNDEFINED,
+    )
 
     class Meta:
         verbose_name = _("Opening hours")

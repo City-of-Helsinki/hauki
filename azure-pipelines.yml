@@ -4,18 +4,31 @@
 # https://dev.to/n3wt0n/container-image-promotion-across-environments-yaml-1ca6
 
 trigger:
-- master
+  batch: true
 
 resources:
 - repo: self
 
 variables:
   tag: '$(Build.SourceVersion)'
+  branch: '$(Build.SourceBranchName)'
   ImageName: 'hauki'
   azureSubscription: HKI-kanslia-standalone
   appName: hauki
   containerRegistry: registry.hub.docker.com
   tag_postfix: '_apm'
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+    tags: |
+      $(tag)
+      $(tag)_$(tag_postfix)
+      $(branch)_latest
+      $(branch)_latest_$(tag_postfix)
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    tags: |
+      $(tag)
+      $(tag)_$(tag_postfix)
+      latest
+      latest_$(tag_postfix)
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -29,17 +42,17 @@ stages:
     steps:
     - script: |
           echo 'Running in workspace $(Pipeline.Workspace)'
-          echo 'Build.SourceVersion: $(Build.SourceVersion)'
+          echo 'Build.SourceBranchName: $(branch)'
+          echo 'Build.SourceVersion: $(tag)'
           echo 'Build.SourceVersionMessage: $(Build.SourceVersionMessage)'
           echo 'Build.SourcesDirectory: $(Build.SourcesDirectory)'
           echo 'Build.ArtifactStagingDirectory: $(build.artifactstagingdirectory)'
+          echo 'Tags: $(tags)'
     - task: DockerCompose@0
       displayName: Build images
       inputs:
         dockerComposeCommand: build
         dockerComposeFile: '$(Build.SourcesDirectory)/docker-compose.yml'
-        includeSourceTags: true
-        includeLatestTag: true
     - task: Docker@2
       displayName: Build APM enhanced image
       inputs:
@@ -100,22 +113,26 @@ stages:
           command: load
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - script: |
-          docker tag $(ImageName):latest helsinki/$(ImageName):latest
           docker tag $(ImageName):latest helsinki/$(ImageName):$(tag)
-          docker tag $(ImageName):apm helsinki/$(ImageName):latest_apm
-          docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_apm
-        displayName: Do image retagging for helsinki repo
+          docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_$(tag_postfix)
+        displayName: Retag image for Helsinki repo with commit hash
+      - script: |
+          docker tag $(ImageName):latest helsinki/$(ImageName):latest
+          docker tag $(ImageName):apm helsinki/$(ImageName):latest_$(tag_postfix)
+        displayName: Retag image for Helsinki repo with latest
+        condition: eq(variables['branch'], 'master')
+      - script: |
+          docker tag $(ImageName):latest helsinki/$(ImageName):$(branch)_latest
+          docker tag $(ImageName):apm helsinki/$(ImageName):$(branch)_latest_$(tag_postfix)
+        displayName: Retag image for Helsinki repo with branch name
+        condition: ne(variables['branch'], 'master')
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:
           containerRegistry: Docker hub upload-hauki
           repository: helsinki/$(ImageName)
           command: push
-          tags: |
-            latest
-            $(tag)
-            latest_apm
-            $(tag)_apm
+          tags: $(tags)
 - stage: Deploy
   displayName: Deploy to Openshift
   jobs:
@@ -123,7 +140,14 @@ stages:
     displayName: Update OC Imagestream
     steps:
       - task: oc-cmd@2
+        displayName: Add OC tag to PR image
+        inputs:
+          openshiftService: Azure OpenShift-hauki
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:HAUKI-91-models_latest'
+        condition: eq(variables['branch'], 'HAUKI-91-models')
+      - task: oc-cmd@2
         displayName: Add OC tag to latest image
         inputs:
           openshiftService: Azure OpenShift-hauki
           cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:latest'
+        condition: eq(variables['branch'], 'master')

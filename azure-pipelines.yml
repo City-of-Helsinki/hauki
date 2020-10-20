@@ -17,13 +17,13 @@ variables:
   appName: hauki
   containerRegistry: registry.hub.docker.com
   tag_postfix: '_apm'
-  ${{ if ne(variables['branch'], 'master') }}:
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
     tags: |
       $(tag)
       $(tag)_$(tag_postfix)
       $(branch)_latest
       $(branch)_latest_$(tag_postfix)
-  ${{ if eq(variables['branch'], 'master') }}:
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     tags: |
       $(tag)
       $(tag)_$(tag_postfix)

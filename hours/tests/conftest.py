@@ -2,12 +2,19 @@ import random
 import string
 
 import factory
+import pytest
 from faker import Factory as FakerFactory
 from pytest_factoryboy import register
+from rest_framework.test import APIClient
 
 from hours.models import DataSource, DatePeriod, OpeningHours, Resource, Rule
 
 faker = FakerFactory.create(locale="fi_FI")
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
 
 
 @register

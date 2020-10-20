@@ -1,7 +1,11 @@
 from django.http import Http404
 from rest_framework import viewsets
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from .authentication import HaukiSignedAuthentication
 from .models import DatePeriod, OpeningHours, Resource, Rule
 from .serializers import (
     DatePeriodSerializer,
@@ -61,3 +65,16 @@ class RuleViewSet(viewsets.ModelViewSet):
 class OpeningHoursViewSet(viewsets.ModelViewSet):
     queryset = OpeningHours.objects.all()
     serializer_class = OpeningHoursSerializer
+
+
+class AuthRequiredTestView(viewsets.ViewSet):
+    authentication_classes = [HaukiSignedAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        return Response(
+            {
+                "message": "You are authenticated",
+                "username": request.user.username,
+            }
+        )

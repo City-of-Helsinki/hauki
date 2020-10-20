@@ -15,6 +15,18 @@ from .serializers import (
 )
 
 
+def get_resource_pk_filter(pk):
+    if ":" not in pk:
+        return {"pk": pk}
+
+    # Find the object using resource origin
+    data_source_id, origin_id = pk.split(":")
+    return {
+        "resourceorigin__data_source_id": data_source_id,
+        "resourceorigin__origin_id": origin_id,
+    }
+
+
 class ResourceViewSet(viewsets.ModelViewSet):
     serializer_class = ResourceSerializer
 
@@ -30,17 +42,7 @@ class ResourceViewSet(viewsets.ModelViewSet):
         if not pk:
             raise Http404
 
-        if ":" in pk:
-            # Find the object using resource origin
-            data_source_id, origin_id = pk.split(":")
-            filter_kwargs = {
-                "resourceorigin__data_source_id": data_source_id,
-                "resourceorigin__origin_id": origin_id,
-            }
-        else:
-            filter_kwargs = {self.lookup_field: pk}
-
-        obj = get_object_or_404(queryset, **filter_kwargs)
+        obj = get_object_or_404(queryset, **get_resource_pk_filter(pk))
 
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)

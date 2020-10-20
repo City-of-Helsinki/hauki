@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from .models import Resource
 from .serializers import DailyOpeningHoursSerializer
+from .viewsets import get_resource_pk_filter
 
 
 class ResourceOpeningHoursView(APIView):
@@ -14,7 +15,7 @@ class ResourceOpeningHoursView(APIView):
 
     def get(self, request, resource_id=None):
         try:
-            resource = Resource.objects.get(pk=resource_id)
+            resource = Resource.objects.get(**get_resource_pk_filter(resource_id))
         except Resource.DoesNotExist:
             raise APIException("Resource does not exist")
 

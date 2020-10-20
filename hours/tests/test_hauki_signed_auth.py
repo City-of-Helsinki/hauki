@@ -15,7 +15,8 @@ def test_get_auth_required_unauthenticated(api_client):
 
 
 @pytest.mark.django_db
-def test_get_auth_required_header_invalid_signature(api_client):
+def test_get_auth_required_header_invalid_signature(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
     url = reverse("auth_required_test-list")
 
     authz_string = (
@@ -33,7 +34,8 @@ def test_get_auth_required_header_invalid_signature(api_client):
 
 
 @pytest.mark.django_db
-def test_get_auth_required_header_invalid_created_at(api_client):
+def test_get_auth_required_header_invalid_created_at(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
     url = reverse("auth_required_test-list")
 
     data = {
@@ -56,7 +58,8 @@ def test_get_auth_required_header_invalid_created_at(api_client):
 
 
 @pytest.mark.django_db
-def test_get_auth_required_header_invalid_valid_until(api_client):
+def test_get_auth_required_header_invalid_valid_until(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
     url = reverse("auth_required_test-list")
 
     data = {
@@ -79,7 +82,8 @@ def test_get_auth_required_header_invalid_valid_until(api_client):
 
 
 @pytest.mark.django_db
-def test_get_auth_required_header_authenticated(api_client):
+def test_get_auth_required_header_authenticated(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
     url = reverse("auth_required_test-list")
 
     now = datetime.datetime.utcnow()

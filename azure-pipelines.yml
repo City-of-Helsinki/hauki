@@ -42,8 +42,8 @@ stages:
     steps:
     - script: |
           echo 'Running in workspace $(Pipeline.Workspace)'
-          echo 'Build.SourceBranchName: $(Build.SourceBranchName)'
-          echo 'Build.SourceVersion: $(Build.SourceVersion)'
+          echo 'Build.SourceBranchName: $(branch)'
+          echo 'Build.SourceVersion: $(tag)'
           echo 'Build.SourceVersionMessage: $(Build.SourceVersionMessage)'
           echo 'Build.SourcesDirectory: $(Build.SourcesDirectory)'
           echo 'Build.ArtifactStagingDirectory: $(build.artifactstagingdirectory)'

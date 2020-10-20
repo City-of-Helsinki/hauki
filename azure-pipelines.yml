@@ -47,6 +47,7 @@ stages:
           echo 'Build.SourceVersionMessage: $(Build.SourceVersionMessage)'
           echo 'Build.SourcesDirectory: $(Build.SourcesDirectory)'
           echo 'Build.ArtifactStagingDirectory: $(build.artifactstagingdirectory)'
+          echo 'Tags: $(tags)'
     - task: DockerCompose@0
       displayName: Build images
       inputs:

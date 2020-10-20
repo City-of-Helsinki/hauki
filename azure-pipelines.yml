@@ -4,8 +4,7 @@
 # https://dev.to/n3wt0n/container-image-promotion-across-environments-yaml-1ca6
 
 trigger:
-- master
-- HAUKI-91-models
+  batch: true
 
 resources:
 - repo: self
@@ -21,13 +20,15 @@ variables:
   ${{ if ne(variables['branch'], 'master') }}:
     tags: |
       $(tag)
-      $(tag)_apm
+      $(tag)_$(tag_postfix)
+      $(branch)_latest
+      $(branch)_latest_$(tag_postfix)
   ${{ if eq(variables['branch'], 'master') }}:
     tags: |
       $(tag)
-      $(tag)_apm
+      $(tag)_$(tag_postfix)
       latest
-      latest_apm
+      latest_$(tag_postfix)
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -112,13 +113,18 @@ stages:
           arguments: '--input $(Pipeline.Workspace)/$(ImageName).image.tar'
       - script: |
           docker tag $(ImageName):latest helsinki/$(ImageName):$(tag)
-          docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_apm
+          docker tag $(ImageName):apm helsinki/$(ImageName):$(tag)_$(tag_postfix)
         displayName: Retag image for Helsinki repo with commit hash
       - script: |
           docker tag $(ImageName):latest helsinki/$(ImageName):latest
-          docker tag $(ImageName):apm helsinki/$(ImageName):latest_apm
+          docker tag $(ImageName):apm helsinki/$(ImageName):latest_$(tag_postfix)
         displayName: Retag image for Helsinki repo with latest
         condition: eq(variables['branch'], 'master')
+      - script: |
+          docker tag $(ImageName):latest helsinki/$(ImageName):$(branch)_latest
+          docker tag $(ImageName):apm helsinki/$(ImageName):$(branch)_latest_$(tag_postfix)
+        displayName: Retag image for Helsinki repo with branch name
+        condition: ne(variables['branch'], 'master')
       - task: Docker@2
         displayName: Push image to Docker hub
         inputs:
@@ -136,7 +142,7 @@ stages:
         displayName: Add OC tag to PR image
         inputs:
           openshiftService: Azure OpenShift-hauki
-          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:branch'
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:HAUKI-91-models_latest'
         condition: eq(variables['branch'], 'HAUKI-91-models')
       - task: oc-cmd@2
         displayName: Add OC tag to latest image

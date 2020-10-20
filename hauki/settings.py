@@ -72,6 +72,7 @@ env = environ.Env(
     MAIL_MAILGUN_KEY=(str, ""),
     MAIL_MAILGUN_DOMAIN=(str, ""),
     MAIL_MAILGUN_API=(str, ""),
+    HAUKI_SIGNED_AUTH_PSK=(str, ""),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -267,6 +268,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "MAX_PAGE_SIZE": 100,
 }
+
+HAUKI_SIGNED_AUTH_PSK = env("HAUKI_SIGNED_AUTH_PSK")
 
 # shown in the browsable API
 INSTANCE_NAME = env("INSTANCE_NAME")

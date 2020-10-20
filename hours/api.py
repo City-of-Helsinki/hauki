@@ -8,7 +8,11 @@ from django_orghierarchy.models import Organization
 from drf_extra_fields.fields import DateRangeField
 from psycopg2.extras import DateRange
 from rest_framework import filters, routers, serializers, viewsets
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from .authentication import HaukiSignedAuthentication
 from .models import (
     DailyHours,
     Opening,
@@ -386,3 +390,19 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 register_view(OrganizationViewSet, "organization")
+
+
+class AuthRequiredTestView(viewsets.ViewSet):
+    authentication_classes = [HaukiSignedAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        return Response(
+            {
+                "message": "You are authenticated",
+                "username": request.user.username,
+            }
+        )
+
+
+register_view(AuthRequiredTestView, "auth_required_test", basename="auth_required_test")

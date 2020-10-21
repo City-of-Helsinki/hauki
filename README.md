@@ -136,16 +136,27 @@ pre-commit run --all-files
 
 ## Importing data
 
-Currently, importing targets from Helsinki metropolitan area unit registry (TPREK) is supported. Import all targets from [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) by
+Currently, importing *targets* from Helsinki metropolitan area unit registry (TPREK) is supported. Import all targets from [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) by
 ```
 python manage.py hours_import tprek --targets
 ```
 
-Opening hours may be imported for any Finnish libraries from the [kirjastot.fi API](https://api.kirjastot.fi/).
+---
+
+*Opening hours* may be imported for any Finnish libraries from the [kirjastot.fi API](https://api.kirjastot.fi/).
 
 This requires that libraries already exist in the database (imported from TPREK or created by other means), with correct kirkanta ids in the `identifiers` field. The kirjastot.fi importer doesn't currently import any libraries into the database, but you may suggest a PR that imports all libraries as targets, if you wish to import libraries outside the Helsinki area from the kirjastot.fi API.
 
 Import library opening hours from the kirjastot.fi API for all targets that have kirkanta identifiers by
 ```
 python manage.py hours_import kirjastot --openings
+```
+
+---
+
+*Organizations* may be imported for the City of Helsinki decision makers from the [Paatos API](http://api.hel.fi/paatos/v1/), or for the TPREK data publishers (including City of Helsinki opening hour publishers) from the [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html).
+
+Import all TPREK publisher organizations by
+```
+python manage.py import_organizations -c tprek http://www.hel.fi/palvelukarttaws/rest/v4/department/
 ```

@@ -16,7 +16,7 @@ variables:
   azureSubscription: HKI-kanslia-standalone
   appName: hauki
   containerRegistry: registry.hub.docker.com
-  tag_postfix: '_apm'
+  tag_postfix: 'apm'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
     tags: |
       $(tag)
@@ -143,11 +143,11 @@ stages:
         displayName: Add OC tag to PR image
         inputs:
           openshiftService: Azure OpenShift-hauki
-          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:HAUKI-91-models_latest'
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)_$(tag_postfix) hauki-backend:HAUKI-91-models_latest'
         condition: eq(variables['branch'], 'HAUKI-91-models')
       - task: oc-cmd@2
         displayName: Add OC tag to latest image
         inputs:
           openshiftService: Azure OpenShift-hauki
-          cmd: 'tag docker.io/helsinki/hauki:$(tag)$(tag_postfix) hauki-backend:latest'
+          cmd: 'tag docker.io/helsinki/hauki:$(tag)_$(tag_postfix) hauki-backend:latest'
         condition: eq(variables['branch'], 'master')

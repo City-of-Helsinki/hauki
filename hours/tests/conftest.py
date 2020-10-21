@@ -3,11 +3,13 @@ import string
 
 import factory
 import pytest
+from django_orghierarchy.models import Organization
 from faker import Factory as FakerFactory
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
 from hours.models import DataSource, DatePeriod, OpeningHours, Resource, Rule
+from users.models import User
 
 faker = FakerFactory.create(locale="fi_FI")
 
@@ -59,3 +61,19 @@ class RuleFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Rule
+
+
+@register
+class OrganizationFactory(factory.django.DjangoModelFactory):
+    name = factory.LazyAttribute(lambda x: "ORG-" + faker.pystr())
+
+    class Meta:
+        model = Organization
+
+
+@register
+class UserFactory(factory.django.DjangoModelFactory):
+    username = factory.LazyAttribute(lambda x: "USER-" + faker.pystr())
+
+    class Meta:
+        model = User

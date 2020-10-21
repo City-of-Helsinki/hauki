@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.models import Organization
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 
@@ -132,6 +133,15 @@ class HaukiSignedAuthentication(BaseAuthentication):
         if not user.is_active:
             raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
 
-        # TODO: Join user to the organization if one is provided
+        if params.get("organization"):
+            try:
+                organization = Organization.objects.get(id=params["organization"])
+                users_organizations = user.organization_memberships.all()
+
+                if organization not in users_organizations:
+                    user.organization_memberships.add(organization)
+            except Organization.DoesNotExist:
+                # TODO: Should we raise exception here
+                pass
 
         return user, None

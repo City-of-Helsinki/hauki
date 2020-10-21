@@ -62,9 +62,25 @@ class TranslationSerializerMixin:
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    classification = serializers.PrimaryKeyRelatedField(read_only=True)
+    children = serializers.HyperlinkedRelatedField(
+        many=True, read_only=True, view_name="organization-detail"
+    )
+
     class Meta:
         model = Organization
-        fields = ["id", "name"]
+        fields = [
+            "id",
+            "data_source",
+            "origin_id",
+            "name",
+            "classification",
+            "parent",
+            "children",
+            "created_time",
+            "last_modified_time",
+        ]
 
 
 class DataSourceSerializer(serializers.ModelSerializer):

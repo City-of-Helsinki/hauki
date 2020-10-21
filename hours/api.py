@@ -4,6 +4,7 @@ from hours.viewsets import (
     AuthRequiredTestView,
     DatePeriodViewSet,
     OpeningHoursViewSet,
+    OrganizationViewSet,
     ResourceViewSet,
     RuleViewSet,
 )
@@ -39,4 +40,5 @@ register_view(ResourceViewSet, "resource", basename="resource")
 register_view(DatePeriodViewSet, "date_period", basename="date_period")
 register_view(RuleViewSet, "rule", basename="rule")
 register_view(OpeningHoursViewSet, "opening_hours", basename="opening_hours")
+register_view(OrganizationViewSet, "organization", basename="organization")
 register_view(AuthRequiredTestView, "auth_required_test", basename="auth_required_test")

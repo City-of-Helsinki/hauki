@@ -1,4 +1,5 @@
 from django.http import Http404
+from django_orghierarchy.models import Organization
 from rest_framework import viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
@@ -10,6 +11,7 @@ from .models import DatePeriod, OpeningHours, Resource, Rule
 from .serializers import (
     DatePeriodSerializer,
     OpeningHoursSerializer,
+    OrganizationSerializer,
     ResourceSerializer,
     RuleSerializer,
 )
@@ -67,6 +69,12 @@ class RuleViewSet(viewsets.ModelViewSet):
 class OpeningHoursViewSet(viewsets.ModelViewSet):
     queryset = OpeningHours.objects.all()
     serializer_class = OpeningHoursSerializer
+
+
+class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    filterset_fields = ["parent"]
 
 
 class AuthRequiredTestView(viewsets.ViewSet):

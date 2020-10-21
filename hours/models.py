@@ -195,6 +195,11 @@ class Target(BaseModel):
         verbose_name = _("Target")
         verbose_name_plural = _("Targets")
 
+    def save(self, *args, **kwargs):
+        if not self.organization and self.parent:
+            self.organization = self.parent.organization
+        super().save(*args, **kwargs)
+
     def get_periods_for_range(
         self,
         start,

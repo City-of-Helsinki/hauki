@@ -82,9 +82,18 @@ class AuthRequiredTestView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):
+        organization_ids = set()
+        organization_ids.update(
+            request.user.admin_organizations.values_list("id", flat=True)
+        )
+        organization_ids.update(
+            request.user.organization_memberships.values_list("id", flat=True)
+        )
+
         return Response(
             {
                 "message": "You are authenticated",
                 "username": request.user.username,
+                "organization_ids": organization_ids,
             }
         )

@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from .authentication import calculate_signature, join_params
 from .models import Resource
 from .serializers import DailyOpeningHoursSerializer
-from .viewsets import get_resource_pk_filter
+from .utils import get_resource_pk_filter
 
 
 class ResourceOpeningHoursView(APIView):

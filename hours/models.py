@@ -16,16 +16,16 @@ from model_utils.models import SoftDeletableModel, TimeStampedModel
 
 from hours.enums import (
     FrequencyModifier,
-    PeriodType,
     ResourceType,
     RuleContext,
     RuleSubject,
+    State,
     Weekday,
 )
 
 TimeElement = namedtuple(
     "TimeElement",
-    ["start_time", "end_time", "period_type", "override", "full_day"],
+    ["start_time", "end_time", "resource_state", "override", "full_day"],
 )
 
 
@@ -78,13 +78,12 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         max_length=100,
         default=ResourceType.UNIT,
     )
-    parent = models.ForeignKey(
+    children = models.ManyToManyField(
         "self",
-        on_delete=models.PROTECT,
-        related_name="children",
-        db_index=True,
-        null=True,
+        verbose_name=_("Sub resources"),
+        related_name="parents",
         blank=True,
+        symmetrical=False,
     )
     organization = models.ForeignKey(
         Organization,
@@ -175,11 +174,11 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     end_date = models.DateField(
         verbose_name=_("End date"), null=True, blank=True, db_index=True
     )
-    period_type = EnumField(
-        PeriodType,
-        verbose_name=_("Period type"),
+    resource_state = EnumField(
+        State,
+        verbose_name=_("Resource state"),
         max_length=100,
-        default=PeriodType.UNDEFINED,
+        default=State.UNDEFINED,
     )
     override = models.BooleanField(
         verbose_name=_("Override"), default=False, db_index=True
@@ -190,7 +189,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         verbose_name_plural = _("Periods")
 
     def __str__(self):
-        return f"{self.name}({self.start_date} - {self.end_date} {self.period_type})"
+        return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"
 
     def get_daily_opening_hours(self, start_date, end_date):
         overlap = get_range_overlap(
@@ -198,39 +197,46 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         )
 
         all_dates = set(expand_range(overlap[0], overlap[1]))
-
-        rules = self.rules.all()
-        opening_hours = self.opening_hours.all()
-
-        if rules.count():
-            for rule in self.rules.all():
-                matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
-                all_dates &= matching_dates
-
         result = defaultdict(list)
-        for one_date in all_dates:
-            for opening_hour in opening_hours:
-                if (
-                    not opening_hour.weekdays
-                    or Weekday.from_iso_weekday(one_date.isoweekday())
-                    in opening_hour.weekdays
-                ):
-                    result[one_date].append(
-                        TimeElement(
-                            start_time=opening_hour.start_time,
-                            end_time=opening_hour.end_time,
-                            period_type=self.period_type,
-                            override=self.override,
-                            full_day=opening_hour.full_day,
+
+        for time_span_group in self.time_span_groups.all():
+            rules = time_span_group.rules.all()
+            time_spans = time_span_group.time_spans.all()
+
+            if rules.count():
+                for rule in rules:
+                    matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
+                    all_dates &= matching_dates
+
+            for one_date in all_dates:
+                for time_span in time_spans:
+                    if (
+                        not time_span.weekdays
+                        or Weekday.from_iso_weekday(one_date.isoweekday())
+                        in time_span.weekdays
+                    ):
+                        result[one_date].append(
+                            TimeElement(
+                                start_time=time_span.start_time,
+                                end_time=time_span.end_time,
+                                resource_state=self.resource_state,
+                                override=self.override,
+                                full_day=time_span.full_day,
+                            )
                         )
-                    )
 
         return result
 
 
-class OpeningHours(SoftDeletableModel, TimeStampedModel):
+class TimeSpanGroup(models.Model):
     period = models.ForeignKey(
-        DatePeriod, on_delete=models.PROTECT, related_name="opening_hours"
+        DatePeriod, on_delete=models.PROTECT, related_name="time_span_groups"
+    )
+
+
+class TimeSpan(SoftDeletableModel, TimeStampedModel):
+    group = models.ForeignKey(
+        TimeSpanGroup, on_delete=models.PROTECT, related_name="time_spans"
     )
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, null=True, blank=True
@@ -252,16 +258,16 @@ class OpeningHours(SoftDeletableModel, TimeStampedModel):
         null=True,
         blank=True,
     )
-    period_type = EnumField(
-        PeriodType,
-        verbose_name=_("Period type"),
+    resource_state = EnumField(
+        State,
+        verbose_name=_("Resource state"),
         max_length=100,
-        default=PeriodType.UNDEFINED,
+        default=State.UNDEFINED,
     )
 
     class Meta:
-        verbose_name = _("Opening hours")
-        verbose_name_plural = _("Opening hours")
+        verbose_name = _("Time span")
+        verbose_name_plural = _("Time spans")
 
     def __str__(self):
         weekdays = ", ".join([str(i) for i in self.weekdays])
@@ -270,8 +276,8 @@ class OpeningHours(SoftDeletableModel, TimeStampedModel):
 
 
 class Rule(SoftDeletableModel, TimeStampedModel):
-    period = models.ForeignKey(
-        DatePeriod, on_delete=models.PROTECT, related_name="rules"
+    group = models.ForeignKey(
+        TimeSpanGroup, on_delete=models.PROTECT, related_name="rules"
     )
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, null=True, blank=True
@@ -363,27 +369,30 @@ class Rule(SoftDeletableModel, TimeStampedModel):
     def get_context_sets(
         self, start_date: datetime.date, end_date: datetime.date
     ) -> List:
-        """Get context sets "_defined by the Rules context and subject"""
+        """Get context sets defined by the Rules context and subject"""
+        period_start_date = self.group.period.start_date
+        period_end_date = self.group.period.end_date
+
         max_start_year = start_date.year
-        if self.period.start_date:
-            max_start_year = max(start_date.year, self.period.start_date.year)
+        if period_start_date:
+            max_start_year = max(start_date.year, period_start_date.year)
 
         min_end_year = end_date.year
-        if self.period.end_date:
-            min_end_year = min(end_date.year, self.period.end_date.year)
+        if period_end_date:
+            min_end_year = min(end_date.year, period_end_date.year)
 
         if self.context == RuleContext.PERIOD:
             if self.subject == RuleSubject.DAY:
-                return [expand_range(self.period.start_date, self.period.end_date)]
+                return [expand_range(period_start_date, period_end_date)]
 
             elif self.subject == RuleSubject.WEEK:
-                week_start = self.period.start_date - relativedelta(
-                    days=self.period.start_date.weekday()
+                week_start = period_start_date - relativedelta(
+                    days=period_start_date.weekday()
                 )
                 week_end = week_start + relativedelta(weekday=SU(1))
 
                 weeks = []
-                while week_start <= self.period.end_date:
+                while week_start <= period_end_date:
                     weeks.append(expand_range(week_start, week_end))
                     week_start = week_start + relativedelta(weeks=1)
                     week_end = week_start + relativedelta(weekday=SU(1))
@@ -392,14 +401,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
             elif self.subject == RuleSubject.MONTH:
                 first_day = datetime.date(
-                    year=self.period.start_date.year,
-                    month=self.period.start_date.month,
+                    year=period_start_date.year,
+                    month=period_start_date.month,
                     day=1,
                 )
                 last_day_of_month = first_day + relativedelta(day=31)
 
                 months = []
-                while last_day_of_month <= self.period.end_date + relativedelta(day=31):
+                while last_day_of_month <= period_end_date + relativedelta(day=31):
                     months.append(expand_range(first_day, last_day_of_month))
                     first_day += relativedelta(months=1)
                     last_day_of_month = first_day + relativedelta(day=31)
@@ -408,9 +417,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
             elif self.subject in RuleSubject.weekday_subjects():
                 dates = []
-                for a_date in expand_range(
-                    self.period.start_date, self.period.end_date
-                ):
+                for a_date in expand_range(period_start_date, period_end_date):
                     if a_date.isoweekday() == self.subject.as_isoweekday():
                         dates.append(a_date)
 
@@ -509,12 +516,12 @@ class Rule(SoftDeletableModel, TimeStampedModel):
     ) -> Set[datetime.date]:
         """Apply rule to the provided date range"""
         max_start_date = start_date
-        if self.period.start_date:
-            max_start_date = max(start_date, self.period.start_date)
+        if self.group.period.start_date:
+            max_start_date = max(start_date, self.group.period.start_date)
 
         min_end_date = end_date
-        if self.period.end_date:
-            min_end_date = min(end_date, self.period.end_date)
+        if self.group.period.end_date:
+            min_end_date = min(end_date, self.group.period.end_date)
 
         if max_start_date > min_end_date:
             # Period starts after the filter start date or the period ends before the

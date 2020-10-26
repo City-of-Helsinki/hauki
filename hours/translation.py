@@ -1,7 +1,7 @@
 import simple_history
 from modeltranslation.translator import TranslationOptions, translator
 
-from .models import DataSource, DatePeriod, OpeningHours, Resource, Rule
+from .models import DataSource, DatePeriod, Resource, Rule, TimeSpan
 
 
 class DataSourceTranslationOptions(TranslationOptions):
@@ -16,7 +16,7 @@ class DatePeriodTranslationOptions(TranslationOptions):
     fields = ("name", "description")
 
 
-class OpeningHoursTranslationOptions(TranslationOptions):
+class TimeSpanTranslationOptions(TranslationOptions):
     fields = ("name", "description")
 
 
@@ -27,7 +27,7 @@ class RuleTranslationOptions(TranslationOptions):
 translator.register(DataSource, DataSourceTranslationOptions)
 translator.register(Resource, ResourceTranslationOptions)
 translator.register(DatePeriod, DatePeriodTranslationOptions)
-translator.register(OpeningHours, OpeningHoursTranslationOptions)
+translator.register(TimeSpan, TimeSpanTranslationOptions)
 translator.register(Rule, RuleTranslationOptions)
 
 
@@ -51,5 +51,5 @@ translator.register(Rule, RuleTranslationOptions)
 simple_history.register(DataSource)
 simple_history.register(Resource)
 simple_history.register(DatePeriod)
-simple_history.register(OpeningHours)
+simple_history.register(TimeSpan)
 simple_history.register(Rule)

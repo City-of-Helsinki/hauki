@@ -2,7 +2,7 @@ from django.utils.translation import pgettext_lazy as _
 from enumfields import Enum
 
 
-class PeriodType(Enum):
+class State(Enum):
     OPEN = "open"
     CLOSED = "closed"
     UNDEFINED = "undefined"
@@ -14,15 +14,15 @@ class PeriodType(Enum):
     EXIT_ONLY = "exit_only"
 
     class Labels:
-        OPEN = _("PeriodType", "Open")
-        CLOSED = _("PeriodType", "Closed")
-        UNDEFINED = _("PeriodType", "Undefined")
-        SELF_SERVICE = _("PeriodType", "Self service")
-        WITH_KEY = _("PeriodType", "With key")
-        WITH_RESERVATION = _("PeriodType", "With reservation")
-        WITH_KEY_AND_RESERVATION = _("PeriodType", "With key and reservation")
-        ENTER_ONLY = _("PeriodType", "Enter only")
-        EXIT_ONLY = _("PeriodType", "Exit only")
+        OPEN = _("State", "Open")
+        CLOSED = _("State", "Closed")
+        UNDEFINED = _("State", "Undefined")
+        SELF_SERVICE = _("State", "Self service")
+        WITH_KEY = _("State", "With key")
+        WITH_RESERVATION = _("State", "With reservation")
+        WITH_KEY_AND_RESERVATION = _("State", "With key and reservation")
+        ENTER_ONLY = _("State", "Enter only")
+        EXIT_ONLY = _("State", "Exit only")
 
 
 class ResourceType(Enum):

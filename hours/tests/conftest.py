@@ -8,7 +8,7 @@ from faker import Factory as FakerFactory
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
-from hours.models import DataSource, DatePeriod, OpeningHours, Resource, Rule
+from hours.models import DataSource, DatePeriod, Resource, Rule, TimeSpan, TimeSpanGroup
 from users.models import User
 
 faker = FakerFactory.create(locale="fi_FI")
@@ -48,11 +48,17 @@ class DatePeriodFactory(factory.django.DjangoModelFactory):
 
 
 @register
-class OpeningHoursFactory(factory.django.DjangoModelFactory):
-    name = factory.LazyAttribute(lambda x: "OH-" + faker.pystr())
+class TimeSpanFactory(factory.django.DjangoModelFactory):
+    name = factory.LazyAttribute(lambda x: "TS-" + faker.pystr())
 
     class Meta:
-        model = OpeningHours
+        model = TimeSpan
+
+
+@register
+class TimeSpanGroupFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = TimeSpanGroup
 
 
 @register

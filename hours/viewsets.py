@@ -7,13 +7,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .authentication import HaukiSignedAuthentication
-from .models import DatePeriod, OpeningHours, Resource, Rule
+from .filters import DatePeriodFilter, TimeSpanFilter
+from .models import DatePeriod, Resource, Rule, TimeSpan
 from .serializers import (
     DatePeriodSerializer,
-    OpeningHoursSerializer,
     OrganizationSerializer,
     ResourceSerializer,
     RuleSerializer,
+    TimeSpanSerializer,
 )
 from .utils import get_resource_pk_filter
 
@@ -44,20 +45,22 @@ class ResourceViewSet(viewsets.ModelViewSet):
 class DatePeriodViewSet(viewsets.ModelViewSet):
     queryset = DatePeriod.objects.all().order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
+    filterset_class = DatePeriodFilter
 
 
 class RuleViewSet(viewsets.ModelViewSet):
     queryset = (
         Rule.objects.all()
-        .select_related("period")
-        .order_by("period__start_date", "period__end_date")
+        .select_related("group", "group__period")
+        .order_by("group__period__start_date", "group__period__end_date")
     )
     serializer_class = RuleSerializer
 
 
-class OpeningHoursViewSet(viewsets.ModelViewSet):
-    queryset = OpeningHours.objects.all()
-    serializer_class = OpeningHoursSerializer
+class TimeSpanViewSet(viewsets.ModelViewSet):
+    queryset = TimeSpan.objects.all()
+    serializer_class = TimeSpanSerializer
+    filterset_class = TimeSpanFilter
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):

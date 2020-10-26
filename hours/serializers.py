@@ -9,8 +9,16 @@ from rest_framework import serializers
 
 from users.serializers import UserSerializer
 
-from .enums import PeriodType
-from .models import DataSource, DatePeriod, OpeningHours, Resource, ResourceOrigin, Rule
+from .enums import State
+from .models import (
+    DataSource,
+    DatePeriod,
+    Resource,
+    ResourceOrigin,
+    Rule,
+    TimeSpan,
+    TimeSpanGroup,
+)
 
 
 class TranslationSerializerMixin:
@@ -114,17 +122,20 @@ class ResourceSerializer(
             "description",
             "address",
             "resource_type",
-            "parent",
+            "children",
+            "parents",
             "organization",
             "resourceorigin_set",
             "last_modified_by",
             "extra_data",
         ]
 
+        read_only_fields = ["parents", "last_modified_by"]
 
-class OpeningHoursSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+
+class TimeSpanSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
     class Meta:
-        model = OpeningHours
+        model = TimeSpan
         fields = "__all__"
 
 
@@ -134,9 +145,17 @@ class RuleSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
         fields = "__all__"
 
 
-class DatePeriodSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
-    opening_hours = OpeningHoursSerializer(many=True)
+class TimeSpanGroupSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+    time_spans = TimeSpanSerializer(many=True)
     rules = RuleSerializer(many=True)
+
+    class Meta:
+        model = TimeSpanGroup
+        fields = "__all__"
+
+
+class DatePeriodSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+    time_span_groups = TimeSpanGroupSerializer(many=True)
 
     class Meta:
         model = DatePeriod
@@ -146,7 +165,7 @@ class DatePeriodSerializer(EnumSupportSerializerMixin, serializers.ModelSerializ
 class TimeElementSerializer(serializers.Serializer):
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
-    period_type = EnumField(enum=PeriodType)
+    resource_state = EnumField(enum=State)
     override = serializers.BooleanField()
     full_day = serializers.BooleanField()
 

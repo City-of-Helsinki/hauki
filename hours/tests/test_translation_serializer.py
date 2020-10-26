@@ -16,7 +16,8 @@ def test_to_representation(resource):
         "last_modified_by": None,
         "name": {"en": None, "fi": resource.name_fi, "sv": None},
         "organization": None,
-        "parent": None,
+        "parents": [],
+        "children": [],
         "resource_type": "unit",
         "resourceorigin_set": [],
     }

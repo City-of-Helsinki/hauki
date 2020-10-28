@@ -69,7 +69,9 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
 
 
 class Resource(SoftDeletableModel, TimeStampedModel):
-    name = models.CharField(verbose_name=_("Name"), max_length=255)
+    name = models.CharField(
+        verbose_name=_("Name"), max_length=255, null=True, blank=True
+    )
     description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
     address = models.TextField(verbose_name=_("Street address"), null=True, blank=True)
     resource_type = EnumField(
@@ -101,6 +103,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         editable=False,
     )
     extra_data = models.JSONField(verbose_name=_("Extra data"), null=True, blank=True)
+    is_public = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = _("Resource")
@@ -143,7 +146,9 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
 
 class ResourceOrigin(models.Model):
-    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+    resource = models.ForeignKey(
+        Resource, related_name="origins", on_delete=models.CASCADE
+    )
     data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
     origin_id = models.CharField(
         verbose_name=_("Origin ID"), max_length=100, db_index=True
@@ -158,6 +163,9 @@ class ResourceOrigin(models.Model):
                 name="unique_identifier_per_data_source",
             ),
         ]
+
+    def __str__(self):
+        return f"{self.data_source}:{self.origin_id}"
 
 
 class DatePeriod(SoftDeletableModel, TimeStampedModel):

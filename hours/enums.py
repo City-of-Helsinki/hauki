@@ -12,6 +12,7 @@ class State(Enum):
     WITH_KEY_AND_RESERVATION = "with_key_and_reservation"
     ENTER_ONLY = "enter_only"
     EXIT_ONLY = "exit_only"
+    WEATHER_PERMITTING = "weather_permitting"
 
     class Labels:
         OPEN = _("State", "Open")
@@ -23,33 +24,36 @@ class State(Enum):
         WITH_KEY_AND_RESERVATION = _("State", "With key and reservation")
         ENTER_ONLY = _("State", "Enter only")
         EXIT_ONLY = _("State", "Exit only")
+        WEATHER_PERMITTING = _("State", "Weather permitting")
 
 
 class ResourceType(Enum):
     UNIT = "unit"
-    UNIT_SERVICE = "unit_service"
+    SUBSECTION = "section"
     SPECIAL_GROUP = "special_group"
-    PERSON = "person"
-    TELEPHONE = "telephone"
+    CONTACT = "contact"
+    ONLINE_SERVICE = "online_service"
     SERVICE = "service"
     SERVICE_CHANNEL = "service_channel"
     SERVICE_AT_UNIT = "service_at_unit"
-    RESOURCE = "resource"
+    RESERVABLE = "reservable"
     BUILDING = "building"
     AREA = "area"
+    ENTRANCE = "entrance_or_exit"
 
     class Labels:
         UNIT = _("ResourceType", "Unit")
-        UNIT_SERVICE = _("ResourceType", "Unit service")
+        SUBSECTION = _("ResourceType", "Section")
         SPECIAL_GROUP = _("ResourceType", "Special group")
-        PERSON = _("ResourceType", "Person")
-        TELEPHONE = _("ResourceType", "Telephone")
+        CONTACT = _("ResourceType", "Contact email or phone number")
+        ONLINE_SERVICE = _("ResourceType", "Online service")
         SERVICE = _("ResourceType", "Service")
         SERVICE_CHANNEL = _("ResourceType", "Service channel")
         SERVICE_AT_UNIT = _("ResourceType", "Service at unit")
-        RESOURCE = _("ResourceType", "Resource")
+        RESERVABLE = _("ResourceType", "Reservable resource")
         BUILDING = _("ResourceType", "Building")
         AREA = _("ResourceType", "Area")
+        ENTRANCE = _("ResourceType", "Entrance or exit")
 
 
 class Weekday(Enum):

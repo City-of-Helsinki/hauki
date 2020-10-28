@@ -19,7 +19,7 @@ def test_to_representation(resource):
         "parents": [],
         "children": [],
         "resource_type": "unit",
-        "resourceorigin_set": [],
+        "origins": [],
     }
 
 

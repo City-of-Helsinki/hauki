@@ -81,9 +81,7 @@ def hauki_signed_auth_link_generator(request):
 
             if form.cleaned_data["resource"]:
                 resource = form.cleaned_data["resource"]
-                tprek_origin = resource.resourceorigin_set.filter(
-                    data_source_id="tprek"
-                ).first()
+                tprek_origin = resource.origins.filter(data_source_id="tprek").first()
 
                 if tprek_origin:
                     params["resource"] = (

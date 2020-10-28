@@ -11,7 +11,7 @@ from ..models import DataSource, Resource
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
-# Here we list which tprek connection types should be mapped to which target types.
+# Here we list which tprek connection types should be mapped to which resource types.
 # Absent an entry in the mapping, the default for connections is "SUBSECTION".
 CONNECTION_TYPE_MAPPING = {
     "LINK": ResourceType.ONLINE_SERVICE,
@@ -186,7 +186,7 @@ class TPRekImporter(Importer):
     def get_connection_data(self, data: dict) -> dict:
         """
         Takes connection data dict in TPREK v4 API format and returns the corresponding
-        serialized Target data.
+        serialized Resource data.
         """
         # Running id will be removed once tprek adds permanent ids to their API.
         if "id" not in data:
@@ -278,6 +278,6 @@ class TPRekImporter(Importer):
     def import_connections(self):
         self.import_objects("connection")
 
-    def import_targets(self):
+    def import_resources(self):
         self.import_units()
         self.import_connections()

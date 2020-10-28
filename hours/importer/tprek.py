@@ -152,9 +152,9 @@ class TPRekImporter(Importer):
         }
         return unit_data
 
-    def filter_unit_data(self, data: dict) -> dict:
+    def filter_unit_data(self, data: list) -> list:
         """
-        Takes unit data dict and filters the units that should be imported.
+        Takes unit data list and filters the units that should be imported.
         """
         # currently, all units are imported
         return data
@@ -218,9 +218,9 @@ class TPRekImporter(Importer):
 
         return connection_data
 
-    def filter_connection_data(self, data: dict) -> dict:
+    def filter_connection_data(self, data: list) -> list:
         """
-        Takes connection data dict and filters the connections that should be imported.
+        Takes connection data list and filters the connections that should be imported.
         """
         return [
             connection

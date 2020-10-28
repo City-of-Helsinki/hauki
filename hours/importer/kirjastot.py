@@ -10,11 +10,13 @@ from django import db
 from django.conf import settings
 from psycopg2.extras import DateRange
 
-from ..models import DataSource, Status, Target, Weekday
-from ..tests.utils import check_opening_hours
+from ..enums import State, Weekday
+from ..models import DataSource, Resource
+
+# from ..tests.utils import check_opening_hours
 from .base import Importer, register_importer
 
-KIRKANTA_STATUS_MAP = {0: Status.CLOSED, 1: Status.OPEN, 2: Status.SELF_SERVICE}
+KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
 fi_holidays = holidays.Finland()
 
 
@@ -48,13 +50,13 @@ class KirjastotImporter(Importer):
         end = base.next_month(forward).date.replace(day=1)
         return begin, end
 
-    def get_hours_from_api(self, target: Target, start: date, end: date) -> dict:
+    def get_hours_from_api(self, resource: Resource, start: date, end: date) -> dict:
         """
         Fetch opening hours for Target from kirjastot.fi's v4 API for the
         given date range.
         """
 
-        kirkanta_id = target.identifiers.get(data_source=self.data_source).origin_id
+        kirkanta_id = resource.identifiers.get(data_source=self.data_source).origin_id
         print(kirkanta_id)
 
         params = {"with": "schedules", "period.start": start, "period.end": end}
@@ -216,13 +218,13 @@ class KirjastotImporter(Importer):
                             {
                                 "weekday": weekday,
                                 "week": week,
-                                "status": Status.CLOSED,
+                                "status": State.CLOSED,
                                 "description": description,
                             }
                         )
         return opening_data
 
-    def get_periods(self, target: Target, data: dict) -> list:
+    def get_periods(self, resource: Resource, data: dict) -> list:
         """
         Returns serialized period objects found in library data for the given
         target library.
@@ -259,7 +261,7 @@ class KirjastotImporter(Importer):
             period_data = {
                 "data_source": self.data_source,
                 "origin_id": str(period_id),
-                "target": target,
+                "target": resource,
                 "period": DateRange(lower=start, upper=end, bounds="[]"),
                 "name": name,
                 "openings": openings,
@@ -269,7 +271,7 @@ class KirjastotImporter(Importer):
 
     @db.transaction.atomic
     def import_openings(self):
-        libraries = Target.objects.filter(identifiers__data_source=self.data_source)
+        libraries = Resource.objects.filter(identifiers__data_source=self.data_source)
         if self.options.get("single", None):
             obj_id = self.options["single"]
             libraries = libraries.filter(id=obj_id)
@@ -285,7 +287,7 @@ class KirjastotImporter(Importer):
                     periods = self.get_periods(library, data)
                     for period_data in periods:
                         self.save_period(period_data)
-                    check_opening_hours(data)
+                    # check_opening_hours(data)
                     # TODO: cannot use syncher here, past periods are still valid
                     #       even though not present in data
                     # TODO: however, we should delete periods that have no active

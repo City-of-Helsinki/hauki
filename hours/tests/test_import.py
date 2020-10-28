@@ -87,7 +87,15 @@ def test_import_tprek(mock_tprek_data):
 
     # Also check the fields are imported correctly
     kallio = Resource.objects.all()[0]
-    assert kallio.name == mock_tprek_data["name_fi"]
+    assert kallio.name_fi == mock_tprek_data["name_fi"]
+    assert kallio.name_sv == mock_tprek_data["name_sv"]
+    assert kallio.name_en == mock_tprek_data["name_en"]
+    assert kallio.address_fi.startswith(mock_tprek_data["street_address_fi"])
+    assert kallio.address_sv.startswith(mock_tprek_data["street_address_sv"])
+    assert kallio.address_en.startswith(mock_tprek_data["street_address_en"])
+    assert kallio.address_fi.endswith(mock_tprek_data["address_city_fi"])
+    assert kallio.address_sv.endswith(mock_tprek_data["address_city_sv"])
+    assert kallio.address_en.endswith(mock_tprek_data["address_city_en"])
     assert kallio.organization_id == "tprek:%s" % mock_tprek_data["dept_id"]
     assert kallio.resource_type == ResourceType.UNIT
     assert (

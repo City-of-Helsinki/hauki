@@ -171,9 +171,11 @@ class Importer(object):
         data_parents = set(data.get("parents", []))
         for parent in data_parents.difference(existing_parents):
             obj.parents.add(parent)
+            obj._changed = True
             obj._changed_fields.append("parents")
         for parent in existing_parents.difference(data_parents):
             obj.parents.remove(parent)
+            obj._changed = True
             obj._changed_fields.append("parents")
 
         # Update related origins only after the resource has been created
@@ -195,9 +197,11 @@ class Importer(object):
         )
         for origin in data_origins.difference(existing_origins):
             origin.save()
+            obj._changed = True
             obj._changed_fields.append("origins")
         for origin in existing_origins.difference(data_origins):
             origin.delete()
+            obj._changed = True
             obj._changed_fields.append("origins")
 
         if obj._changed:

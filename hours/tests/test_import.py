@@ -179,6 +179,16 @@ def test_import_tprek(mock_tprek_data):
         oodi.children.filter(resource_type=ResourceType.ONLINE_SERVICE)
     )
 
+    (mikkolankuja, floorantie) = Resource.objects.filter(
+        resource_type=ResourceType.ENTRANCE
+    )
+    assert {mikkolankuja} == set(
+        kallio.children.filter(resource_type=ResourceType.ENTRANCE)
+    )
+    assert {floorantie} == set(
+        oodi.children.filter(resource_type=ResourceType.ENTRANCE)
+    )
+
 
 # @pytest.mark.django_db
 # def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):

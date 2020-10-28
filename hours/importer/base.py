@@ -129,6 +129,7 @@ class Importer(object):
         object and returns it unsaved for class-specific processing and saving.
         """
         # look for existing origin corresponding to the object
+        cache = getattr(self, "%s_cache" % klass.__name__.lower())
         origin_id = str(
             [
                 origin
@@ -136,12 +137,16 @@ class Importer(object):
                 if origin["data_source_id"] == self.data_source.id
             ][0]["origin_id"]
         )
-        obj = getattr(self, "%s_cache" % klass.__name__.lower()).get(origin_id, None)
+        obj = cache.get(origin_id, None)
         if obj:
             obj._created = False
         else:
             obj = klass()
             obj._created = True
+            # save the new object in the cache so related objects will find it
+            setattr(
+                self, "%s_cache" % klass.__name__.lower(), {**cache, **{origin_id: obj}}
+            )
         obj._changed = False
         obj._changed_fields = []
 
@@ -161,30 +166,39 @@ class Importer(object):
             obj.save()
             self.logger.debug("%s created" % obj)
 
-        # Update related origins only after the target has been created
-        origins = {x.data_source_id: x for x in obj.origins.all()}
-        for origin in data.get("origins", []):
-            data_source_id = origin["data_source_id"]
-            origin_id = origin["origin_id"]
-            if data_source_id in origins:
-                existing_origin = origins[data_source_id]
-                if existing_origin.origin_id != origin_id:
-                    existing_origin.origin_id = origin_id
-                    existing_origin.save()
-                    obj._changed = True
-                    obj._changed_fields.append("origins")
-            else:
-                data_source, created = DataSource.objects.get_or_create(
-                    id=data_source_id
-                )
-                if created:
-                    self.logger.debug("Created missing data source %s" % data_source_id)
-                new_origin = ResourceOrigin(
-                    resource=obj, data_source=data_source, origin_id=origin_id
-                )
-                new_origin.save()
-                obj._changed = True
-                obj._changed_fields.append("origins")
+        # Update parents only after the resource has been created
+        existing_parents = set(obj.parents.all())
+        data_parents = set(data.get("parents", []))
+        for parent in data_parents.difference(existing_parents):
+            obj.parents.add(parent)
+            obj._changed_fields.append("parents")
+        for parent in existing_parents.difference(data_parents):
+            obj.parents.remove(parent)
+            obj._changed_fields.append("parents")
+
+        # Update related origins only after the resource has been created
+        data_sources = {origin["data_source_id"] for origin in data.get("origins", [])}
+        for data_source in data_sources:
+            data_source, created = DataSource.objects.get_or_create(id=data_source)
+            if created:
+                self.logger.debug("Created missing data source %s" % data_source)
+        existing_origins = set(obj.origins.all())
+        data_origins = set(
+            [
+                ResourceOrigin.objects.get_or_create(
+                    resource=obj,
+                    data_source_id=origin["data_source_id"],
+                    origin_id=origin["origin_id"],
+                )[0]
+                for origin in data.get("origins", [])
+            ]
+        )
+        for origin in data_origins.difference(existing_origins):
+            origin.save()
+            obj._changed_fields.append("origins")
+        for origin in existing_origins.difference(data_origins):
+            origin.delete()
+            obj._changed_fields.append("origins")
 
         if obj._changed:
             if not obj._created:

@@ -191,8 +191,8 @@ class TPRekImporter(Importer):
         # Running id will be removed once tprek adds permanent ids to their API.
         if "id" not in data:
             data["id"] = int(time.time() * 1000)
-        connection_id = data.pop("id")
-        unit_id = data.pop("unit_id")
+        connection_id = str(data.pop("id"))
+        unit_id = str(data.pop("unit_id"))
         origin = {
             "data_source_id": self.data_source.id,
             "origin_id": "connection-%s" % connection_id,
@@ -212,7 +212,7 @@ class TPRekImporter(Importer):
             if CONNECTION_TYPE_MAPPING[data["section_type"]] == ResourceType.ENTRANCE
             else "",
             "same_as": self.get_url("connection", connection_id),
-            "parents": {parent},
+            "parents": [parent],
             "extra_data": data,
         }
 

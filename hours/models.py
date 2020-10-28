@@ -110,7 +110,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         verbose_name_plural = _("Resources")
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     @property
     def _history_user(self):

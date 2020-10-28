@@ -83,10 +83,12 @@ class Importer(object):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
 
-    def _update_fields(self, obj: object, info: dict, skip_fields: list = []):
+    def _update_fields(self, obj: object, info: dict, skip_fields: list = None):
         """
         Updates the fields in obj according to info.
         """
+        if not skip_fields:
+            skip_fields = []
         obj_fields = list(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).fields
         for field_name, lang_fields in trans_fields.items():

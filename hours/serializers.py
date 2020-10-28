@@ -110,9 +110,7 @@ class ResourceSerializer(
 ):
     last_modified_by = UserSerializer(read_only=True)
     organization = OrganizationSerializer(read_only=True)
-    resourceorigin_set = ResourceOriginSerializer(
-        many=True, required=False, allow_null=True
-    )
+    origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
         model = Resource
@@ -125,7 +123,7 @@ class ResourceSerializer(
             "children",
             "parents",
             "organization",
-            "resourceorigin_set",
+            "origins",
             "last_modified_by",
             "extra_data",
         ]

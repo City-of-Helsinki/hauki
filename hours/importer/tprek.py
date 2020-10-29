@@ -64,7 +64,9 @@ class TPRekImporter(Importer):
         origins = []
 
         # tprek external identifier is always an origin
-        origins.append({"data_source_id": self.data_source.id, "origin_id": data["id"]})
+        origins.append(
+            {"data_source_id": self.data_source.id, "origin_id": str(data["id"])}
+        )
 
         if "sources" in data:
             for source in data["sources"]:
@@ -74,7 +76,7 @@ class TPRekImporter(Importer):
                     continue
                 origin = {
                     "data_source_id": source["source"],
-                    "origin_id": source["id"],
+                    "origin_id": str(source["id"]),
                 }
                 origins.append(origin)
         return origins

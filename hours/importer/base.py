@@ -19,7 +19,9 @@ class Importer(object):
         self.setup()
         self.resource_cache = {
             origin.origin_id: origin.resource
-            for origin in ResourceOrigin.objects.filter(data_source=self.data_source)
+            for origin in ResourceOrigin.objects.select_related("resource").filter(
+                data_source=self.data_source
+            )
         }
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:
@@ -130,14 +132,15 @@ class Importer(object):
         """
         # look for existing origin corresponding to the object
         cache = getattr(self, "%s_cache" % klass.__name__.lower())
-        origin_id = str(
-            [
-                origin
-                for origin in data["origins"]
-                if origin["data_source_id"] == self.data_source.id
-            ][0]["origin_id"]
-        )
-        obj = cache.get(origin_id, None)
+
+        # if identical objects are merged, an object may have several
+        # origin ids. all origin ids should return the same object.
+        origin_ids = [
+            str(origin["origin_id"])
+            for origin in data["origins"]
+            if origin["data_source_id"] == self.data_source.id
+        ]
+        obj = cache.get(origin_ids[0], None)
         if obj:
             obj._created = False
         else:
@@ -145,7 +148,9 @@ class Importer(object):
             obj._created = True
             # save the new object in the cache so related objects will find it
             setattr(
-                self, "%s_cache" % klass.__name__.lower(), {**cache, **{origin_id: obj}}
+                self,
+                "%s_cache" % klass.__name__.lower(),
+                {**cache, **{origin_id: obj for origin_id in origin_ids}},
             )
         obj._changed = False
         obj._changed_fields = []

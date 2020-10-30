@@ -1,8 +1,9 @@
 import time
-from typing import Callable
+from typing import Callable, Hashable
 
 from django import db
 from django.conf import settings
+from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
 from django_orghierarchy.models import Organization
 
@@ -192,7 +193,7 @@ class TPRekImporter(Importer):
         """
         # Running id will be removed once tprek adds permanent ids to their API.
         if "id" not in data:
-            data["id"] = int(time.time() * 1000)
+            data["id"] = int(time.time() * 100000)
         connection_id = str(data.pop("id"))
         unit_id = str(data.pop("unit_id"))
         origin = {
@@ -202,7 +203,7 @@ class TPRekImporter(Importer):
         # parent may be missing if e.g. the unit has just been created or
         # deleted, or is not public at the moment. Therefore, parent may be empty.
         parent = self.resource_cache.get(unit_id, None)
-
+        parents = [parent] if parent else []
         # incoming data will be saved raw in extra_data, to allow matching identical
         # connections
         connection_data = {
@@ -213,8 +214,7 @@ class TPRekImporter(Importer):
             "address": self.get_resource_name(data)
             if CONNECTION_TYPE_MAPPING[data["section_type"]] == ResourceType.ENTRANCE
             else "",
-            "same_as": self.get_url("connection", connection_id),
-            "parents": [parent],
+            "parents": parents,
             "extra_data": data,
         }
 
@@ -234,18 +234,59 @@ class TPRekImporter(Importer):
     def import_objects(
         self,
         object_type: str,
-        get_object_id: Callable[[Model], str] = None,
+        get_object_id: Callable[[Model], Hashable] = None,
+        get_data_id: Callable[[dict], Hashable] = None,
     ):
         """
-        Imports objects of the given type, using get_object_id to match generated
-        objects to existing objects. The default id function is the origin_id of
-        the object in this data source.
+        Imports objects of the given type, using get_object_id and get_data_id
+        to match incoming data with existing objects. The default id function is
+        the origin_id of the object in this data source. Object id may be any
+        hashable that can be used to index objects and implements __eq__. Objects
+        with the same identifier will be merged.
         """
         queryset = self.data_to_match[object_type]
-        if not get_object_id:
+        if not get_object_id and not get_data_id:
 
             def get_object_id(obj: Model) -> str:
-                return obj.origins.get(data_source=self.data_source).origin_id
+                try:
+                    return obj.origins.get(data_source=self.data_source).origin_id
+                except MultipleObjectsReturned:
+                    raise Exception(
+                        "Seems like your database already contains multiple identifiers"
+                        " for the same object in importer data source. Please run the"
+                        " importer with --merge to combine identical objects into one,"
+                        " or remove the duplicate origin_ids in the database before"
+                        " trying to import identical connections as separate objects."
+                    )
+
+            def get_data_id(data: dict) -> str:
+                origin_ids = [
+                    str(origin["origin_id"])
+                    for origin in data["origins"]
+                    if origin["data_source_id"] == self.data_source.id
+                ]
+                if len(origin_ids) > 1:
+                    raise Exception(
+                        "Seems like your data contains multiple identifiers in the"
+                        " same object in importer data source. Please provide"
+                        " get_object_id and get_data_id methods to return a single"
+                        " hashable identifier to use for identifying objects."
+                    )
+                return origin_ids[0]
+
+        else:
+            if not get_object_id or not get_data_id:
+                raise Exception(
+                    "Both get_object_id and get_data_id functions must be provided"
+                    " to match existing objects to incoming data."
+                )
+
+        syncher = ModelSyncher(
+            queryset,
+            get_object_id,
+            delete_func=self.mark_deleted,
+            check_deleted_func=self.check_deleted,
+        )
 
         if self.options.get("single", None):
             obj_id = self.options["single"]
@@ -255,17 +296,29 @@ class TPRekImporter(Importer):
             self.logger.info("Loading TPREK " + object_type + "s...")
             obj_list = self.api_get(object_type, params={"official": "yes"})
             self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
-        syncher = ModelSyncher(
-            queryset,
-            get_object_id,
-            delete_func=self.mark_deleted,
-            check_deleted_func=self.check_deleted,
-        )
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
+        obj_dict = {}
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                self.logger.info("%s %ss processed" % (idx, object_type))
+                self.logger.info("%s %ss read" % (idx, object_type))
             object_data = getattr(self, "get_%s_data" % object_type)(data)
+            object_data_id = get_data_id(object_data)
+            if object_data_id not in obj_dict:
+                obj_dict[object_data_id] = object_data
+            else:
+                # Duplicate object found. Just append its foreign keys instead of
+                # adding another object.
+                parents = object_data["parents"]
+                origins = object_data["origins"]
+                self.logger.debug(
+                    "Adding duplicate object foreign keys %s to object %s"
+                    % ((parents, origins), object_data_id)
+                )
+                obj_dict[object_data_id]["parents"].extend(parents)
+                obj_dict[object_data_id]["origins"].extend(origins)
+        for idx, object_data in enumerate(obj_dict.values()):
+            if idx and (idx % 1000) == 0:
+                self.logger.info("%s %ss saved" % (idx, object_type))
             obj = self.save_resource(object_data)
 
             syncher.mark(obj)
@@ -274,11 +327,23 @@ class TPRekImporter(Importer):
 
     @db.transaction.atomic
     def import_units(self):
+        self.logger.info("Importing TPREK units")
         self.import_objects("unit")
 
     @db.transaction.atomic
     def import_connections(self):
-        self.import_objects("connection")
+        self.logger.info("Importing TPREK connections")
+        if self.options.get("merge", None):
+            self.logger.info("Merging identical connections")
+            # Merge connections if their extra_data is identical.
+            # Extra_data contains all data apart from origin and parent.
+            self.import_objects(
+                "connection",
+                get_object_id=lambda obj: frozenset(obj.extra_data.items()),
+                get_data_id=lambda data: frozenset(data["extra_data"].items()),
+            )
+        else:
+            self.import_objects("connection")
 
     def import_resources(self):
         self.import_units()

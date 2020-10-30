@@ -33,7 +33,7 @@ from hours.models import DataSource, Resource, ResourceOrigin, ResourceType
 
 
 @pytest.fixture
-def mock_tprek_data(requests_mock):
+def mock_tprek_data(requests_mock, request):
     units_file_name = "test_import_tprek_units.json"
     connections_file_name = "test_import_tprek_connections.json"
     units_file_path = os.path.join(os.path.dirname(__file__), units_file_name)
@@ -50,11 +50,15 @@ def mock_tprek_data(requests_mock):
             "http://www.hel.fi/palvelukarttaws/rest/v4/connection/",
             text=connections_file.read(),
         )
-    call_command("hours_import", "tprek", "--resources")
+    if request.param:
+        call_command("hours_import", "tprek", resources=True, merge=True)
+    else:
+        call_command("hours_import", "tprek", resources=True)
     with open(units_file_path) as units_file, open(
         connections_file_path
     ) as connections_file:
         return {
+            "merged_identical_resources": request.param,
             "units": json.load(units_file),
             "connections": json.load(connections_file),
         }
@@ -92,9 +96,14 @@ def mock_tprek_data(requests_mock):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("mock_tprek_data", [False, True], indirect=True)
 def test_import_tprek(mock_tprek_data):
+    # The results should depend on whether we merge identical connections
+    merge = mock_tprek_data["merged_identical_resources"]
+
     # Check created objects
-    assert Resource.objects.count() == 21
+    expected_n_resources = 16 if merge else 21
+    assert Resource.objects.count() == expected_n_resources
     assert DataSource.objects.count() == 3
     assert Organization.objects.count() == 1
     assert ResourceOrigin.objects.count() == 25
@@ -134,38 +143,68 @@ def test_import_tprek(mock_tprek_data):
             assert origins[source["source"]].origin_id == source["id"]
 
     # Check the right connections are under the right units
-    # TODO: merge identical connections under both units.
-    (
-        covid1,
-        covid2,
-        snack1,
-        snack2,
-        afternoon,
-        berth1,
-        berth2,
-        space1,
-        space2,
-        support,
-    ) = Resource.objects.filter(resource_type=ResourceType.SUBSECTION)
-    assert {covid1, snack1, afternoon, berth1, space1} == set(
-        kallio.children.filter(resource_type=ResourceType.SUBSECTION)
-    )
-    assert {covid2, snack2, berth2, space2, support} == set(
-        oodi.children.filter(resource_type=ResourceType.SUBSECTION)
-    )
+    if merge:
 
-    (
-        reservations1,
-        reservations2,
-        director1,
-        director2,
-    ) = Resource.objects.filter(resource_type=ResourceType.CONTACT)
-    assert {reservations1, director1} == set(
-        kallio.children.filter(resource_type=ResourceType.CONTACT)
-    )
-    assert {reservations2, director2} == set(
-        oodi.children.filter(resource_type=ResourceType.CONTACT)
-    )
+        (
+            covid,
+            snack,
+            afternoon,
+            berth,
+            space,
+            support,
+        ) = Resource.objects.filter(resource_type=ResourceType.SUBSECTION)
+        assert {covid, snack, afternoon, berth, space} == set(
+            kallio.children.filter(resource_type=ResourceType.SUBSECTION)
+        )
+        assert {covid, snack, berth, space, support} == set(
+            oodi.children.filter(resource_type=ResourceType.SUBSECTION)
+        )
+
+        (
+            reservations,
+            directorkallio,
+            directoroodi,
+        ) = Resource.objects.filter(resource_type=ResourceType.CONTACT)
+        assert {reservations, directorkallio} == set(
+            kallio.children.filter(resource_type=ResourceType.CONTACT)
+        )
+        assert {reservations, directoroodi} == set(
+            oodi.children.filter(resource_type=ResourceType.CONTACT)
+        )
+
+    else:
+
+        (
+            covid1,
+            covid2,
+            snack1,
+            snack2,
+            afternoon,
+            berth1,
+            berth2,
+            space1,
+            space2,
+            support,
+        ) = Resource.objects.filter(resource_type=ResourceType.SUBSECTION)
+        assert {covid1, snack1, afternoon, berth1, space1} == set(
+            kallio.children.filter(resource_type=ResourceType.SUBSECTION)
+        )
+        assert {covid2, snack2, berth2, space2, support} == set(
+            oodi.children.filter(resource_type=ResourceType.SUBSECTION)
+        )
+
+        (
+            reservations1,
+            reservations2,
+            directorkallio,
+            directoroodi,
+        ) = Resource.objects.filter(resource_type=ResourceType.CONTACT)
+        assert {reservations1, directorkallio} == set(
+            kallio.children.filter(resource_type=ResourceType.CONTACT)
+        )
+        assert {reservations2, directoroodi} == set(
+            oodi.children.filter(resource_type=ResourceType.CONTACT)
+        )
 
     (
         hydrobic,

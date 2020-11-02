@@ -11,15 +11,18 @@ chardet==3.0.4            # via requests
 convertdate==2.2.2        # via holidays
 delorean==1.0.0           # via -r requirements.in
 django-cors-headers==3.5.0  # via -r requirements.in
+django-enumfields==2.0.0  # via -r requirements.in
 django-environ==0.4.5     # via -r requirements.in
 django-extra-fields==3.0.2  # via -r requirements.in
 django-filter==2.4.0      # via -r requirements.in
 django-helusers==0.5.6    # via -r requirements.in
 django-js-asset==1.2.2    # via django-mptt
+django-model-utils==4.0.0  # via -r requirements.in
+django-modeltranslation==0.15.2  # via -r requirements.in
 django-mptt==0.11.0       # via django-orghierarchy
 django-orghierarchy==0.1.27  # via -r requirements.in
-django-reversion==3.0.8   # via -r requirements.in
-django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-mptt, django-reversion, djangorestframework, drf-oidc-auth
+django-simple-history==2.11.0  # via -r requirements.in
+django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, djangorestframework, drf-oidc-auth
 djangorestframework==3.12.1  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-oidc-auth
 drf-oidc-auth==0.10.0     # via django-helusers
 ecdsa==0.14.1             # via python-jose
@@ -42,7 +45,7 @@ requests-cache==0.5.2     # via -r requirements.in
 requests==2.24.0          # via django-helusers, django-orghierarchy, pyjwkest, requests-cache
 rsa==4.6                  # via python-jose
 sentry-sdk==0.18.0        # via -r requirements.in
-six==1.15.0               # via ecdsa, holidays, pyjwkest, python-dateutil, python-jose
+six==1.15.0               # via django-modeltranslation, django-simple-history, ecdsa, holidays, pyjwkest, python-dateutil, python-jose
 sqlparse==0.3.1           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
 tzlocal==2.1              # via delorean

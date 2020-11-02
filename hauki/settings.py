@@ -123,6 +123,10 @@ LOGGING = {
         },
     },
     "loggers": {
+        "": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+        },
         "django": {
             "handlers": ["console"],
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
@@ -133,11 +137,13 @@ LOGGING = {
 
 INSTALLED_APPS = [
     "helusers.apps.HelusersConfig",
+    "modeltranslation",
     "helusers.apps.HelusersAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "simple_history",
     # disable Django’s development server static file handling
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
@@ -170,6 +176,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 # django-extensions is a set of developer friendly tools

@@ -1,3 +1,5 @@
+import logging
+
 import requests_cache
 from django.core.management.base import BaseCommand, CommandError
 
@@ -7,11 +9,12 @@ from hours.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import data for opening hours"
 
-    importer_types = ["connections", "targets", "openings"]
+    importer_types = ["resources", "units", "connections", "openings"]
 
     def __init__(self):
         super().__init__()
         self.importers = get_importers()
+        self.logger = logging.getLogger("hours_import")
         self.imp_list = ", ".join(sorted(self.importers.keys()))
         self.missing_args_message = (
             "Enter the name of the hours importer module. Valid importers: %s"
@@ -51,6 +54,13 @@ class Command(BaseCommand):
             dest="force",
             help="Allow deleting any number of entities if necessary",
         )
+        parser.add_argument(
+            "--merge",
+            action="store_true",
+            dest="merge",
+            help="Merge identical objects during import, if supported",
+        )
+        print(self.importer_types)
 
         for imp in self.importer_types:
             parser.add_argument(

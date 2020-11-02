@@ -5,6 +5,7 @@ import pytest
 from django.urls import reverse
 
 from hours.authentication import calculate_signature, join_params
+from users.models import User
 
 
 @pytest.mark.django_db
@@ -105,3 +106,150 @@ def test_get_auth_required_header_authenticated(settings, api_client):
 
     assert response.status_code == 200
     assert response.data["username"] == "test_user"
+
+
+@pytest.mark.django_db
+def test_join_user_to_organization(
+    settings, api_client, data_source_factory, organization_factory
+):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    data_source = data_source_factory(id="test")
+    org = organization_factory(data_source=data_source, origin_id=1234)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "username": "test_user",
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "organization": org.id,
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    user = User.objects.get(username="test_user")
+
+    assert user.organization_memberships.count() == 1
+
+
+@pytest.mark.django_db
+def test_join_user_to_organization_existing_user(
+    settings, api_client, user_factory, data_source_factory, organization_factory
+):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    user = user_factory(username="test_user")
+
+    data_source = data_source_factory(id="test")
+    org = organization_factory(data_source=data_source, origin_id=1234)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "username": user.username,
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "organization": org.id,
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    assert User.objects.count() == 1
+
+    assert user.organization_memberships.count() == 1
+
+
+@pytest.mark.django_db
+def test_join_user_to_organization_existing_user_and_organisation(
+    settings, api_client, user_factory, data_source_factory, organization_factory
+):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    user = user_factory(username="test_user")
+
+    data_source = data_source_factory(id="test")
+    org = organization_factory(data_source=data_source, origin_id=1234)
+
+    user.organization_memberships.add(org)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "username": user.username,
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "organization": org.id,
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    assert User.objects.count() == 1
+
+    assert user.organization_memberships.count() == 1
+
+
+@pytest.mark.django_db
+def test_join_user_to_organization_invalid_org(
+    settings, api_client, data_source_factory, organization_factory
+):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "username": "test_user",
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "organization": "test:2345",
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    user = User.objects.get(username="test_user")
+
+    assert user.organization_memberships.count() == 0

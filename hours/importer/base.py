@@ -1,19 +1,15 @@
 import logging
 import os
 import re
+from collections.abc import Sized
 
 import requests
 from django import db
+from django.db.models import Model
+from model_utils.models import SoftDeletableModel
+from modeltranslation.translator import translator
 
-from hours.models import (
-    BaseModel,
-    DataSource,
-    Opening,
-    Period,
-    Target,
-    TargetIdentifier,
-    TargetLink,
-)
+from hours.models import DataSource, Resource, ResourceOrigin
 
 
 class Importer(object):
@@ -21,6 +17,14 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
+        resource_origins = ResourceOrigin.objects.select_related("resource").filter(
+            data_source=self.data_source
+        )
+        if self.options.get("single", None):
+            resource_origins = resource_origins.filter(origin_id=self.options["single"])
+        self.resource_cache = {
+            origin.origin_id: origin.resource for origin in resource_origins
+        }
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:
         url = "%s%s/" % (self.URL_BASE, resource_name)
@@ -38,12 +42,12 @@ class Importer(object):
         return resp.json()
 
     @staticmethod
-    def mark_deleted(obj: BaseModel) -> bool:
-        return obj.soft_delete()
+    def mark_deleted(obj: SoftDeletableModel) -> bool:
+        return obj.delete()
 
     @staticmethod
-    def check_deleted(obj: BaseModel) -> bool:
-        return obj.deleted
+    def check_deleted(obj: SoftDeletableModel) -> bool:
+        return obj.is_removed
 
     @staticmethod
     def clean_text(text: str, strip_newlines: bool = False) -> str:
@@ -56,7 +60,7 @@ class Importer(object):
         # remove consecutive whitespaces
         return re.sub(r"\s\s+", " ", text, re.U).strip()
 
-    def _set_field(self, obj: BaseModel, field_name: str, val: object):
+    def _set_field(self, obj: object, field_name: str, val: object):
         """
         Sets the field_name field of obj to val, if changed.
         """
@@ -69,7 +73,7 @@ class Importer(object):
             return
 
         field = obj._meta.get_field(field_name)
-        if getattr(field, "max_length", None) and val is not None:
+        if getattr(field, "max_length", None) and isinstance(val, Sized):
             if len(val) > field.max_length:
                 raise Exception(
                     "field '%s' too long (max. %d): %s" % field_name,
@@ -83,31 +87,33 @@ class Importer(object):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
 
-    def _update_fields(self, obj: BaseModel, info: dict, skip_fields: list):
+    def _update_fields(self, obj: object, info: dict, skip_fields: list = None):
         """
         Updates the fields in obj according to info.
         """
+        if not skip_fields:
+            skip_fields = []
         obj_fields = list(obj._meta.fields)
-        # trans_fields = translator.get_options_for_model(type(obj)).fields
-        # for field_name, lang_fields in trans_fields.items():
-        #     lang_fields = list(lang_fields)
-        #     for lf in lang_fields:
-        #         lang = lf.language
-        #         # Do not process this field later
-        #         skip_fields.append(lf.name)
+        trans_fields = translator.get_options_for_model(type(obj)).fields
+        for field_name, lang_fields in trans_fields.items():
+            lang_fields = list(lang_fields)
+            for lf in lang_fields:
+                lang = lf.language
+                # Do not process this field later
+                skip_fields.append(lf.name)
 
-        #         if field_name not in info:
-        #             continue
+                if field_name not in info:
+                    continue
 
-        #         data = info[field_name]
-        #         if data is not None and lang in data:
-        #             val = data[lang]
-        #         else:
-        #             val = None
-        #         self._set_field(obj, lf.name, val)
+                data = info[field_name]
+                if data is not None and lang in data:
+                    val = data[lang]
+                else:
+                    val = None
+                self._set_field(obj, lf.name, val)
 
-        #     # Remove original translated field
-        #     skip_fields.append(field_name)
+            # Remove original translated field
+            skip_fields.append(field_name)
 
         for d in skip_fields:
             for f in obj_fields:
@@ -121,83 +127,89 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
-    def _update_or_create_object(self, klass: type, data: dict) -> BaseModel:
+    def _update_or_create_object(self, klass: type, data: dict) -> Model:
         """
-        Takes the class and serialized data, creates and/or updates the BaseModel
+        Takes the class and serialized data, creates and/or updates the Model
         object and returns it unsaved for class-specific processing and saving.
         """
-        args = dict(data_source=data["data_source"], origin_id=data["origin_id"])
-        obj_id = "%s:%s" % (data["data_source"].id, data["origin_id"])
-        try:
-            obj = klass.objects.get(**args)
+        # look for existing origin corresponding to the object
+        cache = getattr(self, "%s_cache" % klass.__name__.lower())
+
+        # if identical objects are merged, an object may have several
+        # origin ids. all origin ids should return the same object.
+        origin_ids = [
+            str(origin["origin_id"])
+            for origin in data["origins"]
+            if origin["data_source_id"] == self.data_source.id
+        ]
+        obj = cache.get(origin_ids[0], None)
+        if obj:
             obj._created = False
-        except klass.DoesNotExist:
-            obj = klass(**args)
+        else:
+            obj = klass()
             obj._created = True
-            obj.id = obj_id
+            # save the new object in the cache so related objects will find it
+            setattr(
+                self,
+                "%s_cache" % klass.__name__.lower(),
+                {**cache, **{origin_id: obj for origin_id in origin_ids}},
+            )
         obj._changed = False
         obj._changed_fields = []
 
-        skip_fields = ["id", "data_source", "origin_id"]
-        self._update_fields(obj, data, skip_fields)
-        self._set_field(obj, "deleted", False)
-        self._set_field(obj, "published", True)
+        self._update_fields(obj, data)
+        self._set_field(obj, "is_removed", False)
+        self._set_field(obj, "is_public", True)
         return obj
 
     @db.transaction.atomic
-    def save_target(self, data: dict) -> Target:
+    def save_resource(self, data: dict) -> Resource:
         """
-        Takes the serialized target data, creates and/or updates the corresponding
-        Target object, saves and returns it.
+        Takes the serialized resource data, creates and/or updates the corresponding
+        Resource object, saves and returns it.
         """
-        obj = self._update_or_create_object(Target, data)
+        obj = self._update_or_create_object(Resource, data)
         if obj._created:
             obj.save()
             self.logger.debug("%s created" % obj)
 
-        # Update related identifiers after the target has been created
-        identifiers = {x.data_source_id: x for x in obj.identifiers.all()}
-        for identifier in data.get("identifiers", []):
-            data_source_id = identifier["data_source_id"]
-            origin_id = identifier["origin_id"]
-            if data_source_id in identifiers:
-                existing_identifier = identifiers[data_source_id]
-                if existing_identifier.origin_id != origin_id:
-                    existing_identifier.origin_id = origin_id
-                    existing_identifier.save()
-                    obj._changed = True
-                    obj._changed_fields.append("identifiers")
-            else:
-                data_source, created = DataSource.objects.get_or_create(
-                    id=data_source_id
-                )
-                if created:
-                    self.logger.debug("Created missing data source %s" % data_source_id)
-                new_identifier = TargetIdentifier(
-                    target=obj, data_source=data_source, origin_id=origin_id
-                )
-                new_identifier.save()
-                obj._changed = True
-                obj._changed_fields.append("identifiers")
+        # Update parents only after the resource has been created
+        existing_parents = set(obj.parents.all())
+        data_parents = set(data.get("parents", []))
+        for parent in data_parents.difference(existing_parents):
+            obj.parents.add(parent)
+            obj._changed = True
+            obj._changed_fields.append("parents")
+        for parent in existing_parents.difference(data_parents):
+            obj.parents.remove(parent)
+            obj._changed = True
+            obj._changed_fields.append("parents")
 
-        # Update related links after the target has been created
-        # Only check one admin and one citizen link at the moment
-        links = {x.link_type: x for x in obj.links.all()}
-        for link in data.get("links", []):
-            link_type = link["link_type"]
-            url = link["url"]
-            if link_type in links:
-                existing_link = links[link_type]
-                if existing_link.url != url:
-                    existing_link.url = url
-                    existing_link.save()
-                    obj._changed = True
-                    obj._changed_fields.append("links")
-            else:
-                new_link = TargetLink(target=obj, link_type=link_type, url=url)
-                new_link.save()
-                obj._changed = True
-                obj._changed_fields.append("links")
+        # Update related origins only after the resource has been created
+        data_sources = {origin["data_source_id"] for origin in data.get("origins", [])}
+        for data_source in data_sources:
+            data_source, created = DataSource.objects.get_or_create(id=data_source)
+            if created:
+                self.logger.debug("Created missing data source %s" % data_source)
+        existing_origins = set(obj.origins.all())
+        data_origins = set(
+            [
+                ResourceOrigin.objects.get_or_create(
+                    resource=obj,
+                    data_source_id=origin["data_source_id"],
+                    origin_id=origin["origin_id"],
+                )[0]
+                for origin in data.get("origins", [])
+            ]
+        )
+        for origin in data_origins.difference(existing_origins):
+            origin.save()
+            obj._changed = True
+            obj._changed_fields.append("origins")
+        for origin in existing_origins.difference(data_origins):
+            origin.delete()
+            obj._changed = True
+            obj._changed_fields.append("origins")
 
         if obj._changed:
             if not obj._created:
@@ -208,42 +220,43 @@ class Importer(object):
 
         return obj
 
-    @db.transaction.atomic
-    def save_period(self, data: dict) -> Period:
-        """
-        Takes the serialized Period data with Openings, creates and/or updates the
-        corresponding Period object, saves and returns it.
-        """
-        obj = self._update_or_create_object(Period, data)
-        if obj._created:
-            obj.save()
-            self.logger.debug("%s created" % obj)
+    # @db.transaction.atomic
+    # def save_period(self, data: dict) -> Period:
+    #     """
+    #     Takes the serialized Period data with Openings, creates and/or updates the
+    #     corresponding Period object, saves and returns it.
+    #     """
+    #     obj = self._update_or_create_object(Period, data)
+    #     if obj._created:
+    #         obj.save()
+    #         print("%s created" % obj)
 
-        # Update openings after the period has been created
-        openings = obj.openings.all()
-        openings.delete()
-        new_openings = []
-        for opening in data.get("openings", []):
-            # openings have no identifiers in kirkanta and they are generated from data
-            # therefore, we cannot identify existing openings with new ones
-            new_opening = Opening(
-                period=obj,
-                weekday=opening["weekday"],
-                week=opening["week"],
-                status=opening["status"],
-                description=opening.get("description", None),
-                opens=opening.get("opens", None),
-                closes=opening.get("closes", None),
-            )
-            new_openings.append(new_opening)
-        Opening.objects.bulk_create(new_openings)
-        obj._changed = True
-        obj._changed_fields.append("openings")
-        if not obj._created:
-            self.logger.debug("%s changed: %s" % (obj, ", ".join(obj._changed_fields)))
-
-        # Saving updates the daily hours for the duration of the period
-        obj.save()
+    #     # Update openings after the period has been created
+    #     openings = obj.openings.all()
+    #     openings.delete()
+    #     new_openings = []
+    #     for opening in data.get("openings", []):
+    #         # openings have no identifiers in kirkanta and they are generated from
+    #         # data, therefore, we cannot identify existing openings with new ones
+    #         new_opening = Opening(
+    #             period=obj,
+    #             weekday=opening["weekday"],
+    #             week=opening["week"],
+    #             status=opening["status"],
+    #             description=opening.get("description", None),
+    #             opens=opening.get("opens", None),
+    #             closes=opening.get("closes", None),
+    #         )
+    #         new_openings.append(new_opening)
+    #     Opening.objects.bulk_create(new_openings)
+    #     obj._changed = True
+    #     obj._changed_fields.append("openings")
+    #     if not obj._created:
+    #         self.logger.debug("%s changed: %s" %
+    #                           (obj, ", ".join(obj._changed_fields)))
+    #
+    #     # Saving updates the daily hours for the duration of the period
+    #     obj.save()
 
 
 importers = {}

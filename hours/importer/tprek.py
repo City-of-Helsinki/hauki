@@ -281,21 +281,23 @@ class TPRekImporter(Importer):
                     " to match existing objects to incoming data."
                 )
 
+        if self.options.get("single", None):
+            obj_id = self.options["single"]
+            obj_list = [self.api_get(object_type, obj_id, params={"official": "yes"})]
+            self.logger.info("Loading TPREK " + object_type + " " + str(obj_list))
+            queryset = queryset.filter(
+                origins__data_source=self.data_source, origins__origin_id=obj_id
+            )
+        else:
+            self.logger.info("Loading TPREK " + object_type + "s...")
+            obj_list = self.api_get(object_type, params={"official": "yes"})
+            self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         syncher = ModelSyncher(
             queryset,
             get_object_id,
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )
-
-        if self.options.get("single", None):
-            obj_id = self.options["single"]
-            obj_list = [self.api_get(object_type, obj_id, params={"official": "yes"})]
-            queryset = queryset.filter(id=obj_id)
-        else:
-            self.logger.info("Loading TPREK " + object_type + "s...")
-            obj_list = self.api_get(object_type, params={"official": "yes"})
-            self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
         obj_dict = {}
         for idx, data in enumerate(obj_list):

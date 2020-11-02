@@ -17,11 +17,13 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
+        resource_origins = ResourceOrigin.objects.select_related("resource").filter(
+            data_source=self.data_source
+        )
+        if self.options.get("single", None):
+            resource_origins = resource_origins.filter(origin_id=self.options["single"])
         self.resource_cache = {
-            origin.origin_id: origin.resource
-            for origin in ResourceOrigin.objects.select_related("resource").filter(
-                data_source=self.data_source
-            )
+            origin.origin_id: origin.resource for origin in resource_origins
         }
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:

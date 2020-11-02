@@ -1,0 +1,158 @@
+[
+    {
+        "id": 8215,
+        "org_id": "83e74666-0836-4c1d-948a-4b34a8b90301",
+        "dept_id": "dc7d39db-b35a-4612-a921-1b7b24b0baa3",
+        "provider_type": "SELF_PRODUCED",
+        "data_source_url": "www.hel.fi",
+        "name_fi": "Kallion kirjasto",
+        "name_sv": "Berghälls bibliotek",
+        "name_en": "Kallio Library",
+        "ontologyword_ids": [
+            473,
+            483,
+            691,
+            692,
+            806,
+            813
+        ],
+        "ontologytree_ids": [
+            328,
+            331,
+            337,
+            338,
+            341,
+            349,
+            749
+        ],
+        "sources": [
+            {
+                "source": "kirkanta",
+                "id": "84860"
+            },
+            {
+                "source": "visithelsinki",
+                "id": "2916"
+            },
+            {
+                "source": "internal",
+                "id": "3266"
+            }
+        ],
+        "latitude": 60.18372,
+        "longitude": 24.95356,
+        "northing_etrs_gk25": 6674543,
+        "easting_etrs_gk25": 25497423,
+        "northing_etrs_tm35fin": 6673631,
+        "easting_etrs_tm35fin": 386500,
+        "manual_coordinates": true,
+        "street_address_fi": "Viides linja 11",
+        "street_address_sv": "Femte linjen 11",
+        "street_address_en": "Viides linja 11",
+        "address_zip": "00530",
+        "address_city_fi": "Helsinki",
+        "address_city_sv": "Helsingfors",
+        "address_city_en": "Helsinki",
+        "phone": "+358 9 310 85053",
+        "call_charge_info_fi": "pvm/mpm",
+        "call_charge_info_sv": "lna/msa",
+        "call_charge_info_en": "local network charge/mobile call charge",
+        "www_fi": "http://www.helmet.fi/kallionkirjasto",
+        "www_sv": "http://www.helmet.fi/kallionkirjasto",
+        "www_en": "http://www.helmet.fi/kallionkirjasto",
+        "address_postal_full_fi": "PL 53455, 00099 HELSINGIN KAUPUNKI",
+        "address_postal_full_sv": "PB 53455, 00099 HELSINGIN KAUPUNKI",
+        "address_postal_full_en": "P.O. Box 53455, 00099 HELSINGIN KAUPUNKI",
+        "picture_url": "https://kirkanta.kirjastot.fi/files/photos/medium/kallio-4f901aa2.jpg",
+        "streetview_entrance_url": "https://maps.google.fi/?q=http:%2F%2Fwww.hel.fi%2Fpalvelukartta%2Fkml.aspx%3Flang%3Dfi%26id%3D8215&ll=60.183222,24.953513&spn=0.002043,0.014699&layer=c&cbll=60.18322,24.953511&cbp=12,15.56,,0,-2.63&t=h&panoid=qS8PWG0EtAkcltniDok4Yw&z=17",
+        "accessibility_phone": "+358 9 310 85953",
+        "accessibility_email": "kallion_kirjasto@hel.fi",
+        "accessibility_www": "https://www.lib.hel.fi/fi-FI/kallio/yhteystiedot/",
+        "accessibility_viewpoints": "00:unknown,11:red,12:red,13:red,21:red,22:red,23:red,31:red,32:red,33:red,41:red,51:red,52:red,61:red",
+        "created_time": "2008-09-11T18:47:26",
+        "modified_time": "2020-06-30T00:32:06"
+    },
+    {
+        "id": 51342,
+        "org_id": "83e74666-0836-4c1d-948a-4b34a8b90301",
+        "dept_id": "dc7d39db-b35a-4612-a921-1b7b24b0baa3",
+        "provider_type": "SELF_PRODUCED",
+        "data_source_url": "www.hel.fi",
+        "name_fi": "Keskustakirjasto Oodi",
+        "name_sv": "Helsingfors centrumbibliotek Ode",
+        "name_en": "Helsinki Central Library Oodi",
+        "ontologyword_ids": [
+            239,
+            345,
+            473,
+            483,
+            691,
+            692,
+            806,
+            813
+        ],
+        "ontologytree_ids": [
+            328,
+            331,
+            337,
+            338,
+            341,
+            349,
+            355,
+            738,
+            749
+        ],
+        "sources": [
+            {
+                "source": "kirkanta",
+                "id": "86476"
+            },
+            {
+                "source": "visithelsinki",
+                "id": "3089"
+            },
+            {
+                "source": "internal",
+                "id": "9600"
+            }
+        ],
+        "short_desc_fi": "Helsingin keskustakirjasto Oodi on elävä kohtaamispaikka Kansalaistorilla, aivan Helsingin sydämessä.",
+        "short_desc_sv": "Ode, Helsingfors centrumbibliotek, är en levande mötesplats på Medborgarplatsen, i hjärtat av Helsingfors.",
+        "short_desc_en": "Helsinki Central Library Oodi is a living meeting place at Kansalaistori square, right at the heart of Helsinki.",
+        "desc_fi": "Oodi on tapahtumapaikka, lukemisen talo ja monipuolinen kaupunkikokemus.\nOodi tarjoaa tietoja, taitoja ja tarinoita, ja sinne on helppo tulla oppimaan,\neläytymään, nauttimaan ja työskentelemään. Kaikille avoin uuden ajan kirjasto\non elävä ja toiminnallinen kohtaamispaikka.",
+        "desc_sv": "Ode är en evenemangsplats, ett läsandets hus och en mångsidig stadsupplevelse. Det bjuder på kunskap, nya färdigheter och berättelser, och är lättillgänglig för inlärning, inlevelse, arbete och avkoppling. Det är ett modernt bibliotek och en levande och funktionell mötesplats till för alla stadsbor.",
+        "desc_en": "Oodi is a venue for events, a house of reading and a diverse urban experience.\nIt will provide its users with knowledge, new skills and stories, and will be an\neasy place to access for learning, story immersion, work and relaxation. Oodi\nis a library of a new era, a living and functional meeting place open for all.",
+        "latitude": 60.17397,
+        "longitude": 24.938158,
+        "northing_etrs_gk25": 6673457,
+        "easting_etrs_gk25": 25496567,
+        "northing_etrs_tm35fin": 6672572,
+        "easting_etrs_tm35fin": 385612,
+        "manual_coordinates": true,
+        "street_address_fi": "Töölönlahdenkatu 4",
+        "street_address_sv": "Tölöviksgatan 4",
+        "street_address_en": "Töölönlahdenkatu 4",
+        "address_zip": "00100",
+        "address_city_fi": "Helsinki",
+        "address_city_sv": "Helsingfors",
+        "address_city_en": "Helsinki",
+        "phone": "+358 9 310 85000",
+        "call_charge_info_fi": "pvm/mpm",
+        "call_charge_info_sv": "lna/msa",
+        "call_charge_info_en": "local network charge/mobile call charge",
+        "email": "oodi@hel.fi",
+        "www_fi": "http://www.helmet.fi/fi-FI/Kirjastot_ja_palvelut/Keskustakirjasto_Oodi",
+        "www_sv": "http://www.helmet.fi/fi-FI/Kirjastot_ja_palvelut/Keskustakirjasto_Oodi",
+        "www_en": "http://www.helmet.fi/fi-FI/Kirjastot_ja_palvelut/Keskustakirjasto_Oodi",
+        "address_postal_full_fi": "PL 10455, 00099 HELSINKI",
+        "address_postal_full_sv": "PB 10455, 00099 HELSINKI",
+        "address_postal_full_en": "P.O. Box 10455, 00099 HELSINKI",
+        "picture_url": "https://kirkanta.kirjastot.fi/files/photos/medium/5d7147dd56b25029363143.JPG",
+        "extra_searchwords_fi": "Grafiikkatyöasema, Monitoimisali, Studio",
+        "accessibility_email": "oodi@hel.fi",
+        "accessibility_www": "http://www.helmet.fi/oodi",
+        "accessibility_viewpoints": "00:unknown,11:green,12:red,13:green,21:green,22:red,23:green,31:green,32:red,33:green,41:green,51:red,52:red,61:green",
+        "created_time": "2016-09-22T10:17:58",
+        "modified_time": "2020-10-28T00:32:36"
+    }
+]

@@ -54,6 +54,13 @@ class Command(BaseCommand):
             dest="force",
             help="Allow deleting any number of entities if necessary",
         )
+        parser.add_argument(
+            "--merge",
+            action="store_true",
+            dest="merge",
+            help="Merge identical objects during import, if supported",
+        )
+        print(self.importer_types)
 
         for imp in self.importer_types:
             parser.add_argument(

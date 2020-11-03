@@ -1,4 +1,8 @@
+import datetime
+
 import pytest
+from django.conf import settings
+from pytz import timezone
 
 from hours.models import Resource
 from hours.serializers import ResourceSerializer
@@ -6,6 +10,9 @@ from hours.serializers import ResourceSerializer
 
 @pytest.mark.django_db
 def test_to_representation(resource):
+    now = datetime.datetime.now(timezone(settings.TIME_ZONE))
+    resource.created = now
+    resource.modified = now
     serializer = ResourceSerializer(resource)
 
     assert serializer.data == {
@@ -20,6 +27,8 @@ def test_to_representation(resource):
         "children": [],
         "resource_type": "unit",
         "origins": [],
+        "created": now.isoformat(),
+        "modified": now.isoformat(),
     }
 
 

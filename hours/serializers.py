@@ -124,6 +124,8 @@ class ResourceSerializer(
             "parents",
             "organization",
             "origins",
+            "created",
+            "modified",
             "last_modified_by",
             "extra_data",
         ]

@@ -111,6 +111,12 @@ class ResourceSerializer(
     last_modified_by = UserSerializer(read_only=True)
     organization = OrganizationSerializer(read_only=True)
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
+    children = serializers.HyperlinkedRelatedField(
+        many=True, read_only=True, view_name="resource-detail"
+    )
+    parents = serializers.HyperlinkedRelatedField(
+        many=True, read_only=True, view_name="resource-detail"
+    )
 
     class Meta:
         model = Resource

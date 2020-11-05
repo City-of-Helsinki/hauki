@@ -75,7 +75,8 @@ class ModelSyncher(object):
                         "Deleting %s not allowed by the importer" % str(obj)
                     )
             if self.delete_func:
-                deleted = self.delete_func(obj)
+                self.delete_func(obj)
+                deleted = True
             else:
                 obj.delete()
                 deleted = True

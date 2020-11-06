@@ -3,7 +3,6 @@ from typing import Callable, Hashable
 
 from django import db
 from django.conf import settings
-from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
 from django_orghierarchy.models import Organization
 
@@ -245,41 +244,6 @@ class TPRekImporter(Importer):
         with the same identifier will be merged.
         """
         queryset = self.data_to_match[object_type]
-        if not get_object_id and not get_data_id:
-
-            def get_object_id(obj: Model) -> str:
-                try:
-                    return obj.origins.get(data_source=self.data_source).origin_id
-                except MultipleObjectsReturned:
-                    raise Exception(
-                        "Seems like your database already contains multiple identifiers"
-                        " for the same object in importer data source. Please run the"
-                        " importer with --merge to combine identical objects into one,"
-                        " or remove the duplicate origin_ids in the database before"
-                        " trying to import identical connections as separate objects."
-                    )
-
-            def get_data_id(data: dict) -> str:
-                origin_ids = [
-                    str(origin["origin_id"])
-                    for origin in data["origins"]
-                    if origin["data_source_id"] == self.data_source.id
-                ]
-                if len(origin_ids) > 1:
-                    raise Exception(
-                        "Seems like your data contains multiple identifiers in the"
-                        " same object in importer data source. Please provide"
-                        " get_object_id and get_data_id methods to return a single"
-                        " hashable identifier to use for identifying objects."
-                    )
-                return origin_ids[0]
-
-        else:
-            if not get_object_id or not get_data_id:
-                raise Exception(
-                    "Both get_object_id and get_data_id functions must be provided"
-                    " to match existing objects to incoming data."
-                )
 
         if self.options.get("single", None):
             obj_id = self.options["single"]
@@ -292,6 +256,19 @@ class TPRekImporter(Importer):
             self.logger.info("Loading TPREK " + object_type + "s...")
             obj_list = self.api_get(object_type, params={"official": "yes"})
             self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
+        # Fill the resource cache so we can match and link to existing objects
+        if not get_object_id and not get_data_id:
+            # Default origin_ids will be used
+            get_object_id = self.get_object_id
+            get_data_id = self.get_data_id
+        elif not get_object_id or not get_data_id:
+            raise Exception(
+                "Both get_object_id and get_data_id functions must be provided"
+                " to match existing objects to incoming data."
+            )
+        self.resource_cache.update(
+            {get_object_id(resource): resource for resource in queryset}
+        )
         syncher = ModelSyncher(
             queryset,
             get_object_id,
@@ -312,16 +289,16 @@ class TPRekImporter(Importer):
                 # adding another object.
                 parents = object_data["parents"]
                 origins = object_data["origins"]
-                self.logger.debug(
-                    "Adding duplicate object foreign keys %s to object %s"
-                    % ((parents, origins), object_data_id)
+                self.logger.info(
+                    "Adding duplicate parent %s and origin %s to object %s"
+                    % (parents, origins, object_data_id)
                 )
                 obj_dict[object_data_id]["parents"].extend(parents)
                 obj_dict[object_data_id]["origins"].extend(origins)
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss saved" % (idx, object_type))
-            obj = self.save_resource(object_data)
+            obj = self.save_resource(object_data, get_data_id=get_data_id)
 
             syncher.mark(obj)
 

@@ -34,6 +34,8 @@ from hours.models import DataSource, Resource, ResourceOrigin, ResourceType
 
 @pytest.fixture
 def mock_tprek_data(requests_mock, request):
+    change = request.param["change"]
+    merge = request.param["merge"]
     units_file_name = "test_import_tprek_units.json"
     connections_file_name = "test_import_tprek_connections.json"
     units_file_path = os.path.join(os.path.dirname(__file__), units_file_name)
@@ -43,25 +45,61 @@ def mock_tprek_data(requests_mock, request):
     with open(units_file_path) as units_file, open(
         connections_file_path
     ) as connections_file:
+        units = json.load(units_file)
+        connections = json.load(connections_file)
+    requests_mock.get(
+        "http://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
+    )
+    requests_mock.get(
+        "http://www.hel.fi/palvelukarttaws/rest/v4/connection/",
+        text=json.dumps(connections),
+    )
+    if merge:
+        call_command("hours_import", "tprek", resources=True, merge=True)
+        print("merged identical resources")
+    else:
+        call_command("hours_import", "tprek", resources=True)
+    if change == "edit":
+        # Modify one connection that is already imported duplicated.
+        # Two single connections should appear.
+        connections[6]["name_fi"] = "Välipala peruttu"
+    if change == "remove":
+        # Remove one connection that is already imported duplicated.
+        # Duplicated connection should become single.
+        connections.pop(8)
+    if change == "add":
+        # Add one connection that is not yet imported duplicated.
+        # Single connection should become duplicated.
+        connections.append(
+            {
+                "id": 28,
+                "unit_id": 8215,
+                "section_type": "ESERVICE_LINK",
+                "name_fi": "Ohjattuun liikuntaan ilmoittautuminen",
+                "www_fi": "https://resurssivaraus.espoo.fi/ohjattuliikunta/haku",
+            }
+        )
+    if change:
         requests_mock.get(
-            "http://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=units_file.read()
+            "http://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
         )
         requests_mock.get(
             "http://www.hel.fi/palvelukarttaws/rest/v4/connection/",
-            text=connections_file.read(),
+            text=json.dumps(connections),
         )
-    if request.param:
-        call_command("hours_import", "tprek", resources=True, merge=True)
-    else:
-        call_command("hours_import", "tprek", resources=True)
-    with open(units_file_path) as units_file, open(
-        connections_file_path
-    ) as connections_file:
-        return {
-            "merged_identical_resources": request.param,
-            "units": json.load(units_file),
-            "connections": json.load(connections_file),
-        }
+        if merge:
+            call_command("hours_import", "tprek", resources=True, merge=True)
+            print("merged identical resources")
+        else:
+            call_command("hours_import", "tprek", resources=True)
+        print("made a change and rerun")
+        print(change)
+    return {
+        "merged_identical_resources": merge,
+        "made_a_change_and_rerun": change,
+        "units": units,
+        "connections": connections,
+    }
 
 
 # @pytest.mark.django_db
@@ -94,19 +132,48 @@ def mock_tprek_data(requests_mock, request):
 
 #     return _mock_library_data
 
+parameters = []
+for merge in [False, True]:
+    for change in [None, "edit", "remove", "add"]:
+        parameters.append({"merge": merge, "change": change})
+
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("mock_tprek_data", [False, True], indirect=True)
+@pytest.mark.parametrize("mock_tprek_data", parameters, indirect=True)
 def test_import_tprek(mock_tprek_data):
     # The results should depend on whether we merge identical connections
+    # and whether we have changed the connections and rerun the import
     merge = mock_tprek_data["merged_identical_resources"]
+    change = mock_tprek_data["made_a_change_and_rerun"]
 
     # Check created objects
-    expected_n_resources = 16 if merge else 21
-    assert Resource.objects.count() == expected_n_resources
+    if change == "add":
+        expected_n_resources = 22
+    elif change == "remove":
+        expected_n_resources = 20
+    else:
+        expected_n_resources = 21
+    if change == "edit":
+        expected_n_merged_resources = 17
+    else:
+        expected_n_merged_resources = 16
+    if not merge:
+        assert Resource.objects.count() == expected_n_resources
+    else:
+        assert Resource.objects.count() == expected_n_merged_resources
     assert DataSource.objects.count() == 3
     assert Organization.objects.count() == 1
-    assert ResourceOrigin.objects.count() == 25
+    external_origins = 4
+    if change == "remove" and not merge:
+        # if a resource is soft deleted, its origin will remain.
+        # if it was merged, extra origin will be deleted.
+        old_origins = 1
+    else:
+        old_origins = 0
+    assert (
+        ResourceOrigin.objects.count()
+        == expected_n_resources + external_origins + old_origins
+    )
 
     # Check the units are imported correctly
     kallio, oodi = Resource.objects.filter(resource_type=ResourceType.UNIT)
@@ -143,37 +210,31 @@ def test_import_tprek(mock_tprek_data):
             assert origins[source["source"]].origin_id == source["id"]
 
     # Check the right connections are under the right units
+    subsections = Resource.objects.order_by("pk").filter(
+        resource_type=ResourceType.SUBSECTION
+    )
+    contacts = Resource.objects.order_by("pk").filter(
+        resource_type=ResourceType.CONTACT
+    )
+    online_services = Resource.objects.order_by("pk").filter(
+        resource_type=ResourceType.ONLINE_SERVICE
+    )
+    entrances = Resource.objects.order_by("pk").filter(
+        resource_type=ResourceType.ENTRANCE
+    )
+
+    # Check subsections
     if merge:
-
-        (
-            covid,
-            snack,
-            afternoon,
-            berth,
-            space,
-            support,
-        ) = Resource.objects.filter(resource_type=ResourceType.SUBSECTION)
-        assert {covid, snack, afternoon, berth, space} == set(
-            kallio.children.filter(resource_type=ResourceType.SUBSECTION)
-        )
-        assert {covid, snack, berth, space, support} == set(
-            oodi.children.filter(resource_type=ResourceType.SUBSECTION)
-        )
-
-        (
-            reservations,
-            directorkallio,
-            directoroodi,
-        ) = Resource.objects.filter(resource_type=ResourceType.CONTACT)
-        assert {reservations, directorkallio} == set(
-            kallio.children.filter(resource_type=ResourceType.CONTACT)
-        )
-        assert {reservations, directoroodi} == set(
-            oodi.children.filter(resource_type=ResourceType.CONTACT)
-        )
-
+        if change == "edit":
+            # snack changed in kallio
+            (covid, snack1, afternoon, berth, space, support, snack2) = subsections
+            subsections_expected_in_kallio = {covid, snack2, afternoon, berth, space}
+            subsections_expected_in_oodi = {covid, snack1, berth, space, support}
+        else:
+            (covid, snack, afternoon, berth, space, support) = subsections
+            subsections_expected_in_kallio = {covid, snack, afternoon, berth, space}
+            subsections_expected_in_oodi = {covid, snack, berth, space, support}
     else:
-
         (
             covid1,
             covid2,
@@ -185,42 +246,71 @@ def test_import_tprek(mock_tprek_data):
             space1,
             space2,
             support,
-        ) = Resource.objects.filter(resource_type=ResourceType.SUBSECTION)
-        assert {covid1, snack1, afternoon, berth1, space1} == set(
-            kallio.children.filter(resource_type=ResourceType.SUBSECTION)
-        )
-        assert {covid2, snack2, berth2, space2, support} == set(
-            oodi.children.filter(resource_type=ResourceType.SUBSECTION)
-        )
+        ) = subsections
+        subsections_expected_in_kallio = {covid1, snack1, afternoon, berth1, space1}
+        subsections_expected_in_oodi = {covid2, snack2, berth2, space2, support}
 
-        (
-            reservations1,
-            reservations2,
-            directorkallio,
-            directoroodi,
-        ) = Resource.objects.filter(resource_type=ResourceType.CONTACT)
-        assert {reservations1, directorkallio} == set(
-            kallio.children.filter(resource_type=ResourceType.CONTACT)
-        )
-        assert {reservations2, directoroodi} == set(
-            oodi.children.filter(resource_type=ResourceType.CONTACT)
-        )
+    assert subsections_expected_in_kallio == set(
+        kallio.children.filter(resource_type=ResourceType.SUBSECTION)
+    )
+    assert subsections_expected_in_oodi == set(
+        oodi.children.filter(resource_type=ResourceType.SUBSECTION)
+    )
 
-    (
-        hydrobic,
-        reservations,
-        exercise,
-    ) = Resource.objects.filter(resource_type=ResourceType.ONLINE_SERVICE)
-    assert set() == set(
+    # Check contacts
+    if merge:
+        (reservations, directorkallio, directoroodi) = contacts
+        if change == "remove":
+            # reservations removed in kallio
+            contacts_expected_in_kallio = {directorkallio}
+        else:
+            contacts_expected_in_kallio = {reservations, directorkallio}
+        contacts_expected_in_oodi = {reservations, directoroodi}
+    else:
+        if change == "remove":
+            # reservations removed in kallio
+            (reservations2, directorkallio, directoroodi) = contacts
+            contacts_expected_in_kallio = {directorkallio}
+        else:
+            (reservations1, reservations2, directorkallio, directoroodi) = contacts
+            contacts_expected_in_kallio = {reservations1, directorkallio}
+        contacts_expected_in_oodi = {reservations2, directoroodi}
+
+    assert contacts_expected_in_kallio == set(
+        kallio.children.filter(resource_type=ResourceType.CONTACT)
+    )
+    assert contacts_expected_in_oodi == set(
+        oodi.children.filter(resource_type=ResourceType.CONTACT)
+    )
+
+    # Check online services
+    if merge:
+        (hydrobic, reservations, exercise) = online_services
+        if change == "add":
+            # exercise added to kallio
+            online_services_expected_in_kallio = {exercise}
+        else:
+            online_services_expected_in_kallio = set()
+        online_services_expected_in_oodi = {hydrobic, reservations, exercise}
+    else:
+        if change == "add":
+            # exercise added to kallio
+            (hydrobic, reservations, exercise1, exercise2) = online_services
+            online_services_expected_in_kallio = {exercise2}
+        else:
+            (hydrobic, reservations, exercise1) = online_services
+            online_services_expected_in_kallio = set()
+        online_services_expected_in_oodi = {hydrobic, reservations, exercise1}
+
+    assert online_services_expected_in_kallio == set(
         kallio.children.filter(resource_type=ResourceType.ONLINE_SERVICE)
     )
-    assert {hydrobic, reservations, exercise} == set(
+    assert online_services_expected_in_oodi == set(
         oodi.children.filter(resource_type=ResourceType.ONLINE_SERVICE)
     )
 
-    (mikkolankuja, floorantie) = Resource.objects.filter(
-        resource_type=ResourceType.ENTRANCE
-    )
+    # Check entrances
+    (mikkolankuja, floorantie) = entrances
     assert {mikkolankuja} == set(
         kallio.children.filter(resource_type=ResourceType.ENTRANCE)
     )

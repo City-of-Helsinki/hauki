@@ -2,9 +2,11 @@ import logging
 import os
 import re
 from collections.abc import Sized
+from typing import Callable, Hashable
 
 import requests
 from django import db
+from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
@@ -17,14 +19,38 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
-        resource_origins = ResourceOrigin.objects.select_related("resource").filter(
-            data_source=self.data_source
-        )
-        if self.options.get("single", None):
-            resource_origins = resource_origins.filter(origin_id=self.options["single"])
-        self.resource_cache = {
-            origin.origin_id: origin.resource for origin in resource_origins
-        }
+        # The cache needs to be populated by each consecutive import command
+        # if we want to match and link to existing and newly imported data.
+        # If resource_cache remains empty, new objects without foreign keys
+        # will be created.
+        self.resource_cache = {}
+
+    def get_object_id(self, obj: Model) -> str:
+        try:
+            return obj.origins.get(data_source=self.data_source).origin_id
+        except MultipleObjectsReturned:
+            raise Exception(
+                "Seems like your database already contains multiple identifiers"
+                " for the same object in importer data source. Please run the"
+                " importer with --merge to combine identical objects into one,"
+                " or remove the duplicate origin_ids in the database before"
+                " trying to import identical connections as separate objects."
+            )
+
+    def get_data_id(self, data: dict) -> str:
+        origin_ids = [
+            str(origin["origin_id"])
+            for origin in data["origins"]
+            if origin["data_source_id"] == self.data_source.id
+        ]
+        if len(origin_ids) > 1:
+            raise Exception(
+                "Seems like your data contains multiple identifiers in the"
+                " same object in importer data source. Please provide"
+                " get_object_id and get_data_id methods to return a single"
+                " hashable identifier to use for identifying objects."
+            )
+        return origin_ids[0]
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:
         url = "%s%s/" % (self.URL_BASE, resource_name)
@@ -43,7 +69,8 @@ class Importer(object):
 
     @staticmethod
     def mark_deleted(obj: SoftDeletableModel) -> bool:
-        return obj.delete()
+        # SoftDeletableModel does not return anything when *soft* deleting
+        obj.delete()
 
     @staticmethod
     def check_deleted(obj: SoftDeletableModel) -> bool:
@@ -127,22 +154,20 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
-    def _update_or_create_object(self, klass: type, data: dict) -> Model:
+    def _update_or_create_object(
+        self,
+        klass: type,
+        data: dict,
+        get_data_id: Callable[[dict], Hashable],
+    ) -> Model:
         """
         Takes the class and serialized data, creates and/or updates the Model
         object and returns it unsaved for class-specific processing and saving.
         """
-        # look for existing origin corresponding to the object
+        # look for existing object
         cache = getattr(self, "%s_cache" % klass.__name__.lower())
-
-        # if identical objects are merged, an object may have several
-        # origin ids. all origin ids should return the same object.
-        origin_ids = [
-            str(origin["origin_id"])
-            for origin in data["origins"]
-            if origin["data_source_id"] == self.data_source.id
-        ]
-        obj = cache.get(origin_ids[0], None)
+        obj_id = get_data_id(data)
+        obj = cache.get(obj_id, None)
         if obj:
             obj._created = False
         else:
@@ -152,7 +177,7 @@ class Importer(object):
             setattr(
                 self,
                 "%s_cache" % klass.__name__.lower(),
-                {**cache, **{origin_id: obj for origin_id in origin_ids}},
+                {**cache, **{obj_id: obj}},
             )
         obj._changed = False
         obj._changed_fields = []
@@ -163,15 +188,28 @@ class Importer(object):
         return obj
 
     @db.transaction.atomic
-    def save_resource(self, data: dict) -> Resource:
+    def save_resource(
+        self,
+        data: dict,
+        get_data_id: Callable[[dict], Hashable] = None,
+    ) -> Resource:
         """
         Takes the serialized resource data, creates and/or updates the corresponding
         Resource object, saves and returns it.
+
+        get_data_id can be used to match incoming data with existing objects. The
+        default id function is the origin_id of the object in this data source. Object
+        id may be any hashable that can be used to index objects and implements __eq__.
+        Objects must have unique ids.
         """
-        obj = self._update_or_create_object(Resource, data)
+        if not get_data_id:
+            # Default origin_ids will be used
+            get_data_id = self.get_data_id
+
+        obj = self._update_or_create_object(Resource, data, get_data_id)
         if obj._created:
             obj.save()
-            self.logger.debug("%s created" % obj)
+            self.logger.info("%s created" % obj)
 
         # Update parents only after the resource has been created
         existing_parents = set(obj.parents.all())
@@ -195,25 +233,30 @@ class Importer(object):
         data_origins = set(
             [
                 ResourceOrigin.objects.get_or_create(
-                    resource=obj,
                     data_source_id=origin["data_source_id"],
                     origin_id=origin["origin_id"],
+                    defaults={"resource": obj},
                 )[0]
                 for origin in data.get("origins", [])
             ]
         )
+        # Any existing origins referring to other resources must be updated
+        for origin in data_origins:
+            origin.resource = obj
         for origin in data_origins.difference(existing_origins):
             origin.save()
             obj._changed = True
             obj._changed_fields.append("origins")
         for origin in existing_origins.difference(data_origins):
+            # Removing an extra origin is the only way origins may be deleted.
+            # Soft deleted resources will retain their old origins.
             origin.delete()
             obj._changed = True
             obj._changed_fields.append("origins")
 
         if obj._changed:
             if not obj._created:
-                self.logger.debug(
+                self.logger.info(
                     "%s changed: %s" % (obj, ", ".join(obj._changed_fields))
                 )
             obj.save()

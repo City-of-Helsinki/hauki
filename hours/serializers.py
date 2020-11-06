@@ -91,7 +91,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         ]
 
 
-class DataSourceSerializer(serializers.ModelSerializer):
+class DataSourceSerializer(TranslationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = DataSource
         fields = ["id", "name"]
@@ -131,16 +131,44 @@ class ResourceSerializer(
         read_only_fields = ["parents", "last_modified_by"]
 
 
-class TimeSpanSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+class TimeSpanSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = TimeSpan
-        fields = "__all__"
+        fields = [
+            "id",
+            "group",
+            "name",
+            "description",
+            "start_time",
+            "end_time",
+            "full_day",
+            "weekdays",
+            "resource_state",
+            "created",
+            "modified",
+        ]
 
 
-class RuleSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+class RuleSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = Rule
-        fields = "__all__"
+        fields = [
+            "id",
+            "group",
+            "name",
+            "description",
+            "context",
+            "subject",
+            "start",
+            "frequency_ordinal",
+            "frequency_modifier",
+            "created",
+            "modified",
+        ]
 
 
 class TimeSpanGroupSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
@@ -152,12 +180,26 @@ class TimeSpanGroupSerializer(EnumSupportSerializerMixin, serializers.ModelSeria
         fields = "__all__"
 
 
-class DatePeriodSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
+class DatePeriodSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
     time_span_groups = TimeSpanGroupSerializer(many=True)
 
     class Meta:
         model = DatePeriod
-        fields = "__all__"
+        fields = [
+            "id",
+            "resource",
+            "name",
+            "description",
+            "start_date",
+            "end_date",
+            "resource_state",
+            "override",
+            "created",
+            "modified",
+            "time_span_groups",
+        ]
 
 
 class TimeElementSerializer(serializers.Serializer):

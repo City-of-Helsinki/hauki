@@ -9,7 +9,7 @@ from hours.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import data for opening hours"
 
-    importer_types = ["resources", "units", "connections", "openings"]
+    importer_types = ["resources", "units", "connections", "openings", "check"]
 
     def __init__(self):
         super().__init__()
@@ -40,6 +40,7 @@ class Command(BaseCommand):
             "--date",
             action="store",
             dest="date",
+            default=None,
             help="Import data starting at given date",
         )
         parser.add_argument(
@@ -60,7 +61,6 @@ class Command(BaseCommand):
             dest="merge",
             help="Merge identical objects during import, if supported",
         )
-        print(self.importer_types)
 
         for imp in self.importer_types:
             parser.add_argument(
@@ -83,10 +83,8 @@ class Command(BaseCommand):
         # old_lang = get_language()
         # activate(settings.LANGUAGES[0][0])
         for imp_type in self.importer_types:
-            print(imp_type)
             name = "import_%s" % imp_type
             method = getattr(importer, name, None)
-            print(method)
             if options[imp_type]:
                 if not method:
                     raise CommandError(
@@ -101,6 +99,4 @@ class Command(BaseCommand):
                 url = options.pop("url", None)
                 if url:
                     kwargs["url"] = url
-                print("calling method")
-                print(method)
                 method(**kwargs)

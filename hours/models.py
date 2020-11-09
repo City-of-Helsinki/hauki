@@ -1,8 +1,10 @@
 import datetime
 from calendar import Calendar
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from dataclasses import dataclass, field
 from itertools import chain
-from typing import List, Set, Union
+from operator import attrgetter
+from typing import List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
@@ -23,10 +25,33 @@ from hours.enums import (
     Weekday,
 )
 
-TimeElement = namedtuple(
-    "TimeElement",
-    ["start_time", "end_time", "resource_state", "override", "full_day"],
-)
+
+# TimeElement represents one time span in days opening hours
+# The name, description and periods are ignored when comparing
+@dataclass(order=True, frozen=True)
+class TimeElement:
+    start_time: Optional[datetime.time]
+    end_time: Optional[datetime.time]
+    resource_state: State = State.UNDEFINED
+    override: bool = False
+    full_day: bool = False
+    name: str = field(default="", compare=False)
+    description: str = field(default="", compare=False)
+    periods: Optional[list] = field(default=None, compare=False)
+    # TODO: Add rules that matched
+    # rules: Optional[list] = field(default=None, compare=False)
+
+    def get_total_period_length(self) -> Optional[int]:
+        """Total length of the periods in this element
+        Returns None if there are no periods or one of the periods are unbounded"""
+        if not self.periods:
+            return None
+
+        period_lengths = [p.get_period_length() for p in self.periods]
+        if None in period_lengths:
+            return None
+
+        return sum(period_lengths)
 
 
 def get_range_overlap(start1, end1, start2, end2):
@@ -50,6 +75,93 @@ def expand_range(start_date, end_date):
         dates.append(start_date + datetime.timedelta(days=i))
 
     return dates
+
+
+def combine_element_time_spans(elements):
+    """Combines overlapping time elements
+
+    Combines overlapping time spans to one time span if they are of the same state.
+    Ignores time elements that have override as True."""
+    result = [el for el in elements if el.override is True]
+
+    states = {el.resource_state for el in elements}
+
+    for state in states:
+        state_elements = [
+            el for el in elements if el.resource_state == state and el.override is False
+        ]
+
+        if not state_elements:
+            continue
+
+        sorted_elements = sorted(
+            state_elements, key=attrgetter("start_time", "end_time")
+        )
+
+        new_range_start = None
+        new_range_end = None
+        periods = set()
+
+        for element in sorted_elements:
+            if new_range_start is None:
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                if element.periods:
+                    periods.update(element.periods)
+            elif new_range_end >= element.start_time:
+                new_range_end = max(element.end_time, new_range_end)
+            else:
+                if element.periods:
+                    periods.update(element.periods)
+
+                result.append(
+                    TimeElement(
+                        start_time=new_range_start,
+                        end_time=new_range_end,
+                        resource_state=element.resource_state,
+                        override=element.override,
+                        full_day=element.full_day,
+                        periods=list(periods),
+                    )
+                )
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                periods = set()
+
+        result.append(
+            TimeElement(
+                start_time=new_range_start,
+                end_time=new_range_end,
+                resource_state=state,
+                override=False,
+                full_day=False if new_range_start and new_range_end else True,
+                periods=list(periods),
+            )
+        )
+
+    return result
+
+
+def _time_element_period_length(time_element) -> int:
+    """Returns total period length for sorting
+    Handles unbounded periods by using 9999 as the period length"""
+    total_period_length = time_element.get_total_period_length()
+    return total_period_length if total_period_length is not None else 9999
+
+
+def combine_and_apply_override(elements):
+    """Combines the supplied elements by state and handles overrides"""
+    overriding_elements = [el for el in elements if el.override]
+
+    # Return only the overriding elements that have the same periods as the one that
+    # is from the shortest period
+    if len(overriding_elements) > 0:
+        time_element = sorted(overriding_elements, key=_time_element_period_length)[0]
+        periods = time_element.periods
+
+        return [el for el in overriding_elements if el.periods == periods]
+
+    return combine_element_time_spans(elements)
 
 
 class DataSource(SoftDeletableModel, TimeStampedModel):
@@ -129,9 +241,6 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         )
 
         # TODO: This is just an MVP. Things yet to do:
-        #       - Combine multiple times of same types
-        #       - Handle multiple types in the same time period
-        #       - Handle override
         #       - Support full_day
 
         all_daily_opening_hours = defaultdict(list)
@@ -142,7 +251,12 @@ class Resource(SoftDeletableModel, TimeStampedModel):
             for the_date, time_items in period_daily_opening_hours.items():
                 all_daily_opening_hours[the_date].extend(time_items)
 
-        return all_daily_opening_hours
+        processed_opening_hours = {
+            day: combine_and_apply_override(items)
+            for day, items in all_daily_opening_hours.items()
+        }
+
+        return processed_opening_hours
 
 
 class ResourceOrigin(models.Model):
@@ -204,36 +318,74 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
             start_date, end_date, self.start_date, self.end_date
         )
 
-        all_dates = set(expand_range(overlap[0], overlap[1]))
+        range_dates = set(expand_range(overlap[0], overlap[1]))
         result = defaultdict(list)
+        time_span_groups = self.time_span_groups.all()
 
-        for time_span_group in self.time_span_groups.all():
+        # Return all days as full days if the period has no time spans
+        if not time_span_groups:
+            if self.resource_state != State.UNDEFINED:
+                for one_date in range_dates:
+                    result[one_date].append(
+                        TimeElement(
+                            start_time=None,
+                            end_time=None,
+                            resource_state=self.resource_state,
+                            override=self.override,
+                            full_day=True,
+                            name=self.name,
+                            description=self.description,
+                            periods=[self],
+                        )
+                    )
+            return result
+
+        result_dates = set(expand_range(overlap[0], overlap[1]))
+
+        for time_span_group in time_span_groups:
             rules = time_span_group.rules.all()
             time_spans = time_span_group.time_spans.all()
 
             if rules.count():
                 for rule in rules:
                     matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
-                    all_dates &= matching_dates
+                    result_dates &= matching_dates
 
-            for one_date in all_dates:
+            for one_date in result_dates:
                 for time_span in time_spans:
                     if (
                         not time_span.weekdays
                         or Weekday.from_iso_weekday(one_date.isoweekday())
                         in time_span.weekdays
                     ):
+                        resource_state = self.resource_state
+                        if time_span.resource_state != State.UNDEFINED:
+                            resource_state = time_span.resource_state
+
+                        # TODO: add matching rules to the TimeElement
                         result[one_date].append(
                             TimeElement(
                                 start_time=time_span.start_time,
                                 end_time=time_span.end_time,
-                                resource_state=self.resource_state,
+                                resource_state=resource_state,
                                 override=self.override,
                                 full_day=time_span.full_day,
+                                name=time_span.name,
+                                description=time_span.description,
+                                periods=[self],
                             )
                         )
 
         return result
+
+    def get_period_length(self) -> Optional[int]:
+        """Get the length of this period in days
+        Returns None if the period is unbounded."""
+        if not self.start_date or not self.end_date:
+            # Unbounded, can't know the length
+            return None
+
+        return (self.end_date - self.start_date).days
 
 
 class TimeSpanGroup(models.Model):
@@ -278,7 +430,10 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         verbose_name_plural = _("Time spans")
 
     def __str__(self):
-        weekdays = ", ".join([str(i) for i in self.weekdays])
+        if self.weekdays:
+            weekdays = ", ".join([str(i) for i in self.weekdays])
+        else:
+            weekdays = "[no weekdays]"
 
         return f"{self.name}({self.start_time} - {self.end_time} {weekdays})"
 

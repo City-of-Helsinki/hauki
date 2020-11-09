@@ -11,7 +11,15 @@ from django.db.models import Model
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
 
-from hours.models import DataSource, Resource, ResourceOrigin
+from hours.models import (
+    DataSource,
+    DatePeriod,
+    Resource,
+    ResourceOrigin,
+    Rule,
+    TimeSpan,
+    TimeSpanGroup,
+)
 
 
 class Importer(object):
@@ -263,43 +271,53 @@ class Importer(object):
 
         return obj
 
-    # @db.transaction.atomic
-    # def save_period(self, data: dict) -> Period:
-    #     """
-    #     Takes the serialized Period data with Openings, creates and/or updates the
-    #     corresponding Period object, saves and returns it.
-    #     """
-    #     obj = self._update_or_create_object(Period, data)
-    #     if obj._created:
-    #         obj.save()
-    #         print("%s created" % obj)
+    @db.transaction.atomic
+    def save_period(self, data: dict) -> DatePeriod:
+        """Takes the serialized period data and creates a DatePeriod
 
-    #     # Update openings after the period has been created
-    #     openings = obj.openings.all()
-    #     openings.delete()
-    #     new_openings = []
-    #     for opening in data.get("openings", []):
-    #         # openings have no identifiers in kirkanta and they are generated from
-    #         # data, therefore, we cannot identify existing openings with new ones
-    #         new_opening = Opening(
-    #             period=obj,
-    #             weekday=opening["weekday"],
-    #             week=opening["week"],
-    #             status=opening["status"],
-    #             description=opening.get("description", None),
-    #             opens=opening.get("opens", None),
-    #             closes=opening.get("closes", None),
-    #         )
-    #         new_openings.append(new_opening)
-    #     Opening.objects.bulk_create(new_openings)
-    #     obj._changed = True
-    #     obj._changed_fields.append("openings")
-    #     if not obj._created:
-    #         self.logger.debug("%s changed: %s" %
-    #                           (obj, ", ".join(obj._changed_fields)))
-    #
-    #     # Saving updates the daily hours for the duration of the period
-    #     obj.save()
+        Will delete previously existing periods with the same name and dates.
+        """
+        try:
+            time_span_groups_data = data.pop("time_span_groups")
+        except KeyError:
+            time_span_groups_data = []
+
+        resource = data["resource"]
+
+        # Delete existing date period and all time spans
+        # TODO: Update existing period instead of deleting all the previous ones
+        for period in DatePeriod.all_objects.filter(
+            resource=resource,
+            name=data["name"],
+            start_date=data["start_date"],
+            end_date=data["end_date"],
+        ):
+            for tsg in TimeSpanGroup.objects.filter(period=period):
+                Rule.all_objects.filter(group=tsg).delete()
+                TimeSpan.all_objects.filter(group=tsg).delete()
+                tsg.delete()
+
+            DatePeriod.all_objects.get(pk=period.id).delete()
+
+        # Add the period as new
+        date_period = DatePeriod(**data)
+        date_period.save()
+
+        for time_span_group_datum in time_span_groups_data:
+            time_span_group = TimeSpanGroup(period=date_period)
+            time_span_group.save()
+
+            for time_span_datum in time_span_group_datum["time_spans"]:
+                time_span_datum["group"] = time_span_group
+                time_span = TimeSpan(**time_span_datum)
+                time_span.save()
+
+            for rule_datum in time_span_group_datum["rules"]:
+                rule_datum["group"] = time_span_group
+                rule = Rule(**rule_datum)
+                rule.save()
+
+        return date_period
 
 
 importers = {}

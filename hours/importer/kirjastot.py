@@ -1,23 +1,87 @@
-from datetime import date, datetime
+from collections import defaultdict
+from datetime import date, datetime, time
 from itertools import groupby
 from math import ceil
 from operator import itemgetter
 
-import delorean
 import holidays
 import numpy as np
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 from django import db
-from django.conf import settings
-from psycopg2.extras import DateRange
+from django.utils import timezone
 
-from ..enums import State, Weekday
-from ..models import DataSource, Resource
-
-# from ..tests.utils import check_opening_hours
+from ..enums import RuleContext, RuleSubject, State, Weekday
+from ..models import DataSource, Resource, TimeElement, combine_element_time_spans
 from .base import Importer, register_importer
 
 KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
 fi_holidays = holidays.Finland()
+
+
+# List of periods that are known not to be a rotation of x weeks, but need to be
+# handled day-by-day.
+KIRKANTA_LONG_EXCEPTIONAL_PERIODS = [
+    # Library "Metropolian kirjasto | Myyrmäki" Period "Joulu ja vuodenvaihde 2020"
+    346087,
+]
+
+# Periods that are not usable from the kirkanta and are thus hard coded
+KIRKANTA_FIXED_GROUPS = {
+    # Library "Saksalainen kirjasto Deutsche Bibliothek" Period "Kirjaston aukioloajat"
+    # Opening hours from their website:
+    # https://www.deutsche-bibliothek.org/fi/kirjaston/oeffnungszeiten.html
+    # maanantaisin klo 10-18, tiistai-perjantai klo 10-16
+    # sekä kuukauden viimeisenä lauantaina klo 10-15.
+    303888: [
+        {
+            "time_spans": [
+                {
+                    "group": None,
+                    "start_time": time(hour=10, minute=0),
+                    "end_time": time(hour=18, minute=0),
+                    "weekdays": [Weekday.MONDAY],
+                    "resource_state": State.OPEN,
+                    "full_day": False,
+                },
+                {
+                    "group": None,
+                    "start_time": time(hour=10, minute=0),
+                    "end_time": time(hour=16, minute=0),
+                    "weekdays": [
+                        Weekday.TUESDAY,
+                        Weekday.WEDNESDAY,
+                        Weekday.THURSDAY,
+                        Weekday.FRIDAY,
+                    ],
+                    "resource_state": State.OPEN,
+                    "full_day": False,
+                },
+            ],
+            "rules": [],
+        },
+        {
+            "time_spans": [
+                {
+                    "group": None,
+                    "start_time": time(hour=10, minute=0),
+                    "end_time": time(hour=15, minute=0),
+                    "weekdays": [Weekday.SATURDAY],
+                    "resource_state": State.OPEN,
+                    "full_day": False,
+                }
+            ],
+            "rules": [
+                {
+                    "group": None,
+                    "context": RuleContext.MONTH,
+                    "subject": RuleSubject.SATURDAY,
+                    "start": -1,
+                }
+            ],
+        },
+    ],
+}
 
 
 @register_importer
@@ -33,11 +97,6 @@ class KirjastotImporter(Importer):
         )
 
     @staticmethod
-    def parse_date(date: str) -> date:
-        date = datetime.strptime(date, "%Y-%m-%d").date()
-        return date
-
-    @staticmethod
     def get_date_range(
         start: date = None, back: int = 1, forward: int = 12
     ) -> (date, date):
@@ -45,9 +104,12 @@ class KirjastotImporter(Importer):
         Returns a date range of "back" months before and "forward" months after
         given date, or today.
         """
-        base = delorean.Delorean(start, timezone=settings.TIME_ZONE)
-        begin = base.last_month(back).date.replace(day=1)
-        end = base.next_month(forward).date.replace(day=1)
+        if not start:
+            start = timezone.now().date()
+
+        begin = (start - relativedelta(months=back)).replace(day=1)
+        end = (start + relativedelta(months=forward)).replace(day=1)
+
         return begin, end
 
     def get_hours_from_api(self, resource: Resource, start: date, end: date) -> dict:
@@ -55,15 +117,20 @@ class KirjastotImporter(Importer):
         Fetch opening hours for Target from kirjastot.fi's v4 API for the
         given date range.
         """
+        kirkanta_id = resource.origins.get(data_source=self.data_source).origin_id
 
-        kirkanta_id = resource.identifiers.get(data_source=self.data_source).origin_id
-        print(kirkanta_id)
-
-        params = {"with": "schedules", "period.start": start, "period.end": end}
+        params = {
+            "with": "schedules",
+            "refs": "period",
+            "period.start": start,
+            "period.end": end,
+        }
         data = self.api_get("library", kirkanta_id, params)
+
         if data["total"] > 0:
-            return data["data"]
-        return False
+            return data
+
+        return {}
 
     def check_period_common_dates_equal(
         self, period_id: int, first_data: list, second_data: list
@@ -116,9 +183,8 @@ class KirjastotImporter(Importer):
     def get_openings(self, data: list) -> list:
         """
         Generates serialized opening rules for a single period from sorted list of
-        dates and their opening times. The period is defined by the first date in
-        the data. Each period needs to be processed separately, starting from the
-        period starting date.
+        dates and their opening times. Each period needs to be processed separately,
+        starting from the period starting date.
         """
         period_id = data[0]["period"]
         # starting date is needed to identify the first week, in case of repetitions of
@@ -181,7 +247,9 @@ class KirjastotImporter(Importer):
         # week in repetition
         opening_data = []
         for week in range(1, max_week + 1):
-            for weekday in Weekday:
+            for weekday_enum in Weekday:
+                weekday = weekday_enum.value
+
                 # not all weekdays are present for short holiday periods
                 if repetition_pattern.get(weekday):
                     week_index = week - 1
@@ -202,15 +270,17 @@ class KirjastotImporter(Importer):
                     if not description:
                         description = ""
                     if opening_times["times"]:
-                        for time in opening_times["times"]:
+                        for opening_time in opening_times["times"]:
                             opening_data.append(
                                 {
                                     "weekday": weekday,
                                     "week": week,
-                                    "status": KIRKANTA_STATUS_MAP[time["status"]],
+                                    "status": KIRKANTA_STATUS_MAP[
+                                        opening_time["status"]
+                                    ],
                                     "description": description,
-                                    "opens": time["from"],
-                                    "closes": time["to"],
+                                    "opens": opening_time["from"],
+                                    "closes": opening_time["to"],
                                 }
                             )
                     else:
@@ -222,84 +292,363 @@ class KirjastotImporter(Importer):
                                 "description": description,
                             }
                         )
-        return opening_data
 
-    def get_periods(self, resource: Resource, data: dict) -> list:
-        """
-        Returns serialized period objects found in library data for the given
-        target library.
-        """
-        # sort the data just in case the API didn't
-        data["schedules"].sort(key=lambda x: x["date"])
-        # parse and annotate the data with indices and weekdays
-        for index, day in enumerate(data["schedules"]):
-            day["date"] = self.parse_date(day["date"])
-            day["weekday"] = day["date"].isoweekday()
-            day["index"] = index
-        days_by_period = groupby(
-            sorted(data["schedules"], key=itemgetter("period")),
-            key=itemgetter("period"),
-        )
-        periods = []
-        for period_id, days in days_by_period:
-            days = list(days)
-            start = days[0]["date"]
-            start_index = days[0]["index"]
-            end = days[-1]["date"]
-            end_index = days[-1]["index"]
-            openings = self.get_openings(data["schedules"][start_index : end_index + 1])
-            name = ""
-            if start == end:
-                # name single day periods after the day
-                name = days[0]["info"]
-            if not name:
-                # even single day periods might be unnamed, resort to holiday names
-                name = fi_holidays.get(start)
-            if not name:
-                #  all previous names may be None
-                name = ""
-            period_data = {
-                "data_source": self.data_source,
-                "origin_id": str(period_id),
-                "target": resource,
-                "period": DateRange(lower=start, upper=end, bounds="[]"),
-                "name": name,
-                "openings": openings,
+        # Generate time span groups, time spans and rules from the weeks that we found
+        openings_by_week = groupby(opening_data, itemgetter("week"))
+
+        time_span_groups = []
+        for rotation_week_num, week_opening_times in openings_by_week:
+            week_opening_times_by_status = defaultdict(list)
+            for week_opening_time in week_opening_times:
+                week_opening_times_by_status[week_opening_time["status"]].append(
+                    week_opening_time
+                )
+
+            time_spans = []
+            for status, week_opening_times in week_opening_times_by_status.items():
+                for week_opening_time in week_opening_times:
+                    if "opens" not in week_opening_time:
+                        week_opening_time["opens"] = ""
+                    if "closes" not in week_opening_time:
+                        week_opening_time["closes"] = ""
+
+                grouped_times = groupby(
+                    sorted(week_opening_times, key=itemgetter("opens", "closes")),
+                    itemgetter("opens", "closes"),
+                )
+                for opening_time, opening_times in grouped_times:
+                    full_day = False
+                    if not opening_time[0] and not opening_time[1]:
+                        full_day = True
+
+                    time_spans.append(
+                        {
+                            "group": None,
+                            "start_time": opening_time[0] if opening_time[0] else None,
+                            "end_time": opening_time[1] if opening_time[1] else None,
+                            "weekdays": [i["weekday"] for i in opening_times],
+                            "resource_state": status,
+                            "full_day": full_day,
+                        }
+                    )
+            time_span_group = {
+                "time_spans": time_spans,
+                "rules": [],
             }
-            periods.append(period_data)
+            if max_week > 1:
+                time_span_group["rules"].append(
+                    {
+                        "group": None,
+                        "context": RuleContext.PERIOD,
+                        "subject": RuleSubject.WEEK,
+                        "start": rotation_week_num,
+                        "frequency_ordinal": max_week,
+                    }
+                )
+
+            time_span_groups.append(time_span_group)
+
+        return time_span_groups
+
+    def separate_exceptional_periods(self, resource: Resource, period: dict) -> list:
+        if all([d["closed"] for d in period["days"]]):
+            return [
+                {
+                    "resource": resource,
+                    "name": period.get("name"),
+                    "start_date": parse(period["validFrom"]).date(),
+                    "end_date": parse(period["validUntil"]).date(),
+                    "resource_state": State.CLOSED,
+                    "override": True,
+                }
+            ]
+
+        periods = []
+        for day in period["days"]:
+            period = {
+                "resource": resource,
+                "name": day.get("info"),
+                "start_date": day["date"],
+                "end_date": day["date"],
+                "resource_state": State.UNDEFINED,
+                "override": True,
+            }
+            if day["closed"]:
+                period["resource_state"] = State.CLOSED
+                periods.append(period)
+                continue
+
+            time_spans = []
+            for opening_time in day["times"]:
+                time_spans.append(
+                    {
+                        "group": None,
+                        "start_time": opening_time["from"],
+                        "end_time": opening_time["to"],
+                        "resource_state": KIRKANTA_STATUS_MAP[opening_time["status"]],
+                        "name": day.get("info"),
+                    }
+                )
+            period["time_span_groups"] = [
+                {
+                    "time_spans": time_spans,
+                    "rules": [],
+                }
+            ]
+            periods.append(period)
+
         return periods
+
+    def get_kirkanta_periods(self, data: dict) -> dict:
+        periods = data.get("refs", {}).get("period", None)
+        if not periods:
+            return {}
+
+        # sort the data just in case the API didn't
+        data["data"]["schedules"].sort(key=lambda x: x["date"])
+
+        # parse and annotate the data with indices and weekdays
+        for day in data["data"]["schedules"]:
+            day["date"] = parse(day["date"]).date()
+            day["weekday"] = day["date"].isoweekday()
+
+            period_id_string = str(day["period"])
+            if period_id_string not in periods.keys():
+                self.logger.info(
+                    "Period {} not found in periods! Skipping day {}".format(
+                        period_id_string, day["date"]
+                    )
+                )
+                continue
+
+            if not periods[period_id_string].get("days"):
+                periods[period_id_string]["days"] = []
+
+            periods[period_id_string]["days"].append(day)
+
+        return periods
+
+    def _get_times_for_sort(self, item: TimeElement) -> tuple:
+        return (
+            item.start_time if item.start_time else "",
+            item.end_time if item.end_time else "",
+        )
+
+    def check_library_data(self, library, data, start_date, end_date):
+        """Checks that the daily opening hours match the schedule in the data
+        Raises AssertionError if they don't match"""
+        override_periods = []
+        kirkanta_periods = data.get("refs", {}).get("period", None)
+
+        schedules = data.get("data", {}).get("schedules")
+
+        if not schedules:
+            self.logger.info("No schedules found in the incoming data. Skipping.")
+            return
+
+        for kirkanta_period in kirkanta_periods.values():
+            valid_from = None
+            valid_until = None
+            if kirkanta_period["validFrom"]:
+                valid_from = parse(kirkanta_period["validFrom"]).date()
+            if kirkanta_period["validUntil"]:
+                valid_until = parse(kirkanta_period["validUntil"]).date()
+
+            if valid_from is not None and valid_until is not None:
+                time_delta = valid_until - valid_from
+                if time_delta.days < 7:
+                    override_periods.append(kirkanta_period["id"])
+                    continue
+
+            period_schedules = [
+                i for i in schedules if i.get("period") == kirkanta_period["id"]
+            ]
+
+            if all([d["closed"] for d in period_schedules]):
+                override_periods.append(kirkanta_period["id"])
+
+            if kirkanta_period["isException"]:
+                override_periods.append(kirkanta_period["id"])
+
+        opening_hours = library.get_daily_opening_hours(start_date, end_date)
+
+        for schedule in schedules:
+            time_elements = []
+
+            if schedule.get("closed") is True:
+                time_elements.append(
+                    TimeElement(
+                        start_time=None,
+                        end_time=None,
+                        resource_state=State.CLOSED,
+                        override=True
+                        if schedule.get("period") in override_periods
+                        else False,
+                        full_day=True,
+                    )
+                )
+            else:
+                for schedule_time in schedule.get("times"):
+                    try:
+                        start_time = datetime.strptime(
+                            schedule_time.get("from"), "%H:%M"
+                        ).time()
+                    except ValueError:
+                        start_time = None
+                    try:
+                        end_time = datetime.strptime(
+                            schedule_time.get("to"), "%H:%M"
+                        ).time()
+                    except ValueError:
+                        end_time = None
+
+                    time_elements.append(
+                        TimeElement(
+                            start_time=start_time,
+                            end_time=end_time,
+                            resource_state=KIRKANTA_STATUS_MAP[schedule_time["status"]],
+                            override=True
+                            if schedule.get("period") in override_periods
+                            else False,
+                            full_day=False,
+                        )
+                    )
+
+            schedule_date = schedule.get("date")
+            if not isinstance(schedule_date, date):
+                schedule_date = parse(schedule.get("date")).date()
+
+            time_elements = combine_element_time_spans(time_elements)
+
+            time_elements.sort(key=self._get_times_for_sort)
+            opening_hours[schedule_date].sort(key=self._get_times_for_sort)
+
+            assert time_elements == opening_hours[schedule_date]
 
     @db.transaction.atomic
     def import_openings(self):
-        libraries = Resource.objects.filter(identifiers__data_source=self.data_source)
-        if self.options.get("single", None):
-            obj_id = self.options["single"]
-            libraries = libraries.filter(id=obj_id)
-        start = self.options.get("date", None)
-        if start:
-            start = datetime.strptime(start, "%Y-%m-%d")
-        print("%s libraries found" % libraries.count())
-        begin, end = self.get_date_range(start=start)
-        for library in libraries:
-            data = self.get_hours_from_api(library, begin, end)
-            if data:
-                try:
-                    periods = self.get_periods(library, data)
-                    for period_data in periods:
-                        self.save_period(period_data)
-                    # check_opening_hours(data)
-                    # TODO: cannot use syncher here, past periods are still valid
-                    #       even though not present in data
-                    # TODO: however, we should delete periods that have no active
-                    #       openings, they are remnants from
-                    # previous imports
-                except Exception:
-                    import traceback
+        libraries = Resource.objects.filter(origins__data_source=self.data_source)
 
-                    print(
-                        "Problem in processing data of library ",
-                        library,
-                        traceback.format_exc(),
+        if self.options.get("single", None):
+            libraries = libraries.filter(origins__origin_id=self.options["single"])
+
+        start_date = self.options.get("date", None)
+
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+
+        self.logger.info("{} libraries found".format(libraries.count()))
+
+        import_start_date, import_end_date = self.get_date_range(
+            start=start_date, back=0
+        )
+
+        for library in libraries:
+            has_fixed_periods = False
+            self.logger.info(
+                'Importing hours for "{}" id:{}...'.format(library.name, library.id)
+            )
+
+            data = self.get_hours_from_api(library, import_start_date, import_end_date)
+
+            kirkanta_periods = self.get_kirkanta_periods(data)
+
+            periods = []
+            for kirkanta_period in kirkanta_periods.values():
+                valid_from = None
+                valid_until = None
+                if kirkanta_period["validFrom"]:
+                    valid_from = parse(kirkanta_period["validFrom"]).date()
+                if kirkanta_period["validUntil"]:
+                    valid_until = parse(kirkanta_period["validUntil"]).date()
+
+                self.logger.debug(
+                    'period #{} "{}": {} - {}'.format(
+                        kirkanta_period["id"],
+                        kirkanta_period["name"],
+                        valid_from,
+                        valid_until,
                     )
+                )
+
+                if valid_from is not None and valid_until is not None:
+                    time_delta = valid_until - valid_from
+
+                    if (
+                        time_delta.days < 7
+                        or kirkanta_period["id"] in KIRKANTA_LONG_EXCEPTIONAL_PERIODS
+                    ):
+                        self.logger.debug("Importing as separate days.")
+                        periods.extend(
+                            self.separate_exceptional_periods(library, kirkanta_period)
+                        )
+                        continue
+
+                self.logger.debug("Importing as a longer period.")
+
+                override = False
+                if all([d["closed"] for d in kirkanta_period["days"]]):
+                    override = True
+
+                if kirkanta_period["isException"]:
+                    override = True
+
+                long_period = {
+                    "resource": library,
+                    "name": kirkanta_period.get("name"),
+                    "start_date": valid_from,
+                    "end_date": valid_until,
+                    "resource_state": State.UNDEFINED,
+                    "override": override,
+                    "time_span_groups": self.get_openings(kirkanta_period["days"]),
+                }
+
+                if kirkanta_period["id"] in KIRKANTA_FIXED_GROUPS:
+                    long_period["time_span_groups"] = KIRKANTA_FIXED_GROUPS[
+                        kirkanta_period["id"]
+                    ]
+                    has_fixed_periods = True
+
+                periods.append(long_period)
+
+            for period_data in periods:
+                self.save_period(period_data)
+
+            self.logger.info(
+                "Checking that the imported date periods match the data..."
+            )
+            if has_fixed_periods:
+                self.logger.info(
+                    "Not checking because library has fixed periods in the importer."
+                )
             else:
-                print("Could not find opening hours for library ", library)
+                self.check_library_data(
+                    library, data, import_start_date, import_end_date
+                )
+                self.logger.info("Check OK.")
+
+    def import_check(self):
+        libraries = Resource.objects.filter(origins__data_source=self.data_source)
+
+        if self.options.get("single", None):
+            libraries = libraries.filter(origins__origin_id=self.options["single"])
+
+        start_date = self.options.get("date", None)
+
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+
+        self.logger.info("{} libraries found".format(libraries.count()))
+
+        import_start_date, import_end_date = self.get_date_range(
+            start=start_date, back=0
+        )
+
+        for library in libraries:
+            self.logger.info(
+                'Fetching schedule for "{}" id:{}...'.format(library.name, library.id)
+            )
+            data = self.get_hours_from_api(library, import_start_date, import_end_date)
+
+            self.check_library_data(library, data, import_start_date, import_end_date)
+            self.logger.info("Check OK.")

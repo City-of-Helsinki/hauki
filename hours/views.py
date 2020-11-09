@@ -1,4 +1,5 @@
 import datetime
+from operator import itemgetter
 from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
@@ -47,7 +48,18 @@ class ResourceOpeningHoursView(APIView):
             raise APIException("start_date must be before end_date")
 
         opening_hours = resource.get_daily_opening_hours(start_date, end_date)
-        serializer = DailyOpeningHoursSerializer(opening_hours)
+
+        opening_hours_list = []
+        for the_date, time_elements in opening_hours.items():
+            opening_hours_list.append(
+                {
+                    "date": the_date,
+                    "times": time_elements,
+                }
+            )
+        opening_hours_list.sort(key=itemgetter("date"))
+
+        serializer = DailyOpeningHoursSerializer(opening_hours_list, many=True)
 
         return Response(serializer.data)
 

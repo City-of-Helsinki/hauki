@@ -1,5 +1,3 @@
-from operator import itemgetter
-
 from django_orghierarchy.models import Organization
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
@@ -203,26 +201,20 @@ class DatePeriodSerializer(
 
 
 class TimeElementSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    description = serializers.CharField()
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
     resource_state = EnumField(enum=State)
-    override = serializers.BooleanField()
     full_day = serializers.BooleanField()
+    periods = serializers.SerializerMethodField()
+
+    def get_periods(self, obj):
+        # Return only period ids for now
+        # TODO: what else we would like to see in the API about the periods
+        return [period.id for period in obj.periods]
 
 
-class DailyOpeningHoursSerializer(serializers.BaseSerializer):
-    def to_representation(self, instance: dict):
-        result = []
-        for date, time_elements in instance.items():
-            for time_element in time_elements:
-                time_element_serializer = TimeElementSerializer(time_element)
-                result.append(
-                    dict(
-                        **{
-                            "date": date.isoformat(),
-                        },
-                        **time_element_serializer.data,
-                    )
-                )
-
-        return sorted(result, key=itemgetter("date"))
+class DailyOpeningHoursSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    times = TimeElementSerializer(many=True)

@@ -432,6 +432,10 @@ class KirjastotImporter(Importer):
         return (
             item.start_time if item.start_time else "",
             item.end_time if item.end_time else "",
+            # Resource state is included to sort items with the same start
+            # and end times. Can't use Enum so we use the value instead.
+            # The order of the states is not important here.
+            item.resource_state.value if item.resource_state else "",
         )
 
     def check_library_data(self, library, data, start_date, end_date):

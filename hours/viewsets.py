@@ -1,12 +1,10 @@
 from django.http import Http404
 from django_orghierarchy.models import Organization
 from rest_framework import viewsets
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .authentication import HaukiSignedAuthentication
 from .filters import DatePeriodFilter, TimeSpanFilter
 from .models import DatePeriod, Resource, Rule, TimeSpan
 from .serializers import (
@@ -70,7 +68,6 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AuthRequiredTestView(viewsets.ViewSet):
-    authentication_classes = [HaukiSignedAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):

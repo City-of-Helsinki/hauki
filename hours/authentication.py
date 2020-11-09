@@ -9,7 +9,11 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from rest_framework import exceptions
-from rest_framework.authentication import BaseAuthentication, get_authorization_header
+from rest_framework.authentication import (
+    BaseAuthentication,
+    TokenAuthentication,
+    get_authorization_header,
+)
 
 User = get_user_model()
 
@@ -145,3 +149,7 @@ class HaukiSignedAuthentication(BaseAuthentication):
                 pass
 
         return user, None
+
+
+class HaukiTokenAuthentication(TokenAuthentication):
+    keyword = "APIToken"

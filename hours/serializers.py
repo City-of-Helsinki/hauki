@@ -1,5 +1,6 @@
 from operator import itemgetter
 
+import pytz
 from django_orghierarchy.models import Organization
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
@@ -117,6 +118,8 @@ class ResourceSerializer(
     parents = serializers.HyperlinkedRelatedField(
         many=True, read_only=True, view_name="resource-detail"
     )
+    created = serializers.DateTimeField(default_timezone=pytz.UTC, read_only=True)
+    modified = serializers.DateTimeField(default_timezone=pytz.UTC, read_only=True)
 
     class Meta:
         model = Resource

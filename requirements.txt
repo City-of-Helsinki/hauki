@@ -25,6 +25,7 @@ django-simple-history==2.11.0  # via -r requirements.in
 django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, djangorestframework, drf-oidc-auth
 djangorestframework==3.12.1  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-oidc-auth
 drf-oidc-auth==0.10.0     # via django-helusers
+drf-writable-nested==0.6.2  # via -r requirements.in
 ecdsa==0.14.1             # via python-jose
 future==0.18.2            # via pyjwkest
 holidays==0.10.3          # via -r requirements.in

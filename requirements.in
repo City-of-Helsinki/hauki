@@ -11,6 +11,7 @@ django-modeltranslation
 django-orghierarchy
 django-simple-history
 djangorestframework
+drf-writable-nested
 holidays
 numpy
 pandas

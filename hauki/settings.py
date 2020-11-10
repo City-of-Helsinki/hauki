@@ -268,6 +268,10 @@ SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
 # https://www.django-rest-framework.org/api-guide/settings/
 
 REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "hours.renderers.BrowsableAPIRendererWithoutForms",
+    ],
     "DEFAULT_FILTER_BACKENDS": [
         "rest_framework.filters.OrderingFilter",
         "django_filters.rest_framework.DjangoFilterBackend",

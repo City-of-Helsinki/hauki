@@ -1,4 +1,5 @@
 from django_orghierarchy.models import Organization
+from drf_writable_nested import WritableNestedModelSerializer
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
@@ -132,6 +133,12 @@ class ResourceSerializer(
 class TimeSpanSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
+    # TODO: Group cannot be required when creating a nested item. But it should
+    #       be when creating a new TimeSpan.
+    group = serializers.PrimaryKeyRelatedField(
+        required=False, queryset=TimeSpanGroup.objects.all()
+    )
+
     class Meta:
         model = TimeSpan
         fields = [
@@ -152,6 +159,12 @@ class TimeSpanSerializer(
 class RuleSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
+    # TODO: Group cannot be required when creating a nested item. But it should
+    #       be when creating a new Rule.
+    group = serializers.PrimaryKeyRelatedField(
+        required=False, queryset=TimeSpanGroup.objects.all()
+    )
+
     class Meta:
         model = Rule
         fields = [
@@ -169,9 +182,16 @@ class RuleSerializer(
         ]
 
 
-class TimeSpanGroupSerializer(EnumSupportSerializerMixin, serializers.ModelSerializer):
-    time_spans = TimeSpanSerializer(many=True)
-    rules = RuleSerializer(many=True)
+class TimeSpanGroupSerializer(
+    EnumSupportSerializerMixin, WritableNestedModelSerializer
+):
+    # TODO: Period cannot be required when creating a nested item. But it should
+    #       be when creating a new TimeSpanGroup.
+    period = serializers.PrimaryKeyRelatedField(
+        required=False, queryset=DatePeriod.objects.all()
+    )
+    time_spans = TimeSpanSerializer(many=True, required=False, allow_null=True)
+    rules = RuleSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
         model = TimeSpanGroup
@@ -179,9 +199,13 @@ class TimeSpanGroupSerializer(EnumSupportSerializerMixin, serializers.ModelSeria
 
 
 class DatePeriodSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+    TranslationSerializerMixin,
+    EnumSupportSerializerMixin,
+    WritableNestedModelSerializer,
 ):
-    time_span_groups = TimeSpanGroupSerializer(many=True)
+    time_span_groups = TimeSpanGroupSerializer(
+        many=True, required=False, allow_null=True
+    )
 
     class Meta:
         model = DatePeriod

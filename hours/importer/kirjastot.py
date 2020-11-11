@@ -1,11 +1,11 @@
 from collections import defaultdict
 from datetime import date, datetime, time
+from functools import reduce
 from itertools import groupby
-from math import ceil
+from math import ceil, gcd
 from operator import itemgetter
 
 import holidays
-import numpy as np
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from django import db
@@ -82,6 +82,10 @@ KIRKANTA_FIXED_GROUPS = {
         },
     ],
 }
+
+
+def lcm(denominators):
+    return reduce(lambda a, b: a * b // gcd(a, b), denominators)
 
 
 @register_importer
@@ -229,7 +233,7 @@ class KirjastotImporter(Importer):
         repetition_lengths = [
             len(repetition) for repetition in repetition_pattern.values()
         ]
-        max_week = np.lcm.reduce(repetition_lengths)
+        max_week = lcm(repetition_lengths)
         # however, len(data) is the maximum, no need to do more than that!
         if max_week > len(data) / 7:
             max_week = int(ceil(len(data) / 7))

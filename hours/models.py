@@ -345,13 +345,14 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         for time_span_group in time_span_groups:
             rules = time_span_group.rules.all()
             time_spans = time_span_group.time_spans.all()
+            result_dates_per_group = result_dates.copy()
 
             if rules.count():
                 for rule in rules:
                     matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
-                    result_dates &= matching_dates
+                    result_dates_per_group &= matching_dates
 
-            for one_date in result_dates:
+            for one_date in result_dates_per_group:
                 for time_span in time_spans:
                     if (
                         not time_span.weekdays
@@ -392,6 +393,9 @@ class TimeSpanGroup(models.Model):
     period = models.ForeignKey(
         DatePeriod, on_delete=models.PROTECT, related_name="time_span_groups"
     )
+
+    def __str__(self):
+        return f"{self.period} time spans {self.time_spans.all()}"
 
 
 class TimeSpan(SoftDeletableModel, TimeStampedModel):
@@ -471,6 +475,15 @@ class Rule(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Rule")
         verbose_name_plural = _("Rules")
+
+    def __str__(self):
+        if self.frequency_modifier:
+            return f"{self.frequency_modifier} {self.subject}s in {self.context}"
+        else:
+            return (
+                f"every {self.frequency_ordinal} {self.subject}s in "
+                f"{self.context}, starting from {self.start}"
+            )
 
     def get_ordinal_for_item(
         self, item: Union[List[datetime.date], datetime.date]

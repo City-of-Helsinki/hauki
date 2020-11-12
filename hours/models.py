@@ -180,6 +180,18 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
         return self.id
 
 
+def _get_all_parent_organizations(resource):
+    parents = resource.parents.all()
+    if not parents:
+        return set()
+
+    result = set([parent.organization for parent in parents])
+    for parent in parents:
+        result.update(_get_all_parent_organizations(parent))
+
+    return result
+
+
 class Resource(SoftDeletableModel, TimeStampedModel):
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, null=True, blank=True
@@ -257,6 +269,16 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         }
 
         return processed_opening_hours
+
+    def get_organizations(self):
+        """Returns the resources and its parents organizations"""
+        organizations = set()
+
+        if self.organization:
+            organizations.add(self.organization)
+            organizations.update(_get_all_parent_organizations(self))
+
+        return organizations
 
 
 class ResourceOrigin(models.Model):

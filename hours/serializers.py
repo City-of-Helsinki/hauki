@@ -108,7 +108,6 @@ class ResourceSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
     last_modified_by = UserSerializer(read_only=True)
-    organization = OrganizationSerializer(read_only=True)
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
 
     class Meta:

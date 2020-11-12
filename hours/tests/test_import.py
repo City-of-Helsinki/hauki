@@ -353,13 +353,17 @@ def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
 
 
 @pytest.mark.django_db
-def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
-    test_file_name = "test_import_kirjastot_data_complex.json"
+def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
+    test_file_name = "test_import_kirjastot_data_pattern.json"
     get_mock_library_data(test_file_name)
 
     # Check created objects
     assert DatePeriod.objects.count() == 5
+    assert TimeSpanGroup.objects.count() == 4
+    assert Rule.objects.count() == 2
     periods_by_start = DatePeriod.objects.order_by("start_date")
+
+    # Data has overlapping periods
     (
         summer_period,
         midsummer_pre_eve,
@@ -367,29 +371,79 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
         midsummer_sat,
         midsummer_sun,
     ) = periods_by_start
-    assert summer_period.time_span_groups.count() == 20
+    assert summer_period.time_span_groups.count() == 3
     assert midsummer_pre_eve.time_span_groups.count() == 1
     assert midsummer_eve.time_span_groups.count() == 0
     assert midsummer_sat.time_span_groups.count() == 0
     assert midsummer_sun.time_span_groups.count() == 0
-    # Complex data should have rules for each weekly time span
-    assert Rule.objects.count() == 20
+
+    # Data should have pattern repeating biweekly even with
+    # missing days at start, end and middle
+    (weekends, first_week, second_week) = summer_period.time_span_groups.all()
+    assert weekends.rules.count() == 0
+    assert first_week.rules.all()[0].start == 1
+    assert first_week.rules.all()[0].frequency_ordinal == 2
+    assert second_week.rules.all()[0].start == 2
+    assert second_week.rules.all()[0].frequency_ordinal == 2
 
 
-# @pytest.mark.django_db
-# def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
-#     test_file_name = "test_import_kirjastot_data_pattern.json"
-#     get_mock_library_data(test_file_name)
+@pytest.mark.django_db
+def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
+    test_file_name = "test_import_kirjastot_data_complex.json"
+    get_mock_library_data(test_file_name)
 
-#     # Check created objects
-#     assert Period.objects.count() == 2
-#     periods_by_start = Period.objects.order_by("period")
-#     summer_period, midsummer_period = periods_by_start
-#     assert summer_period.openings.count() == 36
-#     assert midsummer_period.openings.count() == 5
+    # Check created objects
+    assert DatePeriod.objects.count() == 5
+    assert TimeSpanGroup.objects.count() == 11
+    assert Rule.objects.count() == 9
+    periods_by_start = DatePeriod.objects.order_by("start_date")
 
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
+    # Complex data has overlapping periods
+    (
+        summer_period,
+        midsummer_pre_eve,
+        midsummer_eve,
+        midsummer_sat,
+        midsummer_sun,
+    ) = periods_by_start
+    assert summer_period.time_span_groups.count() == 10
+    assert midsummer_pre_eve.time_span_groups.count() == 1
+    assert midsummer_eve.time_span_groups.count() == 0
+    assert midsummer_sat.time_span_groups.count() == 0
+    assert midsummer_sun.time_span_groups.count() == 0
+
+    # Complex data has different rules for different weekdays
+    (
+        weekends,
+        first_week,
+        second_week,
+        third_week,
+        fourth_week,
+        first_week_thu,
+        second_week_thu,
+        third_week_thu,
+        fourth_week_thu,
+        fifth_week_thu,
+    ) = summer_period.time_span_groups.all()
+    assert weekends.rules.count() == 0
+    assert first_week.rules.all()[0].start == 1
+    assert first_week.rules.all()[0].frequency_ordinal == 4
+    assert second_week.rules.all()[0].start == 2
+    assert second_week.rules.all()[0].frequency_ordinal == 4
+    assert third_week.rules.all()[0].start == 3
+    assert third_week.rules.all()[0].frequency_ordinal == 4
+    assert fourth_week.rules.all()[0].start == 4
+    assert fourth_week.rules.all()[0].frequency_ordinal == 4
+    assert first_week_thu.rules.all()[0].start == 1
+    assert first_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert second_week_thu.rules.all()[0].start == 2
+    assert second_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert third_week_thu.rules.all()[0].start == 3
+    assert third_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert fourth_week_thu.rules.all()[0].start == 4
+    assert fourth_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert fifth_week_thu.rules.all()[0].start == 5
+    assert fifth_week_thu.rules.all()[0].frequency_ordinal == 5
 
 
 # @pytest.mark.django_db

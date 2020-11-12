@@ -1,7 +1,6 @@
 from collections import defaultdict
 from datetime import date, datetime, time
 from itertools import groupby
-from math import ceil
 from operator import itemgetter
 
 import holidays
@@ -180,17 +179,28 @@ class KirjastotImporter(Importer):
             weeks_to_return.append(weekly_opening)
         return weeks_to_return
 
-    def get_openings(self, data: list) -> list:
+    def get_openings(self, data: list, period_start: date = None) -> list:
         """
         Generates serialized opening rules for a single period from sorted list of
-        dates and their opening times. Each period needs to be processed separately,
-        starting from the period starting date.
+        dates and their opening times. Each period needs to be processed separately.
+        Dates may not be missing, but their data may be missing.
+
+        We assume missing data at start, end or middle is indication of period overlap
+        and date filtering, not period irregularity, and extrapolate from all the data
+        we have up to the period length.
+
+        period_start must be specified if the period doesn't start from the first day
+        of data. This is because weekly rotations are always counted from the start
+        of the period. Otherwise period is assumed to start on first date of data.
         """
         period_id = data[0]["period"]
+        start_date = data[0]["date"]
         # starting date is needed to identify the first week, in case of repetitions of
         # multiple weeks
-        start_date = data[0]["date"]
+        if not period_start:
+            period_start = start_date
         start_weekday = start_date.isoweekday()
+        period_start_weekday = period_start.isoweekday()
         openings_by_weekday = groupby(
             sorted(data, key=itemgetter("weekday")), key=itemgetter("weekday")
         )
@@ -230,9 +240,6 @@ class KirjastotImporter(Importer):
             len(repetition) for repetition in repetition_pattern.values()
         ]
         max_week = np.lcm.reduce(repetition_lengths)
-        # however, len(data) is the maximum, no need to do more than that!
-        if max_week > len(data) / 7:
-            max_week = int(ceil(len(data) / 7))
         if max_week > 1:
             self.logger.debug(
                 "Detected repetition of %s weeks in period %s" % (max_week, period_id)
@@ -243,10 +250,28 @@ class KirjastotImporter(Importer):
             if weekday < start_weekday:
                 repetition_pattern[weekday] = [pattern[-1]] + pattern[:-1]
 
-        # 2nd (loop again): generate the openings based on the data for each weekday and
-        # week in repetition
+        # repetition pattern may actually start in the middle of the period if we don't
+        # have data from period start. shift the pattern so it starts from period start
+        days_to_shift = (
+            start_date
+            - relativedelta(days=start_weekday - 1)
+            - period_start
+            + relativedelta(days=period_start_weekday - 1)
+        )
+        weeks_to_shift = days_to_shift.weeks
+        for (weekday, pattern) in repetition_pattern.items():
+            repetition_length = len(pattern)
+            slice_index = weeks_to_shift % repetition_length
+            if slice_index:
+                repetition_pattern[weekday] = (
+                    pattern[-slice_index:] + pattern[: repetition_length - slice_index]
+                )
+        # 2nd (loop again): generate time span groups based on the data for each
+        # weekday and repetition length
+
         opening_data = []
-        for week in range(1, max_week + 1):
+        week_range = range(1, max_week + 1)
+        for week in week_range:
             for weekday_enum in Weekday:
                 weekday = weekday_enum.value
 
@@ -345,13 +370,12 @@ class KirjastotImporter(Importer):
                         "frequency_ordinal": max_week,
                     }
                 )
-
             time_span_groups.append(time_span_group)
 
         return time_span_groups
 
     def separate_exceptional_periods(self, resource: Resource, period: dict) -> list:
-        if all([d["closed"] for d in period["days"]]):
+        if all([d.get("closed", True) for d in period["days"]]):
             return [
                 {
                     "resource": resource,
@@ -400,31 +424,43 @@ class KirjastotImporter(Importer):
         return periods
 
     def get_kirkanta_periods(self, data: dict) -> dict:
+        """
+        Annotates kirkanta data so that periods contain indexed data for each day for
+        their duration. Returned periods may contain empty days or days belonging to
+        other periods, since original data may have period overlaps.
+        """
         periods = data.get("refs", {}).get("period", None)
         if not periods:
             return {}
 
         # sort the data just in case the API didn't
         data["data"]["schedules"].sort(key=lambda x: x["date"])
+        # TODO: check for missing dates?
 
-        # parse and annotate the data with indices and weekdays
-        for day in data["data"]["schedules"]:
+        # parse and annotate the data with day indices and weekdays
+        for index, day in enumerate(data["data"]["schedules"]):
             day["date"] = parse(day["date"]).date()
             day["weekday"] = day["date"].isoweekday()
-
-            period_id_string = str(day["period"])
+            day["index"] = index
+        days_by_period = groupby(
+            sorted(data["data"]["schedules"], key=itemgetter("period")),
+            key=itemgetter("period"),
+        )
+        for period_id, days in days_by_period:
+            days = list(days)
+            start_index = days[0]["index"]
+            end_index = days[-1]["index"]
+            # Here we just slice the data for the duration of the period.
+            # All days must be present for rotation indexing.
+            schedules = data["data"]["schedules"][start_index : end_index + 1]
+            period_id_string = str(period_id)
             if period_id_string not in periods.keys():
                 self.logger.info(
-                    "Period {} not found in periods! Skipping day {}".format(
-                        period_id_string, day["date"]
+                    "Period {} not found in periods! Skipping days {}".format(
+                        period_id_string, days
                     )
                 )
-                continue
-
-            if not periods[period_id_string].get("days"):
-                periods[period_id_string]["days"] = []
-
-            periods[period_id_string]["days"].append(day)
+            periods[period_id_string]["days"] = schedules
 
         return periods
 
@@ -539,7 +575,7 @@ class KirjastotImporter(Importer):
         start_date = self.options.get("date", None)
 
         if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         self.logger.info("{} libraries found".format(libraries.count()))
 
@@ -591,7 +627,7 @@ class KirjastotImporter(Importer):
                 self.logger.debug("Importing as a longer period.")
 
                 override = False
-                if all([d["closed"] for d in kirkanta_period["days"]]):
+                if all([d.get("closed", True) for d in kirkanta_period["days"]]):
                     override = True
 
                 if kirkanta_period["isException"]:
@@ -604,7 +640,9 @@ class KirjastotImporter(Importer):
                     "end_date": valid_until,
                     "resource_state": State.UNDEFINED,
                     "override": override,
-                    "time_span_groups": self.get_openings(kirkanta_period["days"]),
+                    "time_span_groups": self.get_openings(
+                        kirkanta_period["days"], period_start=valid_from
+                    ),
                 }
 
                 if kirkanta_period["id"] in KIRKANTA_FIXED_GROUPS:
@@ -640,7 +678,7 @@ class KirjastotImporter(Importer):
         start_date = self.options.get("date", None)
 
         if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         self.logger.info("{} libraries found".format(libraries.count()))
 

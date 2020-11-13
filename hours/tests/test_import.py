@@ -119,7 +119,10 @@ def mock_tprek_data(requests_mock, request):
 
 @pytest.mark.django_db
 @pytest.fixture
-def get_mock_library_data(mock_tprek_data, requests_mock):
+def get_mock_library_data(mock_tprek_data, requests_mock, request):
+    # We should have the same hours whether base period is endless or ends next year
+    endless = request.param
+
     def _mock_library_data(test_file_name):
         kallio_tprek_id = 8215
         kallio = Resource.objects.get(
@@ -137,8 +140,11 @@ def get_mock_library_data(mock_tprek_data, requests_mock):
             os.path.dirname(__file__), "fixtures", test_file_name
         )
         with open(test_file_path) as f:
-            mock_data = f.read()
-            requests_mock.get(url_to_mock, text=mock_data)
+            mock_data = json.load(f)
+            if endless:
+                first_period_id = next(iter(mock_data["refs"]["period"]))
+                mock_data["refs"]["period"][first_period_id]["validUntil"] = None
+            requests_mock.get(url_to_mock, text=json.dumps(mock_data))
         call_command(
             "hours_import",
             "kirjastot",
@@ -340,6 +346,7 @@ def test_import_tprek(mock_tprek_data):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
 def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
     test_file_name = "test_import_kirjastot_data_simple.json"
     get_mock_library_data(test_file_name)
@@ -353,6 +360,7 @@ def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
 def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
     test_file_name = "test_import_kirjastot_data_pattern.json"
     get_mock_library_data(test_file_name)
@@ -388,6 +396,7 @@ def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
 def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     test_file_name = "test_import_kirjastot_data_complex.json"
     get_mock_library_data(test_file_name)

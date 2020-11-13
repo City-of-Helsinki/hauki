@@ -1,5 +1,4 @@
 Django
-delorean
 django-cors-headers
 django-enumfields
 django-environ
@@ -11,9 +10,8 @@ django-modeltranslation
 django-orghierarchy
 django-simple-history
 djangorestframework
+drf-writable-nested
 holidays
-numpy
-pandas
 psycopg2
 requests-cache
 sentry-sdk

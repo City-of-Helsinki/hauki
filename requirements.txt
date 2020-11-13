@@ -5,11 +5,9 @@
 #    pip-compile requirements.in
 #
 asgiref==3.2.10           # via django
-babel==2.8.0              # via delorean
 certifi==2020.6.20        # via requests, sentry-sdk
 chardet==3.0.4            # via requests
 convertdate==2.2.2        # via holidays
-delorean==1.0.0           # via -r requirements.in
 django-cors-headers==3.5.0  # via -r requirements.in
 django-enumfields==2.0.0  # via -r requirements.in
 django-environ==0.4.5     # via -r requirements.in
@@ -25,22 +23,20 @@ django-simple-history==2.11.0  # via -r requirements.in
 django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, djangorestframework, drf-oidc-auth
 djangorestframework==3.12.1  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-oidc-auth
 drf-oidc-auth==0.10.0     # via django-helusers
+drf-writable-nested==0.6.2  # via -r requirements.in
 ecdsa==0.14.1             # via python-jose
 future==0.18.2            # via pyjwkest
 holidays==0.10.3          # via -r requirements.in
-humanize==3.0.0           # via delorean
 idna==2.10                # via requests
 korean-lunar-calendar==0.2.1  # via holidays
-numpy==1.19.2             # via -r requirements.in, pandas
-pandas==1.1.2             # via -r requirements.in
 psycopg2==2.8.6           # via -r requirements.in
 pyasn1==0.4.8             # via python-jose, rsa
 pycryptodomex==3.9.8      # via pyjwkest
 pyjwkest==1.4.2           # via drf-oidc-auth
 pymeeus==0.3.7            # via convertdate
-python-dateutil==2.8.1    # via delorean, holidays, pandas
+python-dateutil==2.8.1    # via holidays
 python-jose==3.2.0        # via django-helusers
-pytz==2020.1              # via babel, convertdate, delorean, django, pandas, tzlocal
+pytz==2020.1              # via convertdate, django
 requests-cache==0.5.2     # via -r requirements.in
 requests==2.24.0          # via django-helusers, django-orghierarchy, pyjwkest, requests-cache
 rsa==4.6                  # via python-jose
@@ -48,9 +44,5 @@ sentry-sdk==0.18.0        # via -r requirements.in
 six==1.15.0               # via django-modeltranslation, django-simple-history, ecdsa, holidays, pyjwkest, python-dateutil, python-jose
 sqlparse==0.3.1           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
-tzlocal==2.1              # via delorean
 urllib3==1.25.10          # via requests, sentry-sdk
 whitenoise==5.2.0         # via -r requirements.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools

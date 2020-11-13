@@ -121,6 +121,84 @@ def test_create_resource_authenticated_different_org(
 
 
 @pytest.mark.django_db
+def test_create_child_resource_authenticated(
+    resource, organization_factory, data_source, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization1
+    resource.save()
+
+    organization1.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization1.id,
+        "parents": [resource.id],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    new_resource = Resource.objects.get(pk=response.data["id"])
+
+    assert new_resource.parents.count() == 1
+
+
+@pytest.mark.django_db
+def test_create_child_resource_authenticated_parent_different_org(
+    resource, organization_factory, data_source, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization1
+    resource.save()
+
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+
+    organization2.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization2.id,
+        "parents": [resource.id],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
 def test_update_resource_anonymous(resource, api_client):
     original_name = resource.name
 

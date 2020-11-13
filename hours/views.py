@@ -2,7 +2,6 @@ import datetime
 from operator import itemgetter
 from urllib.parse import urlencode
 
-from dateutil.parser import isoparse
 from django import forms
 from django.conf import settings
 from django.http import Http404
@@ -14,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .authentication import calculate_signature, join_params
+from .filters import parse_maybe_relative_date_string
 from .models import Resource
 from .serializers import DailyOpeningHoursSerializer
 from .utils import get_resource_pk_filter
@@ -35,12 +35,16 @@ class ResourceOpeningHoursView(APIView):
             raise APIException("start_date and end_date GET parameters are required")
 
         try:
-            start_date = isoparse(request.query_params.get("start_date", "")).date()
+            start_date = parse_maybe_relative_date_string(
+                request.query_params.get("start_date", "")
+            )
         except ValueError:
             raise APIException("Invalid start_date")
 
         try:
-            end_date = isoparse(request.query_params.get("end_date", "")).date()
+            end_date = parse_maybe_relative_date_string(
+                request.query_params.get("end_date", ""), end_date=True
+            )
         except ValueError:
             raise APIException("Invalid end_date")
 

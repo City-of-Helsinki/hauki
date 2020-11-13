@@ -543,23 +543,18 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             return result
 
     def get_context_sets(
-        self, start_date: datetime.date, end_date: datetime.date
+        self, max_start_date: datetime.date, min_end_date: datetime.date
     ) -> List:
         """Get context sets defined by the Rules context and subject"""
+        # if period is bounded, start and end dates are already bounded by period
         period_start_date = self.group.period.start_date
-        period_end_date = self.group.period.end_date
-
-        max_start_year = start_date.year
-        if period_start_date:
-            max_start_year = max(start_date.year, period_start_date.year)
-
-        min_end_year = end_date.year
-        if period_end_date:
-            min_end_year = min(end_date.year, period_end_date.year)
 
         if self.context == RuleContext.PERIOD:
+            if not period_start_date:
+                raise Exception("Period rule not applicable to period without start.")
+
             if self.subject == RuleSubject.DAY:
-                return [expand_range(period_start_date, period_end_date)]
+                return [expand_range(max_start_date, min_end_date)]
 
             elif self.subject == RuleSubject.WEEK:
                 week_start = period_start_date - relativedelta(
@@ -568,7 +563,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 week_end = week_start + relativedelta(weekday=SU(1))
 
                 weeks = []
-                while week_start <= period_end_date:
+                while week_start <= min_end_date:
                     weeks.append(expand_range(week_start, week_end))
                     week_start = week_start + relativedelta(weeks=1)
                     week_end = week_start + relativedelta(weekday=SU(1))
@@ -584,7 +579,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 last_day_of_month = first_day + relativedelta(day=31)
 
                 months = []
-                while last_day_of_month <= period_end_date + relativedelta(day=31):
+                while last_day_of_month <= min_end_date + relativedelta(day=31):
                     months.append(expand_range(first_day, last_day_of_month))
                     first_day += relativedelta(months=1)
                     last_day_of_month = first_day + relativedelta(day=31)
@@ -593,14 +588,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
             elif self.subject in RuleSubject.weekday_subjects():
                 dates = []
-                for a_date in expand_range(period_start_date, period_end_date):
+                for a_date in expand_range(period_start_date, min_end_date):
                     if a_date.isoweekday() == self.subject.as_isoweekday():
                         dates.append(a_date)
 
                 return [dates]
 
         elif self.context == RuleContext.YEAR:
-            years = range(max_start_year, min_end_year + 1)
+            years = range(max_start_date.year, min_end_date.year + 1)
 
             result = []
             for year in years:
@@ -619,7 +614,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     week_end = week_start + relativedelta(weekday=SU(1))
 
                     weeks = []
-                    while week_start <= end_date:
+                    while week_start <= min_end_date:
                         weeks.append(expand_range(week_start, week_end))
                         week_start = week_start + relativedelta(weeks=1)
                         week_end = week_start + relativedelta(weekday=SU(1))
@@ -655,12 +650,12 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             c = Calendar()
 
             first_day = datetime.date(
-                year=start_date.year, month=start_date.month, day=1
+                year=max_start_date.year, month=max_start_date.month, day=1
             )
             last_day_of_month = first_day + relativedelta(day=31)
 
             result = []
-            while last_day_of_month <= end_date + relativedelta(day=31):
+            while last_day_of_month <= min_end_date + relativedelta(day=31):
                 if self.subject == RuleSubject.DAY:
                     days_in_month = expand_range(first_day, last_day_of_month)
                     result.append(days_in_month)
@@ -708,7 +703,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         matching_dates = set()
 
         # Get a set of dates that match the context and subject
-        context_sets = self.get_context_sets(start_date, end_date)
+        context_sets = self.get_context_sets(max_start_date, min_end_date)
 
         # Filter every set by start and frequency
         for context_set in context_sets:

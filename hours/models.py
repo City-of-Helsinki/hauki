@@ -272,11 +272,10 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
     def get_organizations(self):
         """Returns the resources and its parents organizations"""
-        organizations = set()
+        organizations = _get_all_parent_organizations(self)
 
         if self.organization:
             organizations.add(self.organization)
-            organizations.update(_get_all_parent_organizations(self))
 
         return organizations
 

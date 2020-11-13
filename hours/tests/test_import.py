@@ -135,7 +135,6 @@ def get_mock_library_data(mock_tprek_data, requests_mock, request):
             "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
             % kallio_kirkanta_id
         )
-        print(url_to_mock)
         test_file_path = os.path.join(
             os.path.dirname(__file__), "fixtures", test_file_name
         )

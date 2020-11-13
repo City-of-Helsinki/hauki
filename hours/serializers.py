@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from drf_writable_nested import WritableNestedModelSerializer
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
@@ -5,6 +6,7 @@ from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
 from modeltranslation.utils import get_language
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from users.serializers import UserSerializer
 
@@ -108,7 +110,6 @@ class ResourceSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
     last_modified_by = UserSerializer(read_only=True)
-    organization = OrganizationSerializer(read_only=True)
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
@@ -127,7 +128,35 @@ class ResourceSerializer(
             "extra_data",
         ]
 
-        read_only_fields = ["parents", "last_modified_by"]
+        read_only_fields = ["last_modified_by"]
+        extra_kwargs = {"parents": {"required": False}}
+
+    def validate(self, attrs):
+        """Validate that the user is a member or admin of at least one of the
+        immediate parent resources organizations"""
+        result = super().validate(attrs)
+
+        if not self.context.get("request"):
+            return result
+
+        user = self.context["request"].user
+
+        if not user.is_superuser and result.get("parents"):
+            users_organizations = user.get_all_organizations()
+            if not any(
+                [
+                    parent.organization in users_organizations
+                    for parent in result.get("parents")
+                ]
+            ):
+                raise ValidationError(
+                    detail=_(
+                        "Cannot create or edit sub resources of a resource "
+                        "in an organisation the user is not part of "
+                    )
+                )
+
+        return result
 
 
 class TimeSpanSerializer(

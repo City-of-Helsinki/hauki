@@ -1,12 +1,15 @@
 from django.http import Http404
+from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import DatePeriodFilter, TimeSpanFilter
 from .models import DatePeriod, Resource, Rule, TimeSpan
+from .permissions import IsMemberOrAdminOfOrganization, ReadOnly
 from .serializers import (
     DatePeriodSerializer,
     OrganizationSerializer,
@@ -17,8 +20,52 @@ from .serializers import (
 from .utils import get_resource_pk_filter
 
 
-class ResourceViewSet(viewsets.ModelViewSet):
+class OnCreateOrgMembershipCheck:
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not request.user.is_superuser:
+            organization = serializer.validated_data.get("organization")
+
+            if not organization:
+                if "resource" in serializer.validated_data.keys():
+                    resource = serializer.validated_data.get("resource")
+                    if resource:
+                        organization = resource.organization
+
+                if isinstance(serializer, (RuleSerializer, TimeSpanSerializer)):
+                    time_span_group = serializer.validated_data.get("group")
+                    organization = time_span_group.period.resource.organization
+
+            if not organization:
+                raise ValidationError(
+                    detail=_(
+                        "Cannot create or edit resources that "
+                        "are not part of an organization "
+                    )
+                )
+            else:
+                users_organizations = request.user.get_all_organizations()
+                if organization not in users_organizations:
+                    raise PermissionDenied(
+                        detail=_(
+                            "Cannot add data to organizations the user "
+                            "is not a member of"
+                        )
+                    )
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
+
+
+class ResourceViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
     serializer_class = ResourceSerializer
+    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
     def get_queryset(self):
         return Resource.objects.all().order_by("id")
@@ -40,25 +87,28 @@ class ResourceViewSet(viewsets.ModelViewSet):
         return obj
 
 
-class DatePeriodViewSet(viewsets.ModelViewSet):
+class DatePeriodViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
     queryset = DatePeriod.objects.all().order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
+    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
 
 
-class RuleViewSet(viewsets.ModelViewSet):
+class RuleViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
     queryset = (
         Rule.objects.all()
         .select_related("group", "group__period")
         .order_by("group__period__start_date", "group__period__end_date")
     )
     serializer_class = RuleSerializer
+    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
 
-class TimeSpanViewSet(viewsets.ModelViewSet):
+class TimeSpanViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
     queryset = TimeSpan.objects.all()
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter
+    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):

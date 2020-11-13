@@ -11,7 +11,7 @@ from hours.models import DatePeriod
 
 
 @pytest.mark.django_db
-def test_create_date_period_no_time_span_groups(resource, api_client):
+def test_create_date_period_no_time_span_groups(resource, admin_client):
     url = reverse("date_period-list")
 
     data = {
@@ -24,7 +24,7 @@ def test_create_date_period_no_time_span_groups(resource, api_client):
         "override": "false",
     }
 
-    response = api_client.post(
+    response = admin_client.post(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -42,7 +42,7 @@ def test_create_date_period_no_time_span_groups(resource, api_client):
 
 
 @pytest.mark.django_db
-def test_create_date_period_one_time_span_group_one_time_span(resource, api_client):
+def test_create_date_period_one_time_span_group_one_time_span(resource, admin_client):
     url = reverse("date_period-list")
 
     data = {
@@ -65,7 +65,7 @@ def test_create_date_period_one_time_span_group_one_time_span(resource, api_clie
         ],
     }
 
-    response = api_client.post(
+    response = admin_client.post(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -94,7 +94,7 @@ def test_create_date_period_one_time_span_group_one_time_span(resource, api_clie
 
 @pytest.mark.django_db
 def test_create_date_period_one_time_span_group_one_time_span_one_rule(
-    resource, api_client
+    resource, admin_client
 ):
     url = reverse("date_period-list")
 
@@ -125,7 +125,7 @@ def test_create_date_period_one_time_span_group_one_time_span_one_rule(
         ],
     }
 
-    response = api_client.post(
+    response = admin_client.post(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -159,7 +159,7 @@ def test_create_date_period_one_time_span_group_one_time_span_one_rule(
 
 @pytest.mark.django_db
 def test_update_date_period_no_time_span_groups(
-    resource, date_period_factory, api_client
+    resource, date_period_factory, admin_client
 ):
     date_period = date_period_factory(
         resource=resource,
@@ -178,7 +178,7 @@ def test_update_date_period_no_time_span_groups(
         "end_date": "2020-11-30",
     }
 
-    response = api_client.patch(
+    response = admin_client.patch(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -202,7 +202,7 @@ def test_update_date_period_keep_one_time_span(
     date_period_factory,
     time_span_group_factory,
     time_span_factory,
-    api_client,
+    admin_client,
 ):
     date_period = date_period_factory(
         resource=resource,
@@ -230,7 +230,7 @@ def test_update_date_period_keep_one_time_span(
         "end_date": "2020-11-30",
     }
 
-    response = api_client.patch(
+    response = admin_client.patch(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -259,7 +259,7 @@ def test_update_date_period_add_one_time_span(
     date_period_factory,
     time_span_group_factory,
     time_span_factory,
-    api_client,
+    admin_client,
 ):
     date_period = date_period_factory(
         resource=resource,
@@ -299,7 +299,7 @@ def test_update_date_period_add_one_time_span(
         ],
     }
 
-    response = api_client.patch(
+    response = admin_client.patch(
         url,
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
@@ -327,7 +327,7 @@ def test_update_date_period_add_one_time_span(
 
 
 @pytest.mark.django_db
-def test_create_time_span_no_group(resource, api_client):
+def test_create_time_span_no_group(resource, admin_client):
     url = reverse("time_spans-list")
 
     data = {
@@ -338,7 +338,7 @@ def test_create_time_span_no_group(resource, api_client):
     # TODO: Change when viewsets changed to use different serializer for
     #       update and create.
     with pytest.raises(IntegrityError):
-        api_client.post(
+        admin_client.post(
             url,
             data=json.dumps(data, cls=DjangoJSONEncoder),
             content_type="application/json",

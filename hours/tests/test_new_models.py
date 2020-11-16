@@ -168,6 +168,183 @@ def test_get_period_for_date_with_rule(
         ]
     }
 
+    # The whole week
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    ) == {
+        datetime.date(year=2020, month=10, day=15): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=18, minute=0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
+
+@pytest.mark.django_db
+def test_get_period_for_dates_with_two_rules(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=18, minute=0),
+        weekdays=Weekday.business_days(),
+    )
+
+    rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.THURSDAY,
+        frequency_modifier=FrequencyModifier.EVEN,
+    )
+
+    rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.MONTH,
+        frequency_modifier=FrequencyModifier.EVEN,
+    )
+
+    # Odd Thursday in even month
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=11),
+            datetime.date(year=2020, month=10, day=17),
+        )
+        == {}
+    )
+
+    # Odd Thursday in odd month
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=9, day=14),
+            datetime.date(year=2020, month=9, day=20),
+        )
+        == {}
+    )
+
+    # Even Thursday in even month
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=18),
+        datetime.date(year=2020, month=10, day=25),
+    ) == {
+        datetime.date(year=2020, month=10, day=22): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=18, minute=0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
+    # Even Thursday in odd month
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=9, day=21),
+            datetime.date(year=2020, month=9, day=28),
+        )
+        == {}
+    )
+
+
+@pytest.mark.django_db
+def test_get_period_for_dates_with_two_time_span_groups(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+    other_time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=18, minute=0),
+        weekdays=Weekday.business_days(),
+    )
+
+    time_span_factory(
+        group=other_time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        weekdays=Weekday.business_days(),
+    )
+
+    rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.THURSDAY,
+        frequency_modifier=FrequencyModifier.ODD,
+    )
+
+    rule_factory(
+        group=other_time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.THURSDAY,
+        frequency_modifier=FrequencyModifier.EVEN,
+    )
+
+    # The odd week
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    ) == {
+        datetime.date(year=2020, month=10, day=15): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=18, minute=0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
+    # The even week
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=19),
+        datetime.date(year=2020, month=10, day=25),
+    ) == {
+        datetime.date(year=2020, month=10, day=22): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=16, minute=0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
 
 @pytest.mark.django_db
 def test_rule_filter_dates1(

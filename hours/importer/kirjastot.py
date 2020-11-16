@@ -1,8 +1,6 @@
 from collections import defaultdict
 from datetime import date, datetime, time
-from functools import reduce
 from itertools import groupby
-from math import ceil, gcd
 from operator import itemgetter
 
 import holidays
@@ -82,10 +80,6 @@ KIRKANTA_FIXED_GROUPS = {
         },
     ],
 }
-
-
-def lcm(denominators):
-    return reduce(lambda a, b: a * b // gcd(a, b), denominators)
 
 
 @register_importer
@@ -184,17 +178,28 @@ class KirjastotImporter(Importer):
             weeks_to_return.append(weekly_opening)
         return weeks_to_return
 
-    def get_openings(self, data: list) -> list:
+    def get_openings(self, data: list, period_start: date = None) -> list:
         """
         Generates serialized opening rules for a single period from sorted list of
-        dates and their opening times. Each period needs to be processed separately,
-        starting from the period starting date.
+        dates and their opening times. Each period needs to be processed separately.
+        Dates may not be missing, but their data may be missing.
+
+        We assume missing data at start, end or middle is indication of period overlap
+        and date filtering, not period irregularity, and extrapolate from all the data
+        we have up to the period length.
+
+        period_start must be specified if the period doesn't start from the first day
+        of data. This is because weekly rotations are always counted from the start
+        of the period. Otherwise period is assumed to start on first date of data.
         """
         period_id = data[0]["period"]
+        start_date = data[0]["date"]
         # starting date is needed to identify the first week, in case of repetitions of
         # multiple weeks
-        start_date = data[0]["date"]
+        if not period_start:
+            period_start = start_date
         start_weekday = start_date.isoweekday()
+        period_start_weekday = period_start.isoweekday()
         openings_by_weekday = groupby(
             sorted(data, key=itemgetter("weekday")), key=itemgetter("weekday")
         )
@@ -227,135 +232,109 @@ class KirjastotImporter(Importer):
                     # end of loop reached, hooray! We have the repetition
                     break
             repetition_pattern[weekday] = pattern_candidate
-        # if there, by any chance, should be competing pattern lengths for different
-        # weekdays, the resulting total rule must have length that is the least common
-        # multiple of all the lengths
-        repetition_lengths = [
-            len(repetition) for repetition in repetition_pattern.values()
-        ]
-        max_week = lcm(repetition_lengths)
-        # however, len(data) is the maximum, no need to do more than that!
-        if max_week > len(data) / 7:
-            max_week = int(ceil(len(data) / 7))
-        if max_week > 1:
-            self.logger.debug(
-                "Detected repetition of %s weeks in period %s" % (max_week, period_id)
-            )
+
         # first week may be partial, so openings for some weekdays start from the second
         # week, first week pattern is found at the end. move those patterns by one week
         for (weekday, pattern) in repetition_pattern.items():
             if weekday < start_weekday:
                 repetition_pattern[weekday] = [pattern[-1]] + pattern[:-1]
 
-        # 2nd (loop again): generate the openings based on the data for each weekday and
-        # week in repetition
-        opening_data = []
-        for week in range(1, max_week + 1):
-            for weekday_enum in Weekday:
-                weekday = weekday_enum.value
+        # repetition pattern may actually start in the middle of the period if we don't
+        # have data from period start. shift the pattern so it starts from period start
+        days_to_shift = (
+            start_date
+            - relativedelta(days=start_weekday - 1)
+            - period_start
+            + relativedelta(days=period_start_weekday - 1)
+        )
+        weeks_to_shift = days_to_shift.weeks
+        for (weekday, pattern) in repetition_pattern.items():
+            repetition_length = len(pattern)
+            slice_index = weeks_to_shift % repetition_length
+            if slice_index:
+                repetition_pattern[weekday] = (
+                    pattern[-slice_index:] + pattern[: repetition_length - slice_index]
+                )
 
-                # not all weekdays are present for short holiday periods
-                if repetition_pattern.get(weekday):
-                    week_index = week - 1
-                    # all patterns are not as long as the longest one. They repeat from
-                    # the start earlier
-                    repetition_length = len(repetition_pattern[weekday])
-                    opening_times = repetition_pattern[weekday][
-                        week_index % repetition_length
-                    ]
-                    if not opening_times:
-                        # Opening times may be empty if we have no data for this
-                        # particular day of the period
-                        continue
-                    description = opening_times["info"]
-                    if not description:
-                        # Use the holiday name if present
-                        description = fi_holidays.get(opening_times["date"])
-                    if not description:
-                        description = ""
-                    if opening_times["times"]:
-                        for opening_time in opening_times["times"]:
-                            opening_data.append(
-                                {
-                                    "weekday": weekday,
-                                    "week": week,
-                                    "status": KIRKANTA_STATUS_MAP[
-                                        opening_time["status"]
-                                    ],
-                                    "description": description,
-                                    "opens": opening_time["from"],
-                                    "closes": opening_time["to"],
-                                }
+        # 2nd (loop again): generate time span groups based on the data for each
+        # weekday and varying repetition length
+        openings_by_repetition_length = groupby(
+            sorted(repetition_pattern.values(), key=len), len
+        )
+        time_span_groups = []
+        for length, patterns in openings_by_repetition_length:
+
+            openings_by_week = zip(*patterns)
+            for (rotation_week_num, week_opening_times) in enumerate(openings_by_week):
+                week_opening_times_by_status = defaultdict(list)
+                for day_in_the_week in week_opening_times:
+                    # Opening times may be empty if we have no data for this
+                    # particular day of the period
+                    if day_in_the_week:
+                        if day_in_the_week["times"]:
+                            for week_opening_time in day_in_the_week["times"]:
+                                week_opening_time["weekday"] = day_in_the_week[
+                                    "weekday"
+                                ]
+                                week_opening_times_by_status[
+                                    week_opening_time["status"]
+                                ].append(week_opening_time)
+                        else:
+                            # Closed for the whole day
+                            week_opening_times_by_status[0].append(
+                                {"weekday": day_in_the_week["weekday"]}
                             )
-                    else:
-                        opening_data.append(
+                time_spans = []
+                for status, week_opening_times in week_opening_times_by_status.items():
+                    for week_opening_time in week_opening_times:
+                        if "from" not in week_opening_time:
+                            week_opening_time["from"] = ""
+                        if "to" not in week_opening_time:
+                            week_opening_time["to"] = ""
+
+                    grouped_times = groupby(
+                        sorted(week_opening_times, key=itemgetter("from", "to")),
+                        itemgetter("from", "to"),
+                    )
+                    for opening_time, opening_times in grouped_times:
+                        full_day = False
+                        if not opening_time[0] and not opening_time[1]:
+                            full_day = True
+
+                        time_spans.append(
                             {
-                                "weekday": weekday,
-                                "week": week,
-                                "status": State.CLOSED,
-                                "description": description,
+                                "group": None,
+                                "start_time": opening_time[0]
+                                if opening_time[0]
+                                else None,
+                                "end_time": opening_time[1]
+                                if opening_time[1]
+                                else None,
+                                "weekdays": [i["weekday"] for i in opening_times],
+                                "resource_state": KIRKANTA_STATUS_MAP[status],
+                                "full_day": full_day,
                             }
                         )
-
-        # Generate time span groups, time spans and rules from the weeks that we found
-        openings_by_week = groupby(opening_data, itemgetter("week"))
-
-        time_span_groups = []
-        for rotation_week_num, week_opening_times in openings_by_week:
-            week_opening_times_by_status = defaultdict(list)
-            for week_opening_time in week_opening_times:
-                week_opening_times_by_status[week_opening_time["status"]].append(
-                    week_opening_time
-                )
-
-            time_spans = []
-            for status, week_opening_times in week_opening_times_by_status.items():
-                for week_opening_time in week_opening_times:
-                    if "opens" not in week_opening_time:
-                        week_opening_time["opens"] = ""
-                    if "closes" not in week_opening_time:
-                        week_opening_time["closes"] = ""
-
-                grouped_times = groupby(
-                    sorted(week_opening_times, key=itemgetter("opens", "closes")),
-                    itemgetter("opens", "closes"),
-                )
-                for opening_time, opening_times in grouped_times:
-                    full_day = False
-                    if not opening_time[0] and not opening_time[1]:
-                        full_day = True
-
-                    time_spans.append(
+                time_span_group = {
+                    "time_spans": time_spans,
+                    "rules": [],
+                }
+                if length > 1:
+                    time_span_group["rules"].append(
                         {
                             "group": None,
-                            "start_time": opening_time[0] if opening_time[0] else None,
-                            "end_time": opening_time[1] if opening_time[1] else None,
-                            "weekdays": [i["weekday"] for i in opening_times],
-                            "resource_state": status,
-                            "full_day": full_day,
+                            "context": RuleContext.PERIOD,
+                            "subject": RuleSubject.WEEK,
+                            "start": rotation_week_num + 1,
+                            "frequency_ordinal": length,
                         }
                     )
-            time_span_group = {
-                "time_spans": time_spans,
-                "rules": [],
-            }
-            if max_week > 1:
-                time_span_group["rules"].append(
-                    {
-                        "group": None,
-                        "context": RuleContext.PERIOD,
-                        "subject": RuleSubject.WEEK,
-                        "start": rotation_week_num,
-                        "frequency_ordinal": max_week,
-                    }
-                )
-
-            time_span_groups.append(time_span_group)
+                time_span_groups.append(time_span_group)
 
         return time_span_groups
 
     def separate_exceptional_periods(self, resource: Resource, period: dict) -> list:
-        if all([d["closed"] for d in period["days"]]):
+        if all([d.get("closed", True) for d in period["days"]]):
             return [
                 {
                     "resource": resource,
@@ -404,31 +383,43 @@ class KirjastotImporter(Importer):
         return periods
 
     def get_kirkanta_periods(self, data: dict) -> dict:
+        """
+        Annotates kirkanta data so that periods contain indexed data for each day for
+        their duration. Returned periods may contain empty days or days belonging to
+        other periods, since original data may have period overlaps.
+        """
         periods = data.get("refs", {}).get("period", None)
         if not periods:
             return {}
 
         # sort the data just in case the API didn't
         data["data"]["schedules"].sort(key=lambda x: x["date"])
+        # TODO: check for missing dates?
 
-        # parse and annotate the data with indices and weekdays
-        for day in data["data"]["schedules"]:
+        # parse and annotate the data with day indices and weekdays
+        for index, day in enumerate(data["data"]["schedules"]):
             day["date"] = parse(day["date"]).date()
             day["weekday"] = day["date"].isoweekday()
-
-            period_id_string = str(day["period"])
+            day["index"] = index
+        days_by_period = groupby(
+            sorted(data["data"]["schedules"], key=itemgetter("period")),
+            key=itemgetter("period"),
+        )
+        for period_id, days in days_by_period:
+            days = list(days)
+            start_index = days[0]["index"]
+            end_index = days[-1]["index"]
+            # Here we just slice the data for the duration of the period.
+            # All days must be present for rotation indexing.
+            schedules = data["data"]["schedules"][start_index : end_index + 1]
+            period_id_string = str(period_id)
             if period_id_string not in periods.keys():
                 self.logger.info(
-                    "Period {} not found in periods! Skipping day {}".format(
-                        period_id_string, day["date"]
+                    "Period {} not found in periods! Skipping days {}".format(
+                        period_id_string, days
                     )
                 )
-                continue
-
-            if not periods[period_id_string].get("days"):
-                periods[period_id_string]["days"] = []
-
-            periods[period_id_string]["days"].append(day)
+            periods[period_id_string]["days"] = schedules
 
         return periods
 
@@ -543,7 +534,7 @@ class KirjastotImporter(Importer):
         start_date = self.options.get("date", None)
 
         if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         self.logger.info("{} libraries found".format(libraries.count()))
 
@@ -595,7 +586,7 @@ class KirjastotImporter(Importer):
                 self.logger.debug("Importing as a longer period.")
 
                 override = False
-                if all([d["closed"] for d in kirkanta_period["days"]]):
+                if all([d.get("closed", True) for d in kirkanta_period["days"]]):
                     override = True
 
                 if kirkanta_period["isException"]:
@@ -608,7 +599,9 @@ class KirjastotImporter(Importer):
                     "end_date": valid_until,
                     "resource_state": State.UNDEFINED,
                     "override": override,
-                    "time_span_groups": self.get_openings(kirkanta_period["days"]),
+                    "time_span_groups": self.get_openings(
+                        kirkanta_period["days"], period_start=valid_from
+                    ),
                 }
 
                 if kirkanta_period["id"] in KIRKANTA_FIXED_GROUPS:
@@ -644,7 +637,7 @@ class KirjastotImporter(Importer):
         start_date = self.options.get("date", None)
 
         if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         self.logger.info("{} libraries found".format(libraries.count()))
 

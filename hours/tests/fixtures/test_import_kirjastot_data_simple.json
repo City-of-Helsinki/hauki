@@ -1,6 +1,19 @@
 {
     "type": "library",
     "total": 1,
+    "refs": {
+        "period": {
+            "343802": {
+                "id": 343802,
+                "library": 84860,
+                "validFrom": "2020-06-01",
+                "validUntil": "2020-08-09",
+                "isException": true,
+                "name": "Kesä2020",
+                "description": "Kesä2020"
+            }
+        }
+    },
     "data": {
         "id": 84860,
         "city": 15885,
@@ -52,152 +65,18 @@
         "schedules": [
             {
                 "period": 343802,
-                "date": "2020-06-11",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "20:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-12",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "18:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-13",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "16:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-14",
-                "info": null,
-                "closed": true,
-                "times": []
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-15",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-16",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-17",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 339753,
-                "date": "2020-06-18",
-                "info": "Juhannuksen aaton aatto",
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "18:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 339753,
-                "date": "2020-06-19",
-                "info": "Juhannusaatto",
-                "closed": true,
-                "times": []
-            },
-            {
-                "period": 339753,
-                "date": "2020-06-20",
-                "info": "Juhannuspäivä",
-                "closed": true,
-                "times": []
-            },
-            {
-                "period": 339753,
-                "date": "2020-06-21",
-                "info": "Juhannuksen jälkeinen sunnuntai",
-                "closed": true,
-                "times": []
-            },
-            {
-                "period": 343802,
                 "date": "2020-06-22",
                 "info": null,
                 "closed": false,
                 "times": [
                     {
-                        "to": "20:00",
+                        "to": "10:00",
                         "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
                         "status": 1
                     }
                 ]
@@ -209,8 +88,13 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "20:00",
+                        "to": "10:00",
                         "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
                         "status": 1
                     }
                 ]
@@ -222,8 +106,13 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "20:00",
+                        "to": "10:00",
                         "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
                         "status": 1
                     }
                 ]
@@ -235,8 +124,13 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "20:00",
+                        "to": "10:00",
                         "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
                         "status": 1
                     }
                 ]
@@ -248,8 +142,13 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "20:00",
+                        "to": "10:00",
                         "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "18:00",
+                        "from": "10:00",
                         "status": 1
                     }
                 ]
@@ -273,168 +172,6 @@
                 "info": null,
                 "closed": true,
                 "times": []
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-29",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-06-30",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-01",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-02",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-03",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
-                        "to": "20:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-04",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "16:00",
-                        "from": "10:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-05",
-                "info": null,
-                "closed": true,
-                "times": []
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-06",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "20:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-07",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "20:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-08",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "20:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
-            },
-            {
-                "period": 343802,
-                "date": "2020-07-09",
-                "info": null,
-                "closed": false,
-                "times": [
-                    {
-                        "to": "20:00",
-                        "from": "08:00",
-                        "status": 1
-                    }
-                ]
             }
         ]
     }

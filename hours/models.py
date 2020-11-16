@@ -366,13 +366,14 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         for time_span_group in time_span_groups:
             rules = time_span_group.rules.all()
             time_spans = time_span_group.time_spans.all()
+            result_dates_per_group = result_dates.copy()
 
             if rules.count():
                 for rule in rules:
                     matching_dates = rule.apply_to_date_range(overlap[0], overlap[1])
-                    result_dates &= matching_dates
+                    result_dates_per_group &= matching_dates
 
-            for one_date in result_dates:
+            for one_date in result_dates_per_group:
                 for time_span in time_spans:
                     if (
                         not time_span.weekdays
@@ -413,6 +414,9 @@ class TimeSpanGroup(models.Model):
     period = models.ForeignKey(
         DatePeriod, on_delete=models.PROTECT, related_name="time_span_groups"
     )
+
+    def __str__(self):
+        return f"{self.period} time spans {self.time_spans.all()}"
 
 
 class TimeSpan(SoftDeletableModel, TimeStampedModel):
@@ -493,6 +497,15 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         verbose_name = _("Rule")
         verbose_name_plural = _("Rules")
 
+    def __str__(self):
+        if self.frequency_modifier:
+            return f"{self.frequency_modifier} {self.subject}s in {self.context}"
+        else:
+            return (
+                f"every {self.frequency_ordinal} {self.subject}s in "
+                f"{self.context}, starting from {self.start}"
+            )
+
     def get_ordinal_for_item(
         self, item: Union[List[datetime.date], datetime.date]
     ) -> Union[None, int]:
@@ -551,23 +564,18 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             return result
 
     def get_context_sets(
-        self, start_date: datetime.date, end_date: datetime.date
+        self, max_start_date: datetime.date, min_end_date: datetime.date
     ) -> List:
         """Get context sets defined by the Rules context and subject"""
+        # if period is bounded, start and end dates are already bounded by period
         period_start_date = self.group.period.start_date
-        period_end_date = self.group.period.end_date
-
-        max_start_year = start_date.year
-        if period_start_date:
-            max_start_year = max(start_date.year, period_start_date.year)
-
-        min_end_year = end_date.year
-        if period_end_date:
-            min_end_year = min(end_date.year, period_end_date.year)
 
         if self.context == RuleContext.PERIOD:
+            if not period_start_date:
+                raise Exception("Period rule not applicable to period without start.")
+
             if self.subject == RuleSubject.DAY:
-                return [expand_range(period_start_date, period_end_date)]
+                return [expand_range(max_start_date, min_end_date)]
 
             elif self.subject == RuleSubject.WEEK:
                 week_start = period_start_date - relativedelta(
@@ -576,7 +584,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 week_end = week_start + relativedelta(weekday=SU(1))
 
                 weeks = []
-                while week_start <= period_end_date:
+                while week_start <= min_end_date:
                     weeks.append(expand_range(week_start, week_end))
                     week_start = week_start + relativedelta(weeks=1)
                     week_end = week_start + relativedelta(weekday=SU(1))
@@ -592,7 +600,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 last_day_of_month = first_day + relativedelta(day=31)
 
                 months = []
-                while last_day_of_month <= period_end_date + relativedelta(day=31):
+                while last_day_of_month <= min_end_date + relativedelta(day=31):
                     months.append(expand_range(first_day, last_day_of_month))
                     first_day += relativedelta(months=1)
                     last_day_of_month = first_day + relativedelta(day=31)
@@ -601,14 +609,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
             elif self.subject in RuleSubject.weekday_subjects():
                 dates = []
-                for a_date in expand_range(period_start_date, period_end_date):
+                for a_date in expand_range(period_start_date, min_end_date):
                     if a_date.isoweekday() == self.subject.as_isoweekday():
                         dates.append(a_date)
 
                 return [dates]
 
         elif self.context == RuleContext.YEAR:
-            years = range(max_start_year, min_end_year + 1)
+            years = range(max_start_date.year, min_end_date.year + 1)
 
             result = []
             for year in years:
@@ -627,7 +635,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     week_end = week_start + relativedelta(weekday=SU(1))
 
                     weeks = []
-                    while week_start <= end_date:
+                    while week_start <= min_end_date:
                         weeks.append(expand_range(week_start, week_end))
                         week_start = week_start + relativedelta(weeks=1)
                         week_end = week_start + relativedelta(weekday=SU(1))
@@ -663,12 +671,12 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             c = Calendar()
 
             first_day = datetime.date(
-                year=start_date.year, month=start_date.month, day=1
+                year=max_start_date.year, month=max_start_date.month, day=1
             )
             last_day_of_month = first_day + relativedelta(day=31)
 
             result = []
-            while last_day_of_month <= end_date + relativedelta(day=31):
+            while last_day_of_month <= min_end_date + relativedelta(day=31):
                 if self.subject == RuleSubject.DAY:
                     days_in_month = expand_range(first_day, last_day_of_month)
                     result.append(days_in_month)
@@ -716,7 +724,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         matching_dates = set()
 
         # Get a set of dates that match the context and subject
-        context_sets = self.get_context_sets(start_date, end_date)
+        context_sets = self.get_context_sets(max_start_date, min_end_date)
 
         # Filter every set by start and frequency
         for context_set in context_sets:

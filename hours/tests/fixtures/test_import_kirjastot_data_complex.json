@@ -1,6 +1,28 @@
 {
     "type": "library",
     "total": 1,
+    "refs": {
+        "period": {
+            "343802": {
+                "id": 343802,
+                "library": 84860,
+                "validFrom": "2020-06-01",
+                "validUntil": "2020-08-09",
+                "isException": true,
+                "name": "Kesä2020",
+                "description": "Kesä2020"
+            },
+            "339753": {
+                "id": 339753,
+                "library": 84860,
+                "validFrom": "2020-06-18",
+                "validUntil": "2020-06-21",
+                "isException": true,
+                "name": "Juhannus",
+                "description": "Juhannus"
+            }
+        }
+    },
     "data": {
         "id": 84860,
         "city": 15885,
@@ -50,6 +72,145 @@
         "description": "<h3><strong>Sörnäisten Kansankirjasto</strong></h3><p>Kallion kirjasto avasi ensimmäisen kerran ovensa asiakkaille tiistaina 1.10.1912. Sen historia alkaa kuitenkin jo vuodesta 1889, jolloin uuteen, nopeasti kasvavaan kaupunginosaan perustettiin yksityinen Sörnäisten Kansankirjasto. Aluksi kirjasto toimi Itäisellä Viertotiellä raittiusruokalan yhteydessä, mutta siirtyi vuonna 1890 Alli Tryggin perustamaan työväen monitoimitaloon Kansankotiin, joka sijaitsi nykyisen Alli Tryggin puiston paikalla, kivenheiton päässä nykyisestä Kallion kirjastosta. Vuonna 1899 kirjasto otettiin kaupungin haltuun ja siitä tuli Helsingin kaupunginkirjaston Sörnäisten sivukirjasto.</p><p>Kansankodin tilat osoittautuivat pian liian ahtaiksi ja vuonna 1904 kirjastolle alettiin suunnitella uusia tiloja. Arkkitehti Karl Hård af Segerstadin suunnitelma hyväksyttiin vuonna 1910 ja uusi Kallion kirjastotalo valmistui vuonna 1912. Kyseessä oli Suomen ensimmäinen julkisilla varoilla rakennettu kirjasto, sillä vuonna 1881 valmistunut Rikhardinkadun kirjasto oli Helsingin anniskeluyhtiön rahoittama, kun taas Töölön, Punavuoren ja Vallilan sivukirjastoja varten vuokrattiin jo olemassa olevat tilat.</p><p>&nbsp;</p><h3><strong>Ilmaisia lainoja ja satutunteja</strong></h3><p>Uudessa kirjastossa oli vilkasta alusta asti: vuonna 1913 Kallion kirjastosta lainattiin kirjoja lähes 110&nbsp;000 kertaa ja lukusaleissa kävijöitä oli lähes 150&nbsp;000. 1900-luvun alun kasvaviin lainausmääriin vaikutti sekin, että vuonna 1912 lainaamisesta oli tullut maksutonta.</p><p>Kallion kirjasto oli oman aikansa edelläkävijä kansalaisten tasa-arvoisen kohtelun suhteen: esimerkiksi Rikhardinkadun kirjastossa eri kansanosien kirjat oli jaoteltu perinteisesti eri puolille, mutta Kalliossa tällaista jakoa asiakkaiden suhteen ei tehty.</p><p>Kallion kirjasto on ollut suunnannäyttäjä myös lapsille suunnattujen kirjastopalvelujen toteuttamisessa. Kirjastossa alkoivat jo vuonna 1924 Sirkka Saloviuksen satutunnit, joita oli parhaimmillaan kuuntelemassa 170 lasta. Kallion kirjaston asema oli lastenkirjastotyössä niin keskeinen, että vielä 1950-luvulla kaikki Helsingin kaupunginkirjaston uudet lastenosastojen virkailijat lähetettiin puoleksi päiväksi ”Saloviuksen oppiin”.</p><p>&nbsp;</p><h3><strong>Kallion kirjastotalo ennen ja nyt</strong></h3><p>Tyyliltään Kallion kirjastotalo edustaa myöhäistä jugendia ja alkavaa klassisismia. Julkisivultaan rakennus on säilynyt lähes alkuperäisessä asussaan, mutta sisätiloissa on tehty monia muutoksia vuosien varrella.</p><p>Alun perin asiakas saattoi pääovesta sisään tullessaan ensin jättää takkinsa narikkahuoneeseen, jonka jälkeen keskikäytävän sivuilla olivat sanomalehtien lukusali ja lasten lukusali. Kirjaston kupolisaliin kirjahyllyt oli aseteltu säteittäin suuren lainaustiskin taakse ja kirjoja sai katsottavakseen ja lainattavakseen suuren lainaustiskin yli henkilökunnalta pyytämällä. Toisessa kerroksessa oli vielä kaksi lukusalia lisää sekä henkilökunnan huoneita.</p><p>Kirjaston perhosmainen pohjaratkaisu oli suunniteltu niin, että isosta lainaustoimistosta oli helppo valvoa lukusaleja eli ”perhosen siipiä”. Tämä oli tarpeen, sillä kirjastojen lukusaleissa tapahtui paljon järjestyshäiriöitä. Sanomalehtisalissa käytettiin pystytelineitä, jotta joutilaat eivät tulisi sinne vain istuskelemaan.</p><p>Kallion kirjastoon suunniteltiin tilallisia muutoksia jo vuonna 1941, mutta ne toteutettiin vasta sodan jälkeen, jolloin myös kirjaston saamat pommitusvauriot korjattiin. Kupolisalissa lainaustiskin takana sijainneet säteittäiset kirjahyllyt avattiin asiakkaiden vapaaseen käyttöön. Samalla avattiin keskikäytävän väliseiniin suuret kaariaukot, jotta tila olisi mahdollisimman avara. Kaariaukot reunustavat keskikäytävää vielä tänäkin päivänä.</p><p>Seuraava suuri muutos tapahtui vuosina 1988-1990 toteutetun peruskorjauksen yhteydessä. Tällöin laaja ullakkotila otettiin käyttöön ja siitä tehtiin lasten- ja musiikkiosasto. Kahden kattoikkunan ansiosta tilaan saatiin paljon luonnonvaloa. Kun kirjasto avasi uudelleen ovensa isänpäivänä 1990, syntyi lainausennätys koko Helsingin kaupunginkirjaston siihenastisessa historiassa: kuuden aukiolotunnin aikana kirjattiin 6&nbsp;500 lainaa.</p><p>Vuodenvaihteessa 2017-2018 kirjastossa tehtiin ensimmäisen kerroksen kattanut remontti. Hyllyt vaihdettiin uusiin, ison palautusautomaatin tilalle tuli pienempi ja palvelujen paikkoja muutettiin. Remontin jälkeen asiakkaat kiittelivät erityisesti kirjastoon tulvivaa valoa sekä vanhojen arkkitehtuurielementtien esille tuomista.</p><p>&nbsp;</p><p>&nbsp;</p>",
         "mainLibrary": false,
         "schedules": [
+            {
+                "period": 343802,
+                "date": "2020-06-11",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "20:00",
+                        "from": "08:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-12",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "18:00",
+                        "from": "08:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-13",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "16:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-14",
+                "info": null,
+                "closed": true,
+                "times": []
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-15",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-16",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-17",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 339753,
+                "date": "2020-06-18",
+                "info": "Juhannuksen aaton aatto",
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "18:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 339753,
+                "date": "2020-06-19",
+                "info": "Juhannusaatto",
+                "closed": true,
+                "times": []
+            },
+            {
+                "period": 339753,
+                "date": "2020-06-20",
+                "info": "Juhannuspäivä",
+                "closed": true,
+                "times": []
+            },
+            {
+                "period": 339753,
+                "date": "2020-06-21",
+                "info": "Juhannuksen jälkeinen sunnuntai",
+                "closed": true,
+                "times": []
+            },
             {
                 "period": 343802,
                 "date": "2020-06-22",
@@ -159,6 +320,168 @@
                 "info": null,
                 "closed": true,
                 "times": []
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-29",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-06-30",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-01",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-02",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "20:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-03",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "10:00",
+                        "from": "08:00",
+                        "status": 2
+                    },
+                    {
+                        "to": "18:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-04",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "16:00",
+                        "from": "10:00",
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-05",
+                "info": null,
+                "closed": true,
+                "times": []
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-06",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "20:00",
+                        "from": "08:00",
+                        "status": 2
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-07",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "20:00",
+                        "from": "08:00",
+                        "status": 2
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-08",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "20:00",
+                        "from": "08:00",
+                        "status": 2
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-09",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "20:00",
+                        "from": "08:00",
+                        "status": 2
+                    }
+                ]
             }
         ]
     }

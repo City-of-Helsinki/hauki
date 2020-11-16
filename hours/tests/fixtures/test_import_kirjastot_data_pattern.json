@@ -1,6 +1,28 @@
 {
     "type": "library",
     "total": 1,
+    "refs": {
+        "period": {
+            "343802": {
+                "id": 343802,
+                "library": 84860,
+                "validFrom": "2020-06-01",
+                "validUntil": "2020-08-09",
+                "isException": true,
+                "name": "Kesä2020",
+                "description": "Kesä2020"
+            },
+            "339753": {
+                "id": 339753,
+                "library": 84860,
+                "validFrom": "2020-06-18",
+                "validUntil": "2020-06-21",
+                "isException": true,
+                "name": "Juhannus",
+                "description": "Juhannus"
+            }
+        }
+    },
     "data": {
         "id": 84860,
         "city": 15885,
@@ -196,13 +218,8 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
                         "to": "20:00",
-                        "from": "10:00",
+                        "from": "08:00",
                         "status": 1
                     }
                 ]
@@ -214,13 +231,8 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
                         "to": "20:00",
-                        "from": "10:00",
+                        "from": "08:00",
                         "status": 1
                     }
                 ]
@@ -232,13 +244,8 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
                         "to": "20:00",
-                        "from": "10:00",
+                        "from": "08:00",
                         "status": 1
                     }
                 ]
@@ -250,13 +257,8 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
                         "to": "20:00",
-                        "from": "10:00",
+                        "from": "08:00",
                         "status": 1
                     }
                 ]
@@ -268,13 +270,8 @@
                 "closed": false,
                 "times": [
                     {
-                        "to": "10:00",
-                        "from": "08:00",
-                        "status": 2
-                    },
-                    {
                         "to": "18:00",
-                        "from": "10:00",
+                        "from": "08:00",
                         "status": 1
                     }
                 ]
@@ -383,7 +380,7 @@
                         "status": 2
                     },
                     {
-                        "to": "18:00",
+                        "to": "20:00",
                         "from": "10:00",
                         "status": 1
                     }
@@ -418,7 +415,7 @@
                     {
                         "to": "20:00",
                         "from": "08:00",
-                        "status": 2
+                        "status": 1
                     }
                 ]
             },
@@ -431,7 +428,7 @@
                     {
                         "to": "20:00",
                         "from": "08:00",
-                        "status": 2
+                        "status": 1
                     }
                 ]
             },
@@ -444,7 +441,7 @@
                     {
                         "to": "20:00",
                         "from": "08:00",
-                        "status": 2
+                        "status": 1
                     }
                 ]
             },
@@ -457,7 +454,20 @@
                     {
                         "to": "20:00",
                         "from": "08:00",
-                        "status": 2
+                        "status": 1
+                    }
+                ]
+            },
+            {
+                "period": 343802,
+                "date": "2020-07-10",
+                "info": null,
+                "closed": false,
+                "times": [
+                    {
+                        "to": "18:00",
+                        "from": "08:00",
+                        "status": 1
                     }
                 ]
             }

@@ -5,7 +5,16 @@ import pytest
 from django.core.management import call_command
 from django_orghierarchy.models import Organization
 
-from hours.models import DataSource, Resource, ResourceOrigin, ResourceType
+from hours.models import (
+    DataSource,
+    DatePeriod,
+    Resource,
+    ResourceOrigin,
+    ResourceType,
+    Rule,
+    TimeSpan,
+    TimeSpanGroup,
+)
 
 # from datetime import date, datetime, time
 
@@ -34,13 +43,19 @@ from hours.models import DataSource, Resource, ResourceOrigin, ResourceType
 
 @pytest.fixture
 def mock_tprek_data(requests_mock, request):
-    change = request.param["change"]
-    merge = request.param["merge"]
+    if hasattr(request, "param"):
+        change = request.param["change"]
+        merge = request.param["merge"]
+    else:
+        change = None
+        merge = False
     units_file_name = "test_import_tprek_units.json"
     connections_file_name = "test_import_tprek_connections.json"
-    units_file_path = os.path.join(os.path.dirname(__file__), units_file_name)
+    units_file_path = os.path.join(
+        os.path.dirname(__file__), "fixtures", units_file_name
+    )
     connections_file_path = os.path.join(
-        os.path.dirname(__file__), connections_file_name
+        os.path.dirname(__file__), "fixtures", connections_file_name
     )
     with open(units_file_path) as units_file, open(
         connections_file_path
@@ -102,35 +117,45 @@ def mock_tprek_data(requests_mock, request):
     }
 
 
-# @pytest.mark.django_db
-# @pytest.fixture
-# def get_mock_library_data(mock_tprek_data, requests_mock):
-#     def _mock_library_data(test_file_name):
-#         # Call the library importer for the single created library
-#         kallio = Target.objects.all()[0]
-#         kallio_kirkanta_id = kallio.identifiers.get(data_source="kirkanta").origin_id
-#         print(kallio_kirkanta_id)
-#         url_to_mock = (
-#             "https://api.kirjastot.fi/v4/library/%s/"
-#             "?with=schedules&period.start=2020-06-01&period.end=2021-07-01"
-#             % kallio_kirkanta_id
-#         )
-#         test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
-#         print(url_to_mock)
-#         with open(test_file_path) as f:
-#             mock_data = f.read()
-#             requests_mock.get(url_to_mock, text=mock_data)
-#         call_command(
-#             "hours_import",
-#             "kirjastot",
-#             "--openings",
-#             "--single",
-#             kallio.id,
-#             "--date",
-#             "2020-07-15",
-#         )
+@pytest.mark.django_db
+@pytest.fixture
+def get_mock_library_data(mock_tprek_data, requests_mock, request):
+    # We should have the same hours whether base period is endless or ends next year
+    endless = request.param
 
-#     return _mock_library_data
+    def _mock_library_data(test_file_name):
+        kallio_tprek_id = 8215
+        kallio = Resource.objects.get(
+            origins__data_source="tprek", origins__origin_id=kallio_tprek_id
+        )
+        # Call the library importer for Kallio
+        kallio_kirkanta_id = kallio.origins.get(data_source="kirkanta").origin_id
+        url_to_mock = (
+            "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+            "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
+            % kallio_kirkanta_id
+        )
+        test_file_path = os.path.join(
+            os.path.dirname(__file__), "fixtures", test_file_name
+        )
+        with open(test_file_path) as f:
+            mock_data = json.load(f)
+            if endless:
+                first_period_id = next(iter(mock_data["refs"]["period"]))
+                mock_data["refs"]["period"][first_period_id]["validUntil"] = None
+            requests_mock.get(url_to_mock, text=json.dumps(mock_data))
+        call_command(
+            "hours_import",
+            "kirjastot",
+            "--openings",
+            "--single",
+            kallio_kirkanta_id,
+            "--date",
+            "2020-06-15",
+        )
+
+    return _mock_library_data
+
 
 parameters = []
 for merge in [False, True]:
@@ -319,50 +344,114 @@ def test_import_tprek(mock_tprek_data):
     )
 
 
-# @pytest.mark.django_db
-# def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
-#     test_file_name = "test_import_kirjastot_data_simple.json"
-#     get_mock_library_data(test_file_name)
+@pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
+def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
+    test_file_name = "test_import_kirjastot_data_simple.json"
+    get_mock_library_data(test_file_name)
 
-#     # Check created objects
-#     assert Period.objects.count() == 1
-#     assert Opening.objects.count() == 12
-#     assert DailyHours.objects.count() == 12
-
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
-
-
-# @pytest.mark.django_db
-# def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
-#     test_file_name = "test_import_kirjastot_data_complex.json"
-#     get_mock_library_data(test_file_name)
-
-#     # Check created objects
-#     assert Period.objects.count() == 2
-#     periods_by_start = Period.objects.order_by("period")
-#     summer_period, midsummer_period = periods_by_start
-#     assert summer_period.openings.count() == 46
-#     assert midsummer_period.openings.count() == 5
-
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
+    # Check created objects
+    assert DatePeriod.objects.count() == 1
+    assert TimeSpan.objects.count() == 5
+    assert TimeSpanGroup.objects.count() == 1
+    # Simple data should have pattern repeating weekly
+    assert Rule.objects.count() == 0
 
 
-# @pytest.mark.django_db
-# def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
-#     test_file_name = "test_import_kirjastot_data_pattern.json"
-#     get_mock_library_data(test_file_name)
+@pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
+def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
+    test_file_name = "test_import_kirjastot_data_pattern.json"
+    get_mock_library_data(test_file_name)
 
-#     # Check created objects
-#     assert Period.objects.count() == 2
-#     periods_by_start = Period.objects.order_by("period")
-#     summer_period, midsummer_period = periods_by_start
-#     assert summer_period.openings.count() == 36
-#     assert midsummer_period.openings.count() == 5
+    # Check created objects
+    assert DatePeriod.objects.count() == 5
+    assert TimeSpanGroup.objects.count() == 4
+    assert Rule.objects.count() == 2
+    periods_by_start = DatePeriod.objects.order_by("start_date")
 
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
+    # Data has overlapping periods
+    (
+        summer_period,
+        midsummer_pre_eve,
+        midsummer_eve,
+        midsummer_sat,
+        midsummer_sun,
+    ) = periods_by_start
+    assert summer_period.time_span_groups.count() == 3
+    assert midsummer_pre_eve.time_span_groups.count() == 1
+    assert midsummer_eve.time_span_groups.count() == 0
+    assert midsummer_sat.time_span_groups.count() == 0
+    assert midsummer_sun.time_span_groups.count() == 0
+
+    # Data should have pattern repeating biweekly even with
+    # missing days at start, end and middle
+    (weekends, first_week, second_week) = summer_period.time_span_groups.all()
+    assert weekends.rules.count() == 0
+    assert first_week.rules.all()[0].start == 1
+    assert first_week.rules.all()[0].frequency_ordinal == 2
+    assert second_week.rules.all()[0].start == 2
+    assert second_week.rules.all()[0].frequency_ordinal == 2
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
+def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
+    test_file_name = "test_import_kirjastot_data_complex.json"
+    get_mock_library_data(test_file_name)
+
+    # Check created objects
+    assert DatePeriod.objects.count() == 5
+    assert TimeSpanGroup.objects.count() == 11
+    assert Rule.objects.count() == 9
+    periods_by_start = DatePeriod.objects.order_by("start_date")
+
+    # Complex data has overlapping periods
+    (
+        summer_period,
+        midsummer_pre_eve,
+        midsummer_eve,
+        midsummer_sat,
+        midsummer_sun,
+    ) = periods_by_start
+    assert summer_period.time_span_groups.count() == 10
+    assert midsummer_pre_eve.time_span_groups.count() == 1
+    assert midsummer_eve.time_span_groups.count() == 0
+    assert midsummer_sat.time_span_groups.count() == 0
+    assert midsummer_sun.time_span_groups.count() == 0
+
+    # Complex data has different rules for different weekdays
+    (
+        weekends,
+        first_week,
+        second_week,
+        third_week,
+        fourth_week,
+        first_week_thu,
+        second_week_thu,
+        third_week_thu,
+        fourth_week_thu,
+        fifth_week_thu,
+    ) = summer_period.time_span_groups.all()
+    assert weekends.rules.count() == 0
+    assert first_week.rules.all()[0].start == 1
+    assert first_week.rules.all()[0].frequency_ordinal == 4
+    assert second_week.rules.all()[0].start == 2
+    assert second_week.rules.all()[0].frequency_ordinal == 4
+    assert third_week.rules.all()[0].start == 3
+    assert third_week.rules.all()[0].frequency_ordinal == 4
+    assert fourth_week.rules.all()[0].start == 4
+    assert fourth_week.rules.all()[0].frequency_ordinal == 4
+    assert first_week_thu.rules.all()[0].start == 1
+    assert first_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert second_week_thu.rules.all()[0].start == 2
+    assert second_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert third_week_thu.rules.all()[0].start == 3
+    assert third_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert fourth_week_thu.rules.all()[0].start == 4
+    assert fourth_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert fifth_week_thu.rules.all()[0].start == 5
+    assert fifth_week_thu.rules.all()[0].frequency_ordinal == 5
 
 
 # @pytest.mark.django_db

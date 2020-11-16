@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -8,10 +10,11 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .filters import DatePeriodFilter, TimeSpanFilter
+from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
 from .models import DatePeriod, Resource, Rule, TimeSpan
 from .permissions import IsMemberOrAdminOfOrganization, ReadOnly
 from .serializers import (
+    DailyOpeningHoursSerializer,
     DatePeriodSerializer,
     OrganizationSerializer,
     ResourceSerializer,
@@ -115,6 +118,51 @@ class ResourceViewSet(
         self.check_object_permissions(self.request, obj)
 
         return obj
+
+    @action(detail=True)
+    def opening_hours(self, request, pk=None):
+        try:
+            resource = Resource.objects.get(**get_resource_pk_filter(pk))
+        except Resource.DoesNotExist:
+            raise APIException("Resource does not exist")
+
+        if not request.query_params.get("start_date") or not request.query_params.get(
+            "end_date"
+        ):
+            raise APIException("start_date and end_date GET parameters are required")
+
+        try:
+            start_date = parse_maybe_relative_date_string(
+                request.query_params.get("start_date", "")
+            )
+        except ValueError:
+            raise APIException("Invalid start_date")
+
+        try:
+            end_date = parse_maybe_relative_date_string(
+                request.query_params.get("end_date", ""), end_date=True
+            )
+        except ValueError:
+            raise APIException("Invalid end_date")
+
+        if start_date > end_date:
+            raise APIException("start_date must be before end_date")
+
+        opening_hours = resource.get_daily_opening_hours(start_date, end_date)
+
+        opening_hours_list = []
+        for the_date, time_elements in opening_hours.items():
+            opening_hours_list.append(
+                {
+                    "date": the_date,
+                    "times": time_elements,
+                }
+            )
+        opening_hours_list.sort(key=itemgetter("date"))
+
+        serializer = DailyOpeningHoursSerializer(opening_hours_list, many=True)
+
+        return Response(serializer.data)
 
 
 class DatePeriodViewSet(

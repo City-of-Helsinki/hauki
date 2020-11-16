@@ -2,7 +2,8 @@ from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from rest_framework import status, viewsets
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.decorators import action
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -63,7 +64,36 @@ class OnCreateOrgMembershipCheck:
         )
 
 
-class ResourceViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
+class PermissionCheckAction:
+    @action(
+        detail=True,
+        methods=["get", "post", "put", "patch", "delete"],
+        permission_classes=[],
+    )
+    def permission_check(self, request, pk=None):
+        """Runs check_object_permission for the object and returns the result"""
+        obj = self.get_object()
+
+        # This action should be callable without any permissions, but the
+        # check_object_permissions call should use the original permissions
+        # from the viewset.
+        old_permission_classes = self.permission_classes
+        self.permission_classes = self.__class__.permission_classes
+
+        try:
+            self.check_object_permissions(request, obj)
+            has_permission = True
+        except APIException:
+            has_permission = False
+
+        self.permission_classes = old_permission_classes
+
+        return Response({"has_permission": has_permission})
+
+
+class ResourceViewSet(
+    OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
+):
     serializer_class = ResourceSerializer
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
@@ -87,14 +117,18 @@ class ResourceViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
         return obj
 
 
-class DatePeriodViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
+class DatePeriodViewSet(
+    OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
+):
     queryset = DatePeriod.objects.all().order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
 
 
-class RuleViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
+class RuleViewSet(
+    OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
+):
     queryset = (
         Rule.objects.all()
         .select_related("group", "group__period")
@@ -104,7 +138,9 @@ class RuleViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
 
-class TimeSpanViewSet(OnCreateOrgMembershipCheck, viewsets.ModelViewSet):
+class TimeSpanViewSet(
+    OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
+):
     queryset = TimeSpan.objects.all()
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter

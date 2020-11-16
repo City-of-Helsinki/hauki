@@ -1048,3 +1048,95 @@ def test_update_time_span_authenticated_has_org_permission(
 
     time_span = TimeSpan.objects.get(pk=time_span.id)
     assert time_span.name == "New name"
+
+
+@pytest.mark.django_db
+def test_permission_check_action_anonymous_read(api_client, resource):
+    url = reverse("resource-permission-check", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data == {
+        "has_permission": True,
+    }
+
+
+@pytest.mark.django_db
+def test_permission_check_action_anonymous_update(api_client, resource):
+    url = reverse("resource-permission-check", kwargs={"pk": resource.id})
+
+    data = {
+        "name": "New name",
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data == {
+        "has_permission": False,
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "add_to_org, expected_value",
+    (
+        (False, False),
+        (True, True),
+    ),
+)
+def test_permission_check_action_authenticated_update(
+    api_client,
+    resource,
+    organization_factory,
+    data_source,
+    user,
+    add_to_org,
+    expected_value,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    if add_to_org:
+        organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-permission-check", kwargs={"pk": resource.id})
+
+    data = {
+        "name": "New name",
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data == {
+        "has_permission": expected_value,
+    }

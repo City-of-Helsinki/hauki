@@ -3,7 +3,6 @@ import json
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import IntegrityError
 from django.urls import reverse
 
 from hours.enums import RuleContext, RuleSubject, State, Weekday
@@ -327,7 +326,7 @@ def test_update_date_period_add_one_time_span(
 
 
 @pytest.mark.django_db
-def test_create_time_span_no_group(resource, admin_client):
+def test_create_time_span_no_group(admin_client):
     url = reverse("time_spans-list")
 
     data = {
@@ -335,11 +334,47 @@ def test_create_time_span_no_group(resource, admin_client):
         "resource_state": "closed",
     }
 
-    # TODO: Change when viewsets changed to use different serializer for
-    #       update and create.
-    with pytest.raises(IntegrityError):
-        admin_client.post(
-            url,
-            data=json.dumps(data, cls=DjangoJSONEncoder),
-            content_type="application/json",
-        )
+    response = admin_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert "group" in response.data
+    assert response.data["group"][0].code == "required"
+
+
+@pytest.mark.django_db
+def test_create_time_span_with_group(
+    admin_client, resource, date_period_factory, time_span_group_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    url = reverse("time_spans-list")
+
+    data = {
+        "group": time_span_group.id,
+        "full_day": True,
+        "resource_state": "closed",
+    }
+
+    response = admin_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )

@@ -18,7 +18,9 @@ from .serializers import (
     DatePeriodSerializer,
     OrganizationSerializer,
     ResourceSerializer,
+    RuleCreateSerializer,
     RuleSerializer,
+    TimeSpanCreateSerializer,
     TimeSpanSerializer,
 )
 from .utils import get_resource_pk_filter
@@ -38,7 +40,9 @@ class OnCreateOrgMembershipCheck:
                     if resource:
                         organization = resource.organization
 
-                if isinstance(serializer, (RuleSerializer, TimeSpanSerializer)):
+                if isinstance(
+                    serializer, (RuleCreateSerializer, TimeSpanCreateSerializer)
+                ):
                     time_span_group = serializer.validated_data.get("group")
                     organization = time_span_group.period.resource.organization
 
@@ -185,6 +189,12 @@ class RuleViewSet(
     serializer_class = RuleSerializer
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
+    def get_serializer_class(self):
+        if self.action == "create":
+            return RuleCreateSerializer
+
+        return RuleSerializer
+
 
 class TimeSpanViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
@@ -193,6 +203,12 @@ class TimeSpanViewSet(
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return TimeSpanCreateSerializer
+
+        return TimeSpanSerializer
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):

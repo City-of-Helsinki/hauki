@@ -159,15 +159,9 @@ class ResourceSerializer(
         return result
 
 
-class TimeSpanSerializer(
+class TimeSpanCreateSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
-    # TODO: Group cannot be required when creating a nested item. But it should
-    #       be when creating a new TimeSpan.
-    group = serializers.PrimaryKeyRelatedField(
-        required=False, queryset=TimeSpanGroup.objects.all()
-    )
-
     class Meta:
         model = TimeSpan
         fields = [
@@ -185,15 +179,16 @@ class TimeSpanSerializer(
         ]
 
 
-class RuleSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
-):
-    # TODO: Group cannot be required when creating a nested item. But it should
-    #       be when creating a new Rule.
+class TimeSpanSerializer(TimeSpanCreateSerializer):
+    # Group should not be required when saving a nested object
     group = serializers.PrimaryKeyRelatedField(
         required=False, queryset=TimeSpanGroup.objects.all()
     )
 
+
+class RuleCreateSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = Rule
         fields = [
@@ -211,11 +206,16 @@ class RuleSerializer(
         ]
 
 
+class RuleSerializer(RuleCreateSerializer):
+    # Group should not be required when saving a nested object
+    group = serializers.PrimaryKeyRelatedField(
+        required=False, queryset=TimeSpanGroup.objects.all()
+    )
+
+
 class TimeSpanGroupSerializer(
     EnumSupportSerializerMixin, WritableNestedModelSerializer
 ):
-    # TODO: Period cannot be required when creating a nested item. But it should
-    #       be when creating a new TimeSpanGroup.
     period = serializers.PrimaryKeyRelatedField(
         required=False, queryset=DatePeriod.objects.all()
     )

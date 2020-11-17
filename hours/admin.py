@@ -18,12 +18,23 @@ class HaukiModelAdmin(SimpleHistoryAdmin, TranslationAdmin):
     pass
 
 
+class DataSourceAdmin(HaukiModelAdmin):
+    search_fields = ("id", "name", "description")
+    list_display = ("id", "name")
+    ordering = ("id",)
+
+
 class ResourceOriginInline(admin.TabularInline):
     model = ResourceOrigin
     extra = 1
 
 
 class ResourceAdmin(HaukiModelAdmin):
+    search_fields = ("name", "description")
+    list_display = ("name", "resource_type", "is_public")
+    list_filter = ("resource_type", "data_sources", "is_public")
+    ordering = ("name",)
+    raw_id_fields = ("children", "organization")
     inlines = (ResourceOriginInline,)
 
     def get_form(self, request, obj=None, **kwargs):
@@ -53,6 +64,7 @@ class RuleInline(admin.StackedInline):
 
 class TimeSpanGroupAdmin(admin.ModelAdmin):
     model = TimeSpanGroup
+    search_fields = ("period__name", "period__resource__name")
     list_display = (
         "get_period_name",
         "get_resource_name",
@@ -60,6 +72,9 @@ class TimeSpanGroupAdmin(admin.ModelAdmin):
         "get_end_date",
         "get_resource_state",
     )
+    list_filter = ("period__start_date", "period__end_date")
+    ordering = ("period__start_date", "period__end_date")
+    raw_id_fields = ("period",)
     inlines = (TimeSpanInline, RuleInline)
 
     def get_queryset(self, request):
@@ -94,10 +109,21 @@ class TimeSpanGroupAdmin(admin.ModelAdmin):
 
 
 class DatePeriodAdmin(HaukiModelAdmin):
-    list_display = ("name", "resource", "start_date", "end_date", "resource_state")
+    search_fields = ("resource__name", "name")
+    list_display = (
+        "name",
+        "resource",
+        "start_date",
+        "end_date",
+        "resource_state",
+        "override",
+    )
+    list_filter = ("start_date", "end_date", "resource_state", "override")
+    ordering = ("start_date", "end_date")
+    raw_id_fields = ("resource",)
 
 
-admin.site.register(DataSource, HaukiModelAdmin)
+admin.site.register(DataSource, DataSourceAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(DatePeriod, DatePeriodAdmin)
 admin.site.register(TimeSpanGroup, TimeSpanGroupAdmin)

@@ -105,7 +105,9 @@ class ResourceViewSet(
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
 
     def get_queryset(self):
-        return Resource.objects.all().order_by("id")
+        return Resource.objects.prefetch_related(
+            "origins", "children", "parents", "origins__data_source"
+        ).order_by("id")
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
@@ -172,7 +174,9 @@ class ResourceViewSet(
 class DatePeriodViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
-    queryset = DatePeriod.objects.all().order_by("start_date", "end_date")
+    queryset = DatePeriod.objects.prefetch_related(
+        "time_span_groups", "time_span_groups__time_spans", "time_span_groups__rules"
+    ).order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter

@@ -5,10 +5,41 @@ from django import forms
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
-from .authentication import calculate_signature, join_params
-from .models import Resource
+from .authentication import (
+    InsufficientParamsError,
+    SignatureValidationError,
+    calculate_signature,
+    get_auth_params,
+    join_params,
+    validate_params_and_signature,
+)
+from .models import Resource, SignedAuthEntry
+
+
+@api_view(http_method_names=["POST"])
+def invalidate_hauki_auth_signature(request):
+    params = get_auth_params(request)
+
+    try:
+        validate_params_and_signature(params)
+    except (InsufficientParamsError, SignatureValidationError):
+        raise ValidationError(detail=_("Invalid signature"))
+
+    SignedAuthEntry.objects.create(
+        signature=params["signature"],
+        created_at=params["created_at"],
+        valid_until=params["valid_until"],
+        invalidated_at=timezone.now(),
+    )
+
+    return Response({"success": True})
 
 
 # TODO: This is a temporary demonstration. Remove before production deployment.

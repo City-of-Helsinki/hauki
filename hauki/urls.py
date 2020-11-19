@@ -18,7 +18,10 @@ from django.urls import include, path
 from django.views.generic.base import RedirectView
 
 from hours.api import APIRouter
-from hours.views import hauki_signed_auth_link_generator
+from hours.views import (
+    hauki_signed_auth_link_generator,
+    invalidate_hauki_auth_signature,
+)
 
 admin.autodiscover()
 
@@ -27,6 +30,11 @@ router = APIRouter()
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("v1/", include(router.urls)),
+    path(
+        "invalidate_signature/",
+        invalidate_hauki_auth_signature,
+        name="invalidate_hauki_auth_signature",
+    ),
     path("hauki_signed_auth_link_generator/", hauki_signed_auth_link_generator),
     path("", RedirectView.as_view(url="v1/")),
 ]

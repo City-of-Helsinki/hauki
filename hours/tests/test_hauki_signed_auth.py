@@ -3,8 +3,10 @@ import urllib.parse
 
 import pytest
 from django.urls import reverse
+from pytz import UTC
 
 from hours.authentication import calculate_signature, join_params
+from hours.models import SignedAuthEntry
 from users.models import User
 
 
@@ -253,3 +255,120 @@ def test_join_user_to_organization_invalid_org(
     user = User.objects.get(username="test_user")
 
     assert user.organization_memberships.count() == 0
+
+
+@pytest.mark.django_db
+def test_invalidate_signature_success_header_params(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    valid_until = now + datetime.timedelta(minutes=10)
+
+    data = {
+        "username": "test_user",
+        "created_at": now.isoformat() + "Z",
+        "valid_until": valid_until.isoformat() + "Z",
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    # Check that auth works
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    # Invalidate the signature
+    invalidate_url = reverse("invalidate_hauki_auth_signature")
+    response = api_client.post(invalidate_url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data == {"success": True}
+
+    signed_auth_entry = SignedAuthEntry.objects.get(signature=signature)
+
+    assert signed_auth_entry.created_at == now.replace(tzinfo=UTC)
+    assert signed_auth_entry.valid_until == valid_until.replace(tzinfo=UTC)
+
+    # Verify that the auth no longer works
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_invalidate_signature_success_query_params(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "username": "test_user",
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "?" + urllib.parse.urlencode({**data, "signature": signature})
+
+    # Check that auth works
+    response = api_client.get(f"{url}{authz_string}")
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    # Invalidate the signature
+    invalidate_url = reverse("invalidate_hauki_auth_signature")
+    response = api_client.post(f"{invalidate_url}{authz_string}")
+
+    assert response.status_code == 200
+    assert response.data == {"success": True}
+
+    # Verify that the auth no longer works
+    response = api_client.get(f"{url}{authz_string}")
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_invalidate_signature_no_params(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    # Invalidate the signature
+    invalidate_url = reverse("invalidate_hauki_auth_signature")
+    response = api_client.post(invalidate_url)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_invalidate_signature_invalid_params(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        # username missing
+        "created_at": now.isoformat() + "Z",
+        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    # Invalidate the signature
+    invalidate_url = reverse("invalidate_hauki_auth_signature")
+    response = api_client.post(invalidate_url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403

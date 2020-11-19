@@ -738,3 +738,16 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         range_dates = set(expand_range(max_start_date, min_end_date))
 
         return matching_dates & range_dates
+
+
+class SignedAuthEntry(models.Model):
+    signature = models.TextField(verbose_name=_("Signature"))
+    created_at = models.DateTimeField(verbose_name=_("Signature created at"))
+    valid_until = models.DateTimeField(verbose_name=_("Signature valid until"))
+    invalidated_at = models.DateTimeField(
+        verbose_name=_("Invalidated time"), null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = _("Signed auth entry")
+        verbose_name_plural = _("Signed auth entries")

@@ -15,6 +15,8 @@ from rest_framework.authentication import (
     get_authorization_header,
 )
 
+from hours.models import SignedAuthEntry
+
 User = get_user_model()
 
 REQUIRED_AUTH_PARAM_NAMES = ["username", "created_at", "valid_until", "signature"]
@@ -84,6 +86,49 @@ def compare_signatures(first, second):
     return hmac.compare_digest(first.lower(), second.lower())
 
 
+class InsufficientParamsError(Exception):
+    pass
+
+
+class SignatureValidationError(Exception):
+    pass
+
+
+def validate_params_and_signature(params) -> bool:
+    if not len(params):
+        raise InsufficientParamsError()
+
+    if not all([params.get(k) for k in REQUIRED_AUTH_PARAM_NAMES]):
+        raise InsufficientParamsError()
+
+    calculated_signature = calculate_signature(join_params(params))
+
+    if not compare_signatures(params["signature"], calculated_signature):
+        raise SignatureValidationError(_("Invalid signature"))
+
+    try:
+        created_at = parse(params["created_at"])
+        try:
+            if created_at > timezone.now():
+                raise SignatureValidationError(_("Invalid created_at"))
+        except TypeError:
+            raise SignatureValidationError(_("Invalid created_at"))
+    except ValueError:
+        raise SignatureValidationError(_("Invalid created_at"))
+
+    try:
+        valid_until = parse(params["valid_until"])
+        try:
+            if valid_until < timezone.now():
+                raise SignatureValidationError(_("Invalid valid_until"))
+        except TypeError:
+            raise SignatureValidationError(_("Invalid valid_until"))
+    except ValueError:
+        raise SignatureValidationError(_("Invalid valid_until"))
+
+    return True
+
+
 class HaukiSignedAuthentication(BaseAuthentication):
     def authenticate(self, request):
         if not settings.HAUKI_SIGNED_AUTH_PSK:
@@ -91,37 +136,16 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
         params = get_auth_params(request)
 
-        if not len(params):
-            return None
-
-        if not all([params.get(k) for k in REQUIRED_AUTH_PARAM_NAMES]):
-            return None
-
-        data_string = join_params(params)
-        calculated_signature = calculate_signature(data_string)
-
-        if not compare_signatures(params["signature"], calculated_signature):
-            raise exceptions.AuthenticationFailed(_("Invalid signature"))
-
         try:
-            created_at = parse(params["created_at"])
-            try:
-                if created_at > timezone.now():
-                    raise exceptions.AuthenticationFailed(_("Invalid created_at"))
-            except TypeError:
-                raise exceptions.AuthenticationFailed(_("Invalid created_at"))
-        except ValueError:
-            raise exceptions.AuthenticationFailed(_("Invalid created_at"))
+            validate_params_and_signature(params)
+        except InsufficientParamsError:
+            # Missing params, let other authentication backends try
+            return None
+        except SignatureValidationError as e:
+            raise exceptions.AuthenticationFailed(str(e))
 
-        try:
-            valid_until = parse(params["valid_until"])
-            try:
-                if valid_until < timezone.now():
-                    raise exceptions.AuthenticationFailed(_("Invalid valid_until"))
-            except TypeError:
-                raise exceptions.AuthenticationFailed(_("Invalid valid_until"))
-        except ValueError:
-            raise exceptions.AuthenticationFailed(_("Invalid valid_until"))
+        if SignedAuthEntry.objects.filter(signature=params["signature"]).exists():
+            raise exceptions.AuthenticationFailed(_("Signature has been invalidated"))
 
         # TODO: Add separate PSKs for different integrations and only allow access
         #       to users initially from the same integration. Also Only allow

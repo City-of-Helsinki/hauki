@@ -144,7 +144,9 @@ class HaukiSignedAuthentication(BaseAuthentication):
         except SignatureValidationError as e:
             raise exceptions.AuthenticationFailed(str(e))
 
-        if SignedAuthEntry.objects.filter(signature=params["signature"]).exists():
+        if SignedAuthEntry.objects.filter(
+            signature=params["signature"], invalidated_at__isnull=False
+        ).exists():
             raise exceptions.AuthenticationFailed(_("Signature has been invalidated"))
 
         # TODO: Add separate PSKs for different integrations and only allow access

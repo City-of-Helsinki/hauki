@@ -258,6 +258,44 @@ def test_join_user_to_organization_invalid_org(
 
 
 @pytest.mark.django_db
+def test_signed_auth_entry_not_invalidated(settings, api_client):
+    settings.HAUKI_SIGNED_AUTH_PSK = "testing"
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+    valid_until = now + datetime.timedelta(minutes=10)
+
+    data = {
+        "username": "test_user",
+        "created_at": now.isoformat() + "Z",
+        "valid_until": valid_until.isoformat() + "Z",
+    }
+
+    signature = calculate_signature(join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "signature": signature}
+    )
+
+    # Check that auth works
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    # Add a non invalidated entry to the database
+    SignedAuthEntry.objects.create(
+        signature=signature, created_at=now, valid_until=valid_until
+    )
+
+    # Check that auth still works
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+
+@pytest.mark.django_db
 def test_invalidate_signature_success_header_params(settings, api_client):
     settings.HAUKI_SIGNED_AUTH_PSK = "testing"
     url = reverse("auth_required_test-list")

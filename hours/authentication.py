@@ -3,8 +3,8 @@ import hmac
 import urllib.parse
 
 from dateutil.parser import parse
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -15,11 +15,17 @@ from rest_framework.authentication import (
     get_authorization_header,
 )
 
-from hours.models import SignedAuthEntry
+from hours.models import DataSource, SignedAuthEntry, SignedAuthKey
 
 User = get_user_model()
 
-REQUIRED_AUTH_PARAM_NAMES = ["username", "created_at", "valid_until", "signature"]
+REQUIRED_AUTH_PARAM_NAMES = [
+    "source",
+    "username",
+    "created_at",
+    "valid_until",
+    "signature",
+]
 OPTIONAL_AUTH_PARAM_NAMES = ["organization", "resource"]
 
 
@@ -74,9 +80,9 @@ def join_params(params):
     return "".join([params.get(field_name, "") for field_name in fields_in_order])
 
 
-def calculate_signature(source_string):
+def calculate_signature(signing_key, source_string):
     return hmac.new(
-        key=settings.HAUKI_SIGNED_AUTH_PSK.encode("utf-8"),
+        key=signing_key.encode("utf-8"),
         msg=source_string.encode("utf-8"),
         digestmod=hashlib.sha256,
     ).hexdigest()
@@ -101,7 +107,20 @@ def validate_params_and_signature(params) -> bool:
     if not all([params.get(k) for k in REQUIRED_AUTH_PARAM_NAMES]):
         raise InsufficientParamsError()
 
-    calculated_signature = calculate_signature(join_params(params))
+    now = timezone.now()
+
+    try:
+        signed_auth_key = SignedAuthKey.objects.get(
+            Q(data_source__id=params["source"])
+            & Q(valid_after__lt=now)
+            & (Q(valid_until__isnull=True) | Q(valid_until__gt=now))
+        )
+    except SignedAuthKey.DoesNotExist:
+        raise SignatureValidationError(_("Invalid source"))
+
+    calculated_signature = calculate_signature(
+        signed_auth_key.signing_key, join_params(params)
+    )
 
     if not compare_signatures(params["signature"], calculated_signature):
         raise SignatureValidationError(_("Invalid signature"))
@@ -131,9 +150,6 @@ def validate_params_and_signature(params) -> bool:
 
 class HaukiSignedAuthentication(BaseAuthentication):
     def authenticate(self, request):
-        if not settings.HAUKI_SIGNED_AUTH_PSK:
-            return None
-
         params = get_auth_params(request)
 
         try:
@@ -166,10 +182,15 @@ class HaukiSignedAuthentication(BaseAuthentication):
         if params.get("organization"):
             try:
                 organization = Organization.objects.get(id=params["organization"])
-                users_organizations = user.organization_memberships.all()
 
-                if organization not in users_organizations:
-                    user.organization_memberships.add(organization)
+                # Allow joining users only to organizations that are from
+                # the same data source
+                data_source = DataSource.objects.get(id=params["source"])
+                if data_source == organization.data_source:
+                    users_organizations = user.organization_memberships.all()
+
+                    if organization not in users_organizations:
+                        user.organization_memberships.add(organization)
             except Organization.DoesNotExist:
                 # TODO: Should we raise exception here
                 pass

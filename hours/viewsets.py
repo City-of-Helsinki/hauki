@@ -7,6 +7,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -98,11 +99,18 @@ class PermissionCheckAction:
         return Response({"has_permission": has_permission})
 
 
+class ResourcePageNumberPagination(PageNumberPagination):
+    page_size = 100
+    max_page_size = 1000
+    page_query_param = "page_size"
+
+
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
     serializer_class = ResourceSerializer
     permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+    pagination_class = ResourcePageNumberPagination
 
     def get_queryset(self):
         return Resource.objects.prefetch_related(

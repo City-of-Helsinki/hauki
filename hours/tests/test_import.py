@@ -423,15 +423,12 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     # Complex data has different rules for different weekdays
     (
         weekends,
+        first_week_thu,
+        second_week_thu,
         first_week,
         second_week,
         third_week,
         fourth_week,
-        first_week_thu,
-        second_week_thu,
-        third_week_thu,
-        fourth_week_thu,
-        fifth_week_thu,
     ) = summer_period.time_span_groups.all()
     assert weekends.rules.count() == 0
     assert first_week.rules.all()[0].start == 1
@@ -443,31 +440,6 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     assert fourth_week.rules.all()[0].start == 4
     assert fourth_week.rules.all()[0].frequency_ordinal == 4
     assert first_week_thu.rules.all()[0].start == 1
-    assert first_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert first_week_thu.rules.all()[0].frequency_ordinal == 2
     assert second_week_thu.rules.all()[0].start == 2
-    assert second_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert third_week_thu.rules.all()[0].start == 3
-    assert third_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert fourth_week_thu.rules.all()[0].start == 4
-    assert fourth_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert fifth_week_thu.rules.all()[0].start == 5
-    assert fifth_week_thu.rules.all()[0].frequency_ordinal == 5
-
-
-# @pytest.mark.django_db
-# def test_import_kirjastot_update(get_mock_library_data, mock_tprek_data,
-#                                  requests_mock):
-#     test_file_name = 'test_import_kirjastot_data_simple.json'
-#     get_mock_library_data(test_file_name)
-
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
-
-#     # Change the imported data bounds (as will happen at change of month)
-#     # Ensure the periods are updated sensibly
-#     #test_file_name = 'test_import_kirjastot_data_changed.json'
-#     #get_mock_library_data(test_file_name)
-
-#     # Check daily opening hours again
-#     #check_all_opening_hours(test_file_name, kallio)
-#     assert False
+    assert second_week_thu.rules.all()[0].frequency_ordinal == 2

@@ -14,6 +14,7 @@ from .enums import State
 from .models import (
     DataSource,
     DatePeriod,
+    PeriodOrigin,
     Resource,
     ResourceOrigin,
     Rule,
@@ -227,6 +228,14 @@ class TimeSpanGroupSerializer(
         fields = "__all__"
 
 
+class PeriodOriginSerializer(serializers.ModelSerializer):
+    data_source = DataSourceSerializer()
+
+    class Meta:
+        model = PeriodOrigin
+        fields = ["data_source", "origin_id"]
+
+
 class DatePeriodSerializer(
     TranslationSerializerMixin,
     EnumSupportSerializerMixin,
@@ -235,6 +244,7 @@ class DatePeriodSerializer(
     time_span_groups = TimeSpanGroupSerializer(
         many=True, required=False, allow_null=True
     )
+    origins = PeriodOriginSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
         model = DatePeriod
@@ -247,6 +257,7 @@ class DatePeriodSerializer(
             "end_date",
             "resource_state",
             "override",
+            "origins",
             "created",
             "modified",
             "time_span_groups",

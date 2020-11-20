@@ -326,6 +326,8 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     override = models.BooleanField(
         verbose_name=_("Override"), default=False, db_index=True
     )
+    data_sources = models.ManyToManyField(DataSource, through="PeriodOrigin")
+    is_public = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = _("Period")
@@ -410,7 +412,30 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         return (self.end_date - self.start_date).days
 
 
-class TimeSpanGroup(models.Model):
+class PeriodOrigin(models.Model):
+    period = models.ForeignKey(
+        DatePeriod, related_name="origins", on_delete=models.CASCADE
+    )
+    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
+    origin_id = models.CharField(
+        verbose_name=_("Origin ID"), max_length=100, db_index=True
+    )
+
+    class Meta:
+        verbose_name = _("Period origin")
+        verbose_name_plural = _("Period origins")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["data_source", "origin_id"],
+                name="unique_period_identifier_per_data_source",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.data_source}:{self.origin_id}"
+
+
+class TimeSpanGroup(SoftDeletableModel, models.Model):
     period = models.ForeignKey(
         DatePeriod, on_delete=models.PROTECT, related_name="time_span_groups"
     )

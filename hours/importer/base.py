@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from collections.abc import Sized
+from itertools import zip_longest
 from typing import Callable, Hashable
 
 import requests
@@ -11,15 +12,7 @@ from django.db.models import Model
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
 
-from hours.models import (
-    DataSource,
-    DatePeriod,
-    Resource,
-    ResourceOrigin,
-    Rule,
-    TimeSpan,
-    TimeSpanGroup,
-)
+from hours.models import DataSource, DatePeriod, Resource, Rule, TimeSpan, TimeSpanGroup
 
 
 class Importer(object):
@@ -32,6 +25,7 @@ class Importer(object):
         # If resource_cache remains empty, new objects without foreign keys
         # will be created.
         self.resource_cache = {}
+        self.dateperiod_cache = {}
 
     def get_object_id(self, obj: Model) -> str:
         try:
@@ -170,7 +164,7 @@ class Importer(object):
     ) -> Model:
         """
         Takes the class and serialized data, creates and/or updates the Model
-        object and returns it unsaved for class-specific processing and saving.
+        object, saves and returns it saved for class-specific processing.
         """
         # look for existing object
         cache = getattr(self, "%s_cache" % klass.__name__.lower())
@@ -193,6 +187,42 @@ class Importer(object):
         self._update_fields(obj, data)
         self._set_field(obj, "is_removed", False)
         self._set_field(obj, "is_public", True)
+
+        # required fields are filled, so the object may be saved now
+        if obj._created:
+            obj.save()
+            self.logger.info("%s created" % obj)
+
+        # Update object origins only after the object has been saved
+        data_sources = {origin["data_source_id"] for origin in data.get("origins", [])}
+        for data_source in data_sources:
+            data_source, created = DataSource.objects.get_or_create(id=data_source)
+            if created:
+                self.logger.debug("Created missing data source %s" % data_source)
+        existing_origins = set(obj.origins.all())
+        data_origins = set(
+            [
+                klass.origins.field.model.objects.get_or_create(
+                    data_source_id=origin["data_source_id"],
+                    origin_id=origin["origin_id"],
+                    defaults={klass.origins.field.name: obj},
+                )[0]
+                for origin in data.get("origins", [])
+            ]
+        )
+        # Any existing origins referring to other objects must be updated
+        for origin in data_origins:
+            origin.resource = obj
+        for origin in data_origins.difference(existing_origins):
+            origin.save()
+            obj._changed = True
+            obj._changed_fields.append("origins")
+        for origin in existing_origins.difference(data_origins):
+            # Removing an extra origin is the only way origins may be deleted.
+            # Soft deleted objects will retain their old origins.
+            origin.delete()
+            obj._changed = True
+            obj._changed_fields.append("origins")
         return obj
 
     @db.transaction.atomic
@@ -203,7 +233,7 @@ class Importer(object):
     ) -> Resource:
         """
         Takes the serialized resource data, creates and/or updates the corresponding
-        Resource object, saves and returns it.
+        Resource object, and returns it.
 
         get_data_id can be used to match incoming data with existing objects. The
         default id function is the origin_id of the object in this data source. Object
@@ -215,9 +245,6 @@ class Importer(object):
             get_data_id = self.get_data_id
 
         obj = self._update_or_create_object(Resource, data, get_data_id)
-        if obj._created:
-            obj.save()
-            self.logger.info("%s created" % obj)
 
         # Update parents only after the resource has been created
         existing_parents = set(obj.parents.all())
@@ -231,37 +258,6 @@ class Importer(object):
             obj._changed = True
             obj._changed_fields.append("parents")
 
-        # Update related origins only after the resource has been created
-        data_sources = {origin["data_source_id"] for origin in data.get("origins", [])}
-        for data_source in data_sources:
-            data_source, created = DataSource.objects.get_or_create(id=data_source)
-            if created:
-                self.logger.debug("Created missing data source %s" % data_source)
-        existing_origins = set(obj.origins.all())
-        data_origins = set(
-            [
-                ResourceOrigin.objects.get_or_create(
-                    data_source_id=origin["data_source_id"],
-                    origin_id=origin["origin_id"],
-                    defaults={"resource": obj},
-                )[0]
-                for origin in data.get("origins", [])
-            ]
-        )
-        # Any existing origins referring to other resources must be updated
-        for origin in data_origins:
-            origin.resource = obj
-        for origin in data_origins.difference(existing_origins):
-            origin.save()
-            obj._changed = True
-            obj._changed_fields.append("origins")
-        for origin in existing_origins.difference(data_origins):
-            # Removing an extra origin is the only way origins may be deleted.
-            # Soft deleted resources will retain their old origins.
-            origin.delete()
-            obj._changed = True
-            obj._changed_fields.append("origins")
-
         if obj._changed:
             if not obj._created:
                 self.logger.info(
@@ -273,51 +269,93 @@ class Importer(object):
 
     @db.transaction.atomic
     def save_period(self, data: dict) -> DatePeriod:
-        """Takes the serialized period data and creates a DatePeriod
-
-        Will delete previously existing periods with the same name and dates.
+        """Takes the serialized period data, creates and/or updates the corresponding
+        DatePeriod object, and returns it.
         """
+        period = self._update_or_create_object(DatePeriod, data, self.get_data_id)
         try:
             time_span_groups_data = data.pop("time_span_groups")
         except KeyError:
             time_span_groups_data = []
 
-        resource = data["resource"]
-
-        # Delete existing date period and all time spans
-        # TODO: Update existing period instead of deleting all the previous ones
-        for period in DatePeriod.all_objects.filter(
-            resource=resource,
-            name=data["name"],
-            start_date=data["start_date"],
-            end_date=data["end_date"],
+        # if data didn't change, the time span groups will be in db order
+        existing_time_span_groups = period.time_span_groups.all()
+        for datum, existing_group in zip_longest(
+            time_span_groups_data, existing_time_span_groups, fillvalue=None
         ):
-            for tsg in TimeSpanGroup.objects.filter(period=period):
-                Rule.all_objects.filter(group=tsg).delete()
-                TimeSpan.all_objects.filter(group=tsg).delete()
-                tsg.delete()
+            if not datum:
+                existing_group.delete()
+                period._changed = True
+                period._changed_fields.append("time_span_groups")
+                continue
+            elif not existing_group:
+                time_span_group = TimeSpanGroup(period=period)
+                time_span_group.save()
+                period._changed = True
+                period._changed_fields.append("time_span_groups")
+                existing_time_spans = ()
+                existing_rules = ()
+            else:
+                time_span_group = existing_group
+                existing_time_spans = existing_group.time_spans.all()
+                existing_rules = existing_group.rules.all()
 
-            DatePeriod.all_objects.get(pk=period.id).delete()
+            # if data didn't change, the time spans will be in db order
+            for time_span_datum, existing_time_span in zip_longest(
+                datum["time_spans"], existing_time_spans, fillvalue=None
+            ):
+                if not time_span_datum:
+                    existing_time_span.delete()
+                    period._changed = True
+                    period._changed_fields.append("time_span_groups__time_span")
+                    continue
+                elif not existing_time_span:
+                    time_span_datum["group"] = time_span_group
+                    time_span = TimeSpan(**time_span_datum)
+                    time_span.save()
+                    period._changed = True
+                    period._changed_fields.append("time_span_groups__time_span")
+                else:
+                    time_span_datum["group"] = time_span_group
+                    existing_time_span._changed = False
+                    self._update_fields(existing_time_span, time_span_datum)
+                    if existing_time_span._changed:
+                        period._changed = True
+                        period._changed_fields.append("time_span_groups__time_span")
+                        existing_time_span.save()
 
-        # Add the period as new
-        date_period = DatePeriod(**data)
-        date_period.save()
+            # if data didn't change, the rules will be in db order
+            for rule_datum, existing_rule in zip_longest(
+                datum["rules"], existing_rules, fillvalue=None
+            ):
+                if not rule_datum:
+                    existing_rule.delete()
+                    period._changed = True
+                    period._changed_fields.append("time_span_groups__rule")
+                    continue
+                elif not existing_rule:
+                    rule_datum["group"] = time_span_group
+                    rule = Rule(**rule_datum)
+                    rule.save()
+                    period._changed = True
+                    period._changed_fields.append("time_span_groups__rule")
+                else:
+                    rule_datum["group"] = time_span_group
+                    existing_rule._changed = False
+                    self._update_fields(existing_rule, rule_datum)
+                    if existing_rule._changed:
+                        period._changed = True
+                        period._changed_fields.append("time_span_groups__rule")
+                        existing_rule.save()
 
-        for time_span_group_datum in time_span_groups_data:
-            time_span_group = TimeSpanGroup(period=date_period)
-            time_span_group.save()
+        if period._changed:
+            if not period._created:
+                self.logger.info(
+                    "%s changed: %s" % (period, ", ".join(period._changed_fields))
+                )
+            period.save()
 
-            for time_span_datum in time_span_group_datum["time_spans"]:
-                time_span_datum["group"] = time_span_group
-                time_span = TimeSpan(**time_span_datum)
-                time_span.save()
-
-            for rule_datum in time_span_group_datum["rules"]:
-                rule_datum["group"] = time_span_group
-                rule = Rule(**rule_datum)
-                rule.save()
-
-        return date_period
+        return period
 
 
 importers = {}

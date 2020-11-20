@@ -212,7 +212,7 @@ class Importer(object):
         )
         # Any existing origins referring to other objects must be updated
         for origin in data_origins:
-            origin.resource = obj
+            setattr(origin, klass.origins.field.name, obj)
         for origin in data_origins.difference(existing_origins):
             origin.save()
             obj._changed = True

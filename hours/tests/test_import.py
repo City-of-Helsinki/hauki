@@ -108,7 +108,7 @@ def mock_library_data(mock_tprek_data, requests_mock, request):
             origins__data_source="tprek", origins__origin_id=kallio_tprek_id
         )
         # Call the library importer for Kallio
-        date = "2020-06-15"
+        date = "2020-06-01"
         kallio_kirkanta_id = kallio.origins.get(data_source="kirkanta").origin_id
         url_to_mock = (
             "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
@@ -224,7 +224,7 @@ def mock_library_data(mock_tprek_data, requests_mock, request):
             print("made a change")
             print(change)
         if change == "next_month":
-            date = "2020-07-15"
+            date = "2020-07-01"
             url_to_mock = (
                 "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
                 "&refs=period&period.start=2020-07-01&period.end=2021-07-01"
@@ -247,7 +247,7 @@ def mock_library_data(mock_tprek_data, requests_mock, request):
         # opening hours to stay true to the original file even after July data
         # was added. Rotation of four weeks should exactly match original data.
         if change == "next_month":
-            date = "2020-06-15"
+            date = "2020-06-01"
             url_to_mock = (
                 "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
                 "&refs=period&period.start=2020-06-01&period.end=2021-06-01"

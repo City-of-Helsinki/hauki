@@ -113,8 +113,8 @@ class KirjastotImporter(Importer):
         if not start:
             start = timezone.now().date()
 
-        begin = (start - relativedelta(months=back)).replace(day=1)
-        end = (start + relativedelta(months=forward)).replace(day=1)
+        begin = start - relativedelta(months=back)
+        end = start + relativedelta(months=forward)
 
         return begin, end
 

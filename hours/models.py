@@ -751,3 +751,19 @@ class SignedAuthEntry(models.Model):
     class Meta:
         verbose_name = _("Signed auth entry")
         verbose_name_plural = _("Signed auth entries")
+
+
+class SignedAuthKey(models.Model):
+    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
+    signing_key = models.TextField(verbose_name=_("Signing key"))
+    valid_after = models.DateTimeField(verbose_name=_("Key valid after"))
+    valid_until = models.DateTimeField(
+        verbose_name=_("Key valid until"), null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = _("Signed auth key")
+        verbose_name_plural = _("Signed auth keys")
+
+    def __str__(self):
+        return f"SignedAuthKey {self.data_source.name}"

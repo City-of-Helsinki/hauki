@@ -3,12 +3,21 @@ import string
 
 import factory
 import pytest
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from faker import Factory as FakerFactory
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
-from hours.models import DataSource, DatePeriod, Resource, Rule, TimeSpan, TimeSpanGroup
+from hours.models import (
+    DataSource,
+    DatePeriod,
+    Resource,
+    Rule,
+    SignedAuthKey,
+    TimeSpan,
+    TimeSpanGroup,
+)
 from users.models import User
 
 faker = FakerFactory.create(locale="fi_FI")
@@ -83,3 +92,13 @@ class UserFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = User
+
+
+@register
+class SignedAuthKeyFactory(factory.django.DjangoModelFactory):
+    signing_key = factory.LazyAttribute(lambda x: faker.pystr(max_chars=40))
+    valid_after = factory.LazyAttribute(lambda x: timezone.now())
+    valid_until = None
+
+    class Meta:
+        model = SignedAuthKey

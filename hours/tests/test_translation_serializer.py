@@ -46,3 +46,32 @@ def test_to_internal_value(resource):
 
     assert saved_resource.id == resource.id
     assert saved_resource.name_fi == "Name fi"
+    assert saved_resource.name_en == "Name en"
+    assert saved_resource.name_sv is None
+
+
+@pytest.mark.django_db
+def test_to_internal_value_partial_update(resource_factory):
+    resource = resource_factory(
+        name_fi="Test name fi",
+        name_sv="Test name sv",
+        name_en="Test name en",
+    )
+
+    data = {
+        "id": resource.id,
+        "name": {"fi": "New name fi", "sv": None},
+    }
+
+    serializer = ResourceSerializer(instance=resource, data=data)
+
+    assert serializer.is_valid()
+
+    serializer.save()
+
+    saved_resource = Resource.objects.get(pk=resource.id)
+
+    assert saved_resource.id == resource.id
+    assert saved_resource.name_fi == "New name fi"
+    assert saved_resource.name_en == "Test name en"
+    assert saved_resource.name_sv is None

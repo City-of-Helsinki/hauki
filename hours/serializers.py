@@ -4,7 +4,6 @@ from drf_writable_nested import WritableNestedModelSerializer
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
-from modeltranslation.utils import get_language
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -52,8 +51,7 @@ class TranslationSerializerMixin:
         except NotRegistered:
             return super().to_internal_value(data)
 
-        current_language = get_language()
-
+        translated_values = {}
         for field_name in translation_options.fields.keys():
             if field_name not in data.keys():
                 continue
@@ -61,13 +59,20 @@ class TranslationSerializerMixin:
             if not isinstance(data.get(field_name), dict):
                 continue
 
+            field_values = data.get(field_name, {})
+
             for lang in mt_settings.AVAILABLE_LANGUAGES:
-                key = f"{field_name}_{lang}"
-                data[key] = data.get(field_name, {}).get(lang, None)
+                if lang not in field_values:
+                    continue
 
-            data[field_name] = data[f"{field_name}_{current_language}"]
+                translated_values[f"{field_name}_{lang}"] = field_values[lang]
 
-        return super().to_internal_value(data)
+            del data[field_name]
+
+        other_values = super().to_internal_value(data)
+        other_values.update(**translated_values)
+
+        return other_values
 
 
 class OrganizationSerializer(serializers.ModelSerializer):

@@ -88,7 +88,7 @@ class Command(BaseCommand):
             if options[imp_type]:
                 if not method:
                     raise CommandError(
-                        "Importer %s does not support importing %s" % (name, imp_type)
+                        "Importer %s does not support importing %s" % (module, imp_type)
                     )
             else:
                 if not options["all"]:

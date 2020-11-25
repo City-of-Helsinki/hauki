@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime, timedelta
 
 import pytest
 from django.core.management import call_command
@@ -15,30 +16,6 @@ from hours.models import (
     TimeSpan,
     TimeSpanGroup,
 )
-
-# from datetime import date, datetime, time
-
-
-# from hours.tests.utils import check_opening_hours
-
-
-# def parse_date(date: str) -> date:
-#     date = datetime.strptime(date, "%Y-%m-%d").date()
-#     return date
-
-
-# def parse_time(time: str) -> time:
-#     time = datetime.strptime(time, "%H:%M").time()
-#     return time
-
-
-# def check_opening_hours_from_file(test_file_name):
-#     # Check that all opening hours were saved
-#     test_data = []
-#     test_file_path = os.path.join(os.path.dirname(__file__), test_file_name)
-#     with open(test_file_path) as f:
-#         test_data = json.load(f)["data"]
-#     check_opening_hours(test_data)
 
 
 @pytest.fixture
@@ -119,9 +96,11 @@ def mock_tprek_data(requests_mock, request):
 
 @pytest.mark.django_db
 @pytest.fixture
-def get_mock_library_data(mock_tprek_data, requests_mock, request):
+def mock_library_data(mock_tprek_data, requests_mock, request):
     # We should have the same hours whether base period is endless or ends next year
-    endless = request.param
+    endless = request.param["endless"]
+    # The results should depend on possible changes done to period
+    change = request.param["change"]
 
     def _mock_library_data(test_file_name):
         kallio_tprek_id = 8215
@@ -129,6 +108,7 @@ def get_mock_library_data(mock_tprek_data, requests_mock, request):
             origins__data_source="tprek", origins__origin_id=kallio_tprek_id
         )
         # Call the library importer for Kallio
+        date = "2020-06-01"
         kallio_kirkanta_id = kallio.origins.get(data_source="kirkanta").origin_id
         url_to_mock = (
             "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
@@ -140,10 +120,12 @@ def get_mock_library_data(mock_tprek_data, requests_mock, request):
         )
         with open(test_file_path) as f:
             mock_data = json.load(f)
-            if endless:
-                first_period_id = next(iter(mock_data["refs"]["period"]))
-                mock_data["refs"]["period"][first_period_id]["validUntil"] = None
-            requests_mock.get(url_to_mock, text=json.dumps(mock_data))
+
+        period_ids = iter(mock_data["refs"]["period"])
+        base_period_id = next(period_ids)
+        if endless:
+            mock_data["refs"]["period"][base_period_id]["validUntil"] = None
+        requests_mock.get(url_to_mock, text=json.dumps(mock_data))
         call_command(
             "hours_import",
             "kirjastot",
@@ -151,20 +133,158 @@ def get_mock_library_data(mock_tprek_data, requests_mock, request):
             "--single",
             kallio_kirkanta_id,
             "--date",
-            "2020-06-15",
+            date,
+        )
+        if change == "next_month":
+            # When the month changes, the importer will by default import a new
+            # set of dates. Period bounds should not change, but dates will be
+            # partially new, old periods may disappear at the start and new periods may
+            # appear at the end. Existing periods should survive the process unscathed
+            # if new data holds no surprises and has the same weekly pattern. Past
+            # periods should stay in the database, while current and future ones may
+            # update.
+            for index, day in enumerate(mock_data["data"]["schedules"]):
+                # move the data forward exactly four weeks, so it starts in July
+                # but with the same rotation
+                mock_data["data"]["schedules"][index]["date"] = (
+                    (datetime.fromisoformat(day["date"]) + timedelta(weeks=4))
+                    .date()
+                    .strftime("%Y-%m-%d")
+                )
+        if change == "edit":
+            # Change Saturday opening in base period
+            for index, day in enumerate(mock_data["data"]["schedules"]):
+                weekday = datetime.fromisoformat(day["date"]).date().isoweekday()
+                if weekday == 6 and day["period"] == int(base_period_id):
+                    mock_data["data"]["schedules"][index]["times"] = [
+                        {"to": "15:00", "from": "11:00", "status": 2}
+                    ]
+        if change == "remove":
+            # Remove Saturday opening in base period
+            for index, day in enumerate(mock_data["data"]["schedules"]):
+                weekday = datetime.fromisoformat(day["date"]).date().isoweekday()
+                if weekday == 6 and day["period"] == int(base_period_id):
+                    mock_data["data"]["schedules"][index]["times"] = []
+                    mock_data["data"]["schedules"][index]["closed"] = True
+            # If exception period exists, remove it too
+            try:
+                midsummer_period_id = next(period_ids)
+                mock_data["refs"]["period"].pop(midsummer_period_id)
+                for index, day in enumerate(mock_data["data"]["schedules"]):
+                    weekday = datetime.fromisoformat(day["date"]).date().isoweekday()
+                    if day["period"] == int(midsummer_period_id):
+                        day_to_change = mock_data["data"]["schedules"][index]
+                        day_to_change["period"] = int(base_period_id)
+                        if weekday in {4, 5}:
+                            day_to_change["times"] = [
+                                {"to": "10:00", "from": "08:00", "status": 2},
+                                {"to": "20:00", "from": "10:00", "status": 1},
+                            ]
+                            day_to_change["closed"] = False
+                        if weekday in {6, 7}:
+                            day_to_change["times"] = []
+                            day_to_change["closed"] = True
+            except StopIteration:
+                pass
+        if change == "add":
+            # Add Sunday opening in base period
+            for index, day in enumerate(mock_data["data"]["schedules"]):
+                if datetime.fromisoformat(day["date"]).date().isoweekday() == 7 and day[
+                    "period"
+                ] == int(base_period_id):
+                    mock_data["data"]["schedules"][index]["times"] = [
+                        {"to": "16:00", "from": "10:00", "status": 1}
+                    ]
+                    mock_data["data"]["schedules"][index]["closed"] = False
+            # If exception period exists, add another exception
+            try:
+                midsummer_period_id = next(period_ids)
+                new_id = int(midsummer_period_id) + 1
+                mock_data["refs"]["period"][str(new_id)] = {
+                    "id": new_id,
+                    "library": 84860,
+                    "validFrom": "2020-06-23",
+                    "validUntil": "2020-06-23",
+                    "isException": True,
+                    "name": "Yllätyspäivä",
+                    "description": "Suddenly, we are closed",
+                }
+                for index, day in enumerate(mock_data["data"]["schedules"]):
+                    if day["date"] == "2020-06-23":
+                        mock_data["data"]["schedules"][index]["period"] = new_id
+                        mock_data["data"]["schedules"][index]["times"] = []
+                        mock_data["data"]["schedules"][index]["closed"] = True
+                        mock_data["data"]["schedules"][index]["info"] = "Yllätyspäivä"
+            except StopIteration:
+                pass
+
+        # TODO: should we test for periods edited mid-period so that old dates may
+        # hold old data, and only update periods based on current and future dates??
+        if change:
+            print("made a change")
+            print(change)
+        if change == "next_month":
+            date = "2020-07-01"
+            url_to_mock = (
+                "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+                "&refs=period&period.start=2020-07-01&period.end=2021-07-01"
+                % kallio_kirkanta_id
+            )
+
+        # Calling the import twice checks idempotency, even if no change was made
+        requests_mock.get(url_to_mock, text=json.dumps(mock_data))
+        call_command(
+            "hours_import",
+            "kirjastot",
+            "--openings",
+            "--single",
+            kallio_kirkanta_id,
+            "--date",
+            date,
         )
 
-    return _mock_library_data
+        # Finally, if we run the import for both June and July, we want the June
+        # opening hours to stay true to the original file even after July data
+        # was added. Rotation of four weeks should exactly match original data.
+        if change == "next_month":
+            date = "2020-06-01"
+            url_to_mock = (
+                "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+                "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
+                % kallio_kirkanta_id
+            )
+            test_file_path = os.path.join(
+                os.path.dirname(__file__), "fixtures", test_file_name
+            )
+            with open(test_file_path) as f:
+                mock_data = json.load(f)
+            requests_mock.get(url_to_mock, text=json.dumps(mock_data))
+            # Don't import June data again, just do the check
+            call_command(
+                "hours_import",
+                "kirjastot",
+                "--check",
+                "--single",
+                kallio_kirkanta_id,
+                "--date",
+                date,
+            )
+
+    return {
+        "testing_period_endless": endless,
+        "made_a_change": change,
+        "get_data": _mock_library_data,
+    }
 
 
-parameters = []
+tprek_parameters = []
 for merge in [False, True]:
     for change in [None, "edit", "remove", "add"]:
-        parameters.append({"merge": merge, "change": change})
+        tprek_parameters.append({"merge": merge, "change": change})
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("mock_tprek_data", parameters, indirect=True)
+@pytest.mark.parametrize("mock_tprek_data", tprek_parameters, indirect=True)
 def test_import_tprek(mock_tprek_data):
     # The results should depend on whether we merge identical connections
     # and whether we have changed the connections and rerun the import
@@ -347,45 +467,110 @@ def test_import_tprek(mock_tprek_data):
     )
 
 
+kirjastot_parameters = []
+for endless in [False, True]:
+    for change in [None, "next_month", "edit", "remove", "add"]:
+        kirjastot_parameters.append({"endless": endless, "change": change})
+
+
 @pytest.mark.django_db
-@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
-def test_import_kirjastot_simple(get_mock_library_data, mock_tprek_data):
+@pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
+def test_import_kirjastot_simple(mock_library_data, mock_tprek_data):
+    # The results should depend on possible changes in data between import runs
+    change = mock_library_data["made_a_change"]
+
     test_file_name = "test_import_kirjastot_data_simple.json"
-    get_mock_library_data(test_file_name)
+    mock_library_data["get_data"](test_file_name)
 
     # Check created objects
     assert DatePeriod.objects.count() == 1
-    assert TimeSpan.objects.count() == 5
+    expected_n_time_spans = 4 if change == "remove" or change == "add" else 5
+    assert TimeSpan.objects.count() == expected_n_time_spans
     assert TimeSpanGroup.objects.count() == 1
     # Simple data should have pattern repeating weekly
     assert Rule.objects.count() == 0
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
-def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
+@pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
+def test_import_kirjastot_pattern(mock_library_data, mock_tprek_data):
+    # The results should depend on possible changes in data between import runs
+    change = mock_library_data["made_a_change"]
+
     test_file_name = "test_import_kirjastot_data_pattern.json"
-    get_mock_library_data(test_file_name)
+    mock_library_data["get_data"](test_file_name)
 
     # Check created objects
-    assert DatePeriod.objects.count() == 5
-    assert TimeSpanGroup.objects.count() == 4
+    if change == "next_month":
+        expected_n_periods = 9
+    elif change == "remove":
+        expected_n_periods = 1
+    elif change == "add":
+        expected_n_periods = 6
+    else:
+        expected_n_periods = 5
+    assert DatePeriod.objects.count() == expected_n_periods
+
+    if change == "next_month":
+        expected_n_timespan_groups = 5
+    elif change == "remove":
+        expected_n_timespan_groups = 3
+        timespan_groups_of_removed_periods = 1
+        expected_n_timespan_groups += timespan_groups_of_removed_periods
+    else:
+        expected_n_timespan_groups = 4
+    assert TimeSpanGroup.objects.count() == expected_n_timespan_groups
     assert Rule.objects.count() == 2
     periods_by_start = DatePeriod.objects.order_by("start_date")
 
     # Data has overlapping periods
-    (
-        summer_period,
-        midsummer_pre_eve,
-        midsummer_eve,
-        midsummer_sat,
-        midsummer_sun,
-    ) = periods_by_start
+    if change == "next_month":
+        # we imported first June, then July, and both months had a copy of
+        # exception period. Summer period should stay the same
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+            midsummer_pre_eve_copy,
+            midsummer_eve_copy,
+            midsummer_sat_copy,
+            midsummer_sun_copy,
+        ) = periods_by_start
+        assert midsummer_pre_eve_copy.time_span_groups.count() == 1
+        assert midsummer_eve_copy.time_span_groups.count() == 0
+        assert midsummer_sat_copy.time_span_groups.count() == 0
+        assert midsummer_sun_copy.time_span_groups.count() == 0
+    elif change == "remove":
+        (summer_period,) = periods_by_start
+    elif change == "add":
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+            extra_exception,
+        ) = periods_by_start
+        assert midsummer_pre_eve.time_span_groups.count() == 1
+        assert midsummer_eve.time_span_groups.count() == 0
+        assert midsummer_sat.time_span_groups.count() == 0
+        assert midsummer_sun.time_span_groups.count() == 0
+        assert extra_exception.time_span_groups.count() == 0
+    else:
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+        ) = periods_by_start
+        assert midsummer_pre_eve.time_span_groups.count() == 1
+        assert midsummer_eve.time_span_groups.count() == 0
+        assert midsummer_sat.time_span_groups.count() == 0
+        assert midsummer_sun.time_span_groups.count() == 0
     assert summer_period.time_span_groups.count() == 3
-    assert midsummer_pre_eve.time_span_groups.count() == 1
-    assert midsummer_eve.time_span_groups.count() == 0
-    assert midsummer_sat.time_span_groups.count() == 0
-    assert midsummer_sun.time_span_groups.count() == 0
 
     # Data should have pattern repeating biweekly even with
     # missing days at start, end and middle
@@ -398,43 +583,95 @@ def test_import_kirjastot_pattern(get_mock_library_data, mock_tprek_data):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("get_mock_library_data", {False, True}, indirect=True)
-def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
+@pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
+def test_import_kirjastot_complex(mock_library_data, mock_tprek_data):
+    # The results should depend on possible changes in data between import runs
+    change = mock_library_data["made_a_change"]
+
     test_file_name = "test_import_kirjastot_data_complex.json"
-    get_mock_library_data(test_file_name)
+    mock_library_data["get_data"](test_file_name)
 
     # Check created objects
-    assert DatePeriod.objects.count() == 5
-    assert TimeSpanGroup.objects.count() == 11
-    assert Rule.objects.count() == 9
+    if change == "next_month":
+        expected_n_periods = 9
+    elif change == "remove":
+        expected_n_periods = 1
+    elif change == "add":
+        expected_n_periods = 6
+    else:
+        expected_n_periods = 5
+    assert DatePeriod.objects.count() == expected_n_periods
+
+    if change == "next_month":
+        expected_n_timespan_groups = 9
+    elif change == "remove":
+        expected_n_timespan_groups = 7
+        timespan_groups_of_removed_periods = 1
+        expected_n_timespan_groups += timespan_groups_of_removed_periods
+    else:
+        expected_n_timespan_groups = 8
+    assert TimeSpanGroup.objects.count() == expected_n_timespan_groups
+    assert Rule.objects.count() == 6
     periods_by_start = DatePeriod.objects.order_by("start_date")
 
     # Complex data has overlapping periods
-    (
-        summer_period,
-        midsummer_pre_eve,
-        midsummer_eve,
-        midsummer_sat,
-        midsummer_sun,
-    ) = periods_by_start
-    assert summer_period.time_span_groups.count() == 10
-    assert midsummer_pre_eve.time_span_groups.count() == 1
-    assert midsummer_eve.time_span_groups.count() == 0
-    assert midsummer_sat.time_span_groups.count() == 0
-    assert midsummer_sun.time_span_groups.count() == 0
+    if change == "next_month":
+        # we imported first June, then July, and both months had a copy of
+        # exception period. Summer period should stay the same
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+            midsummer_pre_eve_copy,
+            midsummer_eve_copy,
+            midsummer_sat_copy,
+            midsummer_sun_copy,
+        ) = periods_by_start
+        assert midsummer_pre_eve_copy.time_span_groups.count() == 1
+        assert midsummer_eve_copy.time_span_groups.count() == 0
+        assert midsummer_sat_copy.time_span_groups.count() == 0
+        assert midsummer_sun_copy.time_span_groups.count() == 0
+    elif change == "remove":
+        (summer_period,) = periods_by_start
+    elif change == "add":
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+            extra_exception,
+        ) = periods_by_start
+        assert midsummer_pre_eve.time_span_groups.count() == 1
+        assert midsummer_eve.time_span_groups.count() == 0
+        assert midsummer_sat.time_span_groups.count() == 0
+        assert midsummer_sun.time_span_groups.count() == 0
+        assert extra_exception.time_span_groups.count() == 0
+    else:
+        (
+            summer_period,
+            midsummer_pre_eve,
+            midsummer_eve,
+            midsummer_sat,
+            midsummer_sun,
+        ) = periods_by_start
+        assert midsummer_pre_eve.time_span_groups.count() == 1
+        assert midsummer_eve.time_span_groups.count() == 0
+        assert midsummer_sat.time_span_groups.count() == 0
+        assert midsummer_sun.time_span_groups.count() == 0
+    assert summer_period.time_span_groups.count() == 7
 
     # Complex data has different rules for different weekdays
     (
         weekends,
+        first_week_thu,
+        second_week_thu,
         first_week,
         second_week,
         third_week,
         fourth_week,
-        first_week_thu,
-        second_week_thu,
-        third_week_thu,
-        fourth_week_thu,
-        fifth_week_thu,
     ) = summer_period.time_span_groups.all()
     assert weekends.rules.count() == 0
     assert first_week.rules.all()[0].start == 1
@@ -446,31 +683,6 @@ def test_import_kirjastot_complex(get_mock_library_data, mock_tprek_data):
     assert fourth_week.rules.all()[0].start == 4
     assert fourth_week.rules.all()[0].frequency_ordinal == 4
     assert first_week_thu.rules.all()[0].start == 1
-    assert first_week_thu.rules.all()[0].frequency_ordinal == 5
+    assert first_week_thu.rules.all()[0].frequency_ordinal == 2
     assert second_week_thu.rules.all()[0].start == 2
-    assert second_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert third_week_thu.rules.all()[0].start == 3
-    assert third_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert fourth_week_thu.rules.all()[0].start == 4
-    assert fourth_week_thu.rules.all()[0].frequency_ordinal == 5
-    assert fifth_week_thu.rules.all()[0].start == 5
-    assert fifth_week_thu.rules.all()[0].frequency_ordinal == 5
-
-
-# @pytest.mark.django_db
-# def test_import_kirjastot_update(get_mock_library_data, mock_tprek_data,
-#                                  requests_mock):
-#     test_file_name = 'test_import_kirjastot_data_simple.json'
-#     get_mock_library_data(test_file_name)
-
-#     # Check daily opening hours
-#     check_opening_hours_from_file(test_file_name)
-
-#     # Change the imported data bounds (as will happen at change of month)
-#     # Ensure the periods are updated sensibly
-#     #test_file_name = 'test_import_kirjastot_data_changed.json'
-#     #get_mock_library_data(test_file_name)
-
-#     # Check daily opening hours again
-#     #check_all_opening_hours(test_file_name, kallio)
-#     assert False
+    assert second_week_thu.rules.all()[0].frequency_ordinal == 2

@@ -136,20 +136,37 @@ pre-commit run --all-files
 
 ## Importing data
 
-Currently, importing *targets* from Helsinki metropolitan area unit registry (TPREK) is supported. Import all targets from [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) by
+Currently, importing *resources* from Helsinki metropolitan area unit registry (TPREK) is supported. Import all resources from [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) by
 ```
-python manage.py hours_import tprek --targets
+python manage.py hours_import tprek --resources
+```
+
+This imports all TPREK units and some of their child resources that are expected to have opening hours. Identical child resources may be merged into a single child having multiple parents, as they most often will have the same opening hours. Merging identical child resources can be done by running the import instead with
+```
+python manage.py hours_import tprek --resources --merge
 ```
 
 ---
 
 *Opening hours* may be imported for any Finnish libraries from the [kirjastot.fi API](https://api.kirjastot.fi/).
 
-This requires that libraries already exist in the database (imported from TPREK or created by other means), with correct kirkanta ids in the `identifiers` field. The kirjastot.fi importer doesn't currently import any libraries into the database, but you may suggest a PR that imports all libraries as targets, if you wish to import libraries outside the Helsinki area from the kirjastot.fi API.
+This requires that libraries already exist in the database (imported from TPREK or created by other means), with correct kirkanta ids in the `identifiers` field. The kirjastot.fi importer doesn't currently import any libraries into the database, but you may suggest a PR that imports all libraries as resources, if you wish to import libraries outside the Helsinki area from the kirjastot.fi API.
 
-Import library opening hours from the kirjastot.fi API for all targets that have kirkanta identifiers by
+Import library opening hours from the kirjastot.fi API for all resources that have kirkanta identifiers by
 ```
 python manage.py hours_import kirjastot --openings
+```
+
+This imports opening hours for the libraries starting from today and ending one year in the future. If you wish to specify another start date, you may use 
+
+```
+python manage.py hours_import kirjastot --openings --date 2021-01-01
+```
+
+If you only wish to import opening hours for a single library, you may use its kirkanta id, e.g. for Kallion kirjasto
+
+```
+python manage.py hours_import kirjastot --openings --single 84860
 ```
 
 ---

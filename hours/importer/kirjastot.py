@@ -7,11 +7,19 @@ import holidays
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from django import db
+from django.db.models import Q
 from django.utils import timezone
 
 from ..enums import RuleContext, RuleSubject, State, Weekday
-from ..models import DataSource, Resource, TimeElement, combine_element_time_spans
+from ..models import (
+    DataSource,
+    DatePeriod,
+    Resource,
+    TimeElement,
+    combine_element_time_spans,
+)
 from .base import Importer, register_importer
+from .sync import ModelSyncher
 
 KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
 fi_holidays = holidays.Finland()
@@ -105,8 +113,8 @@ class KirjastotImporter(Importer):
         if not start:
             start = timezone.now().date()
 
-        begin = (start - relativedelta(months=back)).replace(day=1)
-        end = (start + relativedelta(months=forward)).replace(day=1)
+        begin = start - relativedelta(months=back)
+        end = start + relativedelta(months=forward)
 
         return begin, end
 
@@ -304,13 +312,20 @@ class KirjastotImporter(Importer):
                         time_spans.append(
                             {
                                 "group": None,
-                                "start_time": opening_time[0]
+                                "start_time": datetime.strptime(
+                                    opening_time[0], "%H:%M"
+                                ).time()
                                 if opening_time[0]
                                 else None,
-                                "end_time": opening_time[1]
+                                "end_time": datetime.strptime(
+                                    opening_time[1], "%H:%M"
+                                ).time()
                                 if opening_time[1]
                                 else None,
-                                "weekdays": [i["weekday"] for i in opening_times],
+                                "weekdays": [
+                                    Weekday.from_iso_weekday(i["weekday"])
+                                    for i in opening_times
+                                ],
                                 "resource_state": KIRKANTA_STATUS_MAP[status],
                                 "full_day": full_day,
                             }
@@ -338,27 +353,40 @@ class KirjastotImporter(Importer):
             return [
                 {
                     "resource": resource,
-                    "name": period.get("name"),
+                    "name": {"fi": period.get("name")},
                     "start_date": parse(period["validFrom"]).date(),
                     "end_date": parse(period["validUntil"]).date(),
                     "resource_state": State.CLOSED,
                     "override": True,
+                    "origins": [
+                        {
+                            "data_source_id": self.data_source.id,
+                            "origin_id": str(period["id"]),
+                        }
+                    ],
                 }
             ]
 
         periods = []
         for day in period["days"]:
-            period = {
+            name = day.get("info") if day.get("info") else fi_holidays.get(day["date"])
+            sub_period = {
                 "resource": resource,
-                "name": day.get("info"),
+                "name": {"fi": name},
                 "start_date": day["date"],
                 "end_date": day["date"],
                 "resource_state": State.UNDEFINED,
                 "override": True,
+                "origins": [
+                    {
+                        "data_source_id": self.data_source.id,
+                        "origin_id": str(period["id"]) + "-" + str(day["date"]),
+                    }
+                ],
             }
             if day["closed"]:
-                period["resource_state"] = State.CLOSED
-                periods.append(period)
+                sub_period["resource_state"] = State.CLOSED
+                periods.append(sub_period)
                 continue
 
             time_spans = []
@@ -366,19 +394,23 @@ class KirjastotImporter(Importer):
                 time_spans.append(
                     {
                         "group": None,
-                        "start_time": opening_time["from"],
-                        "end_time": opening_time["to"],
+                        "start_time": datetime.strptime(
+                            opening_time["from"], "%H:%M"
+                        ).time(),
+                        "end_time": datetime.strptime(
+                            opening_time["to"], "%H:%M"
+                        ).time(),
                         "resource_state": KIRKANTA_STATUS_MAP[opening_time["status"]],
-                        "name": day.get("info"),
+                        "name": {"fi": day.get("info")},
                     }
                 )
-            period["time_span_groups"] = [
+            sub_period["time_span_groups"] = [
                 {
                     "time_spans": time_spans,
                     "rules": [],
                 }
             ]
-            periods.append(period)
+            periods.append(sub_period)
 
         return periods
 
@@ -415,7 +447,7 @@ class KirjastotImporter(Importer):
             period_id_string = str(period_id)
             if period_id_string not in periods.keys():
                 self.logger.info(
-                    "Period {} not found in periods! Skipping days {}".format(
+                    "Period {} not found in periods! Ignoring data {}".format(
                         period_id_string, days
                     )
                 )
@@ -542,15 +574,35 @@ class KirjastotImporter(Importer):
             start=start_date, back=0
         )
 
+        queryset = (
+            DatePeriod.objects.filter(
+                origins__data_source=self.data_source, resource__in=libraries
+            )
+            .filter(Q(end_date=None) | Q(end_date__gte=import_start_date))
+            .prefetch_related("time_span_groups__time_spans")
+        )
+        self.dateperiod_cache.update(
+            {self.get_object_id(period): period for period in queryset}
+        )
+
+        syncher = ModelSyncher(
+            queryset,
+            self.get_object_id,
+            delete_func=self.mark_deleted,
+            check_deleted_func=self.check_deleted,
+        )
+
         for library in libraries:
-            has_fixed_periods = False
+            library._has_fixed_periods = False
             self.logger.info(
                 'Importing hours for "{}" id:{}...'.format(library.name, library.id)
             )
 
-            data = self.get_hours_from_api(library, import_start_date, import_end_date)
+            library._kirkanta_data = self.get_hours_from_api(
+                library, import_start_date, import_end_date
+            )
 
-            kirkanta_periods = self.get_kirkanta_periods(data)
+            kirkanta_periods = self.get_kirkanta_periods(library._kirkanta_data)
 
             periods = []
             for kirkanta_period in kirkanta_periods.values():
@@ -588,17 +640,26 @@ class KirjastotImporter(Importer):
                 override = False
                 if all([d.get("closed", True) for d in kirkanta_period["days"]]):
                     override = True
+                    state = State.CLOSED
+                else:
+                    state = State.UNDEFINED
 
                 if kirkanta_period["isException"]:
                     override = True
 
                 long_period = {
                     "resource": library,
-                    "name": kirkanta_period.get("name"),
+                    "name": {"fi": kirkanta_period.get("name")},
                     "start_date": valid_from,
                     "end_date": valid_until,
-                    "resource_state": State.UNDEFINED,
+                    "resource_state": state,
                     "override": override,
+                    "origins": [
+                        {
+                            "data_source_id": self.data_source.id,
+                            "origin_id": str(kirkanta_period["id"]),
+                        }
+                    ],
                     "time_span_groups": self.get_openings(
                         kirkanta_period["days"], period_start=valid_from
                     ),
@@ -608,23 +669,27 @@ class KirjastotImporter(Importer):
                     long_period["time_span_groups"] = KIRKANTA_FIXED_GROUPS[
                         kirkanta_period["id"]
                     ]
-                    has_fixed_periods = True
+                    library._has_fixed_periods = True
 
                 periods.append(long_period)
 
             for period_data in periods:
-                self.save_period(period_data)
+                period = self.save_period(period_data)
+                syncher.mark(period)
 
-            self.logger.info(
-                "Checking that the imported date periods match the data..."
-            )
-            if has_fixed_periods:
+        syncher.finish(force=self.options["force"])
+
+        for library in libraries:
+            if library._has_fixed_periods:
                 self.logger.info(
                     "Not checking because library has fixed periods in the importer."
                 )
             else:
+                self.logger.info(
+                    'Checking hours for "{}" id:{}...'.format(library.name, library.id)
+                )
                 self.check_library_data(
-                    library, data, import_start_date, import_end_date
+                    library, library._kirkanta_data, import_start_date, import_end_date
                 )
                 self.logger.info("Check OK.")
 

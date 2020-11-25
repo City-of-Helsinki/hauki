@@ -35,6 +35,7 @@ urlpatterns = [
         invalidate_hauki_auth_signature,
         name="invalidate_hauki_auth_signature",
     ),
+    path("", include("rest_framework.urls", namespace="rest_framework")),
     path("hauki_signed_auth_link_generator/", hauki_signed_auth_link_generator),
     path("", RedirectView.as_view(url="v1/")),
 ]

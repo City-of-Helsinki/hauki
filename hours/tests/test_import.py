@@ -183,9 +183,12 @@ def test_import_tprek(mock_tprek_data):
     else:
         expected_n_merged_resources = 16
     if not merge:
-        assert Resource.objects.count() == expected_n_resources
+        assert Resource.objects.filter(is_public=True).count() == expected_n_resources
     else:
-        assert Resource.objects.count() == expected_n_merged_resources
+        assert (
+            Resource.objects.filter(is_public=True).count()
+            == expected_n_merged_resources
+        )
     assert DataSource.objects.count() == 3
     assert Organization.objects.count() == 1
     external_origins = 4
@@ -236,16 +239,16 @@ def test_import_tprek(mock_tprek_data):
 
     # Check the right connections are under the right units
     subsections = Resource.objects.order_by("pk").filter(
-        resource_type=ResourceType.SUBSECTION
+        resource_type=ResourceType.SUBSECTION, is_public=True
     )
     contacts = Resource.objects.order_by("pk").filter(
-        resource_type=ResourceType.CONTACT
+        resource_type=ResourceType.CONTACT, is_public=True
     )
     online_services = Resource.objects.order_by("pk").filter(
-        resource_type=ResourceType.ONLINE_SERVICE
+        resource_type=ResourceType.ONLINE_SERVICE, is_public=True
     )
     entrances = Resource.objects.order_by("pk").filter(
-        resource_type=ResourceType.ENTRANCE
+        resource_type=ResourceType.ENTRANCE, is_public=True
     )
 
     # Check subsections
@@ -302,7 +305,7 @@ def test_import_tprek(mock_tprek_data):
         contacts_expected_in_oodi = {reservations2, directoroodi}
 
     assert contacts_expected_in_kallio == set(
-        kallio.children.filter(resource_type=ResourceType.CONTACT)
+        kallio.children.filter(resource_type=ResourceType.CONTACT, is_public=True)
     )
     assert contacts_expected_in_oodi == set(
         oodi.children.filter(resource_type=ResourceType.CONTACT)

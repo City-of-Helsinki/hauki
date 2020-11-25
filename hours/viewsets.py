@@ -8,12 +8,16 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
 from .models import DatePeriod, Resource, Rule, TimeSpan
-from .permissions import IsMemberOrAdminOfOrganization, ReadOnly
+from .permissions import (
+    IsMemberOrAdminOfOrganization,
+    ReadOnlyPublic,
+    filter_queryset_by_permission,
+)
 from .serializers import (
     DailyOpeningHoursSerializer,
     DatePeriodSerializer,
@@ -109,13 +113,18 @@ class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
     serializer_class = ResourceSerializer
-    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+    permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     pagination_class = ResourcePageNumberPagination
 
     def get_queryset(self):
-        return Resource.objects.prefetch_related(
+        queryset = Resource.objects.prefetch_related(
             "origins", "children", "parents", "origins__data_source"
         ).order_by("id")
+        # Object permissions are not checked in listings, so we have
+        # to filter the queryset according to permissions.
+        if self.request.method in SAFE_METHODS:
+            queryset = filter_queryset_by_permission(self.request, queryset)
+        return queryset
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
@@ -186,7 +195,7 @@ class DatePeriodViewSet(
         "time_span_groups", "time_span_groups__time_spans", "time_span_groups__rules"
     ).order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
-    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+    permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
 
 
@@ -199,7 +208,7 @@ class RuleViewSet(
         .order_by("group__period__start_date", "group__period__end_date")
     )
     serializer_class = RuleSerializer
-    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+    permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -214,7 +223,7 @@ class TimeSpanViewSet(
     queryset = TimeSpan.objects.all()
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter
-    permission_classes = [ReadOnly | IsMemberOrAdminOfOrganization]
+    permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
 
     def get_serializer_class(self):
         if self.action == "create":

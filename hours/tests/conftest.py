@@ -34,6 +34,7 @@ class DataSourceFactory(factory.django.DjangoModelFactory):
 class ResourceFactory(factory.django.DjangoModelFactory):
     name = factory.LazyAttribute(lambda x: faker.company())
     address = factory.LazyAttribute(lambda x: faker.address())
+    is_public = True
 
     class Meta:
         model = Resource

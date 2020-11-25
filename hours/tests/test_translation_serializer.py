@@ -7,8 +7,7 @@ from hours.serializers import ResourceSerializer
 @pytest.mark.django_db
 def test_to_representation(resource):
     serializer = ResourceSerializer(resource)
-
-    assert serializer.data == {
+    expected_data = {
         "address": {"en": None, "fi": resource.address_fi, "sv": None},
         "description": {"en": None, "fi": None, "sv": None},
         "extra_data": None,
@@ -20,7 +19,10 @@ def test_to_representation(resource):
         "children": [],
         "resource_type": "unit",
         "origins": [],
+        "is_public": True,
     }
+
+    assert serializer.data == expected_data
 
 
 @pytest.mark.django_db
@@ -34,6 +36,7 @@ def test_to_internal_value(resource):
         "name": {"en": "Name en", "fi": "Name fi", "sv": None},
         "organization": None,
         "resource_type": "unit",
+        "is_public": False,
     }
 
     serializer = ResourceSerializer(instance=resource, data=data)
@@ -46,3 +49,4 @@ def test_to_internal_value(resource):
 
     assert saved_resource.id == resource.id
     assert saved_resource.name_fi == "Name fi"
+    assert not saved_resource.is_public

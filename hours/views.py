@@ -20,7 +20,8 @@ from .authentication import (
     join_params,
     validate_params_and_signature,
 )
-from .models import Resource, SignedAuthEntry
+from .models import DataSource, Resource, SignedAuthEntry, SignedAuthKey
+from .utils import get_resource_pk_filter
 
 
 @api_view(http_method_names=["POST"])
@@ -44,11 +45,48 @@ def invalidate_hauki_auth_signature(request):
 
 # TODO: This is a temporary demonstration. Remove before production deployment.
 class HaukiSignedAuthGeneratorForm(forms.Form):
-    username = forms.CharField(label="User name", max_length=100)
-    resource = forms.ModelChoiceField(queryset=Resource.objects.all(), required=False)
-    organization = forms.ModelChoiceField(
-        queryset=Organization.objects.all(), required=False
+    username = forms.CharField(label="User name (*)", max_length=100)
+    data_source = forms.ModelChoiceField(queryset=DataSource.objects.all())
+    resource = forms.CharField(label="Resource id", required=False)
+    organization = forms.CharField(label="Organization id", required=False)
+    valid_minutes = forms.ChoiceField(
+        label="Valid for",
+        choices=(
+            (10, "10 minutes"),
+            (30, "30 minutes"),
+            (60, "60 minutes"),
+            (60 * 24, "24 hours"),
+            (60 * 24 * 7, "a week"),
+        ),
     )
+
+    def clean_data_source(self):
+        try:
+            SignedAuthKey.objects.get(data_source=self.cleaned_data["data_source"])
+
+            return self.cleaned_data["data_source"]
+        except SignedAuthKey.DoesNotExist:
+            raise forms.ValidationError(_("No signing key for selected data " "source"))
+
+    def clean_resource(self):
+        if not self.cleaned_data.get("resource"):
+            return None
+
+        try:
+            return Resource.objects.get(
+                **get_resource_pk_filter(self.cleaned_data.get("resource"))
+            )
+        except (ValueError, Resource.DoesNotExist):
+            raise forms.ValidationError("Unknown resource")
+
+    def clean_organization(self):
+        if not self.cleaned_data.get("organization"):
+            return None
+
+        try:
+            return Organization.objects.get(pk=self.cleaned_data.get("organization"))
+        except (ValueError, Organization.DoesNotExist):
+            raise forms.ValidationError("Unknown organization")
 
 
 def hauki_signed_auth_link_generator(request):
@@ -64,10 +102,19 @@ def hauki_signed_auth_link_generator(request):
         form = HaukiSignedAuthGeneratorForm(request.POST)
         if form.is_valid():
             params = {
+                "source": form.cleaned_data["data_source"].id,
                 "username": form.cleaned_data["username"],
                 "created_at": now.isoformat() + "Z",
-                "valid_until": (now + datetime.timedelta(minutes=60)).isoformat() + "Z",
+                "valid_until": (
+                    now
+                    + datetime.timedelta(
+                        minutes=int(form.cleaned_data["valid_minutes"])
+                    )
+                ).isoformat()
+                + "Z",
             }
+
+            print(form.cleaned_data)
 
             if form.cleaned_data["resource"]:
                 resource = form.cleaned_data["resource"]
@@ -83,8 +130,19 @@ def hauki_signed_auth_link_generator(request):
             if form.cleaned_data["organization"]:
                 params["organization"] = form.cleaned_data["organization"].id
 
+            try:
+                signed_auth_key = SignedAuthKey.objects.get(
+                    data_source=form.cleaned_data["data_source"]
+                )
+            except SignedAuthKey.DoesNotExist:
+                raise forms.ValidationError(
+                    _("No signing key for selected data " "source")
+                )
+
             data_string = join_params(params)
-            calculated_signature = calculate_signature(data_string)
+            calculated_signature = calculate_signature(
+                signed_auth_key.signing_key, data_string
+            )
 
             params["signature"] = calculated_signature
             context["link"] = client_base_url + "?" + urlencode(params)

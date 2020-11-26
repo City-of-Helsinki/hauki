@@ -9,6 +9,7 @@ from .models import (
     Resource,
     ResourceOrigin,
     Rule,
+    SignedAuthKey,
     TimeSpan,
     TimeSpanGroup,
 )
@@ -123,7 +124,24 @@ class DatePeriodAdmin(HaukiModelAdmin):
     raw_id_fields = ("resource",)
 
 
+class SignedAuthKeyAdmin(admin.ModelAdmin):
+    search_fields = ("data_source__name",)
+    list_display = (
+        "get_data_source_name",
+        "valid_after",
+        "valid_until",
+    )
+    list_filter = ("valid_after", "valid_until")
+    ordering = ("valid_after", "valid_until")
+
+    def get_data_source_name(self, obj):
+        return obj.data_source.name
+
+    get_data_source_name.short_description = _("Data source name")
+
+
 admin.site.register(DataSource, DataSourceAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(DatePeriod, DatePeriodAdmin)
 admin.site.register(TimeSpanGroup, TimeSpanGroupAdmin)
+admin.site.register(SignedAuthKey, SignedAuthKeyAdmin)

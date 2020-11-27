@@ -1,5 +1,3 @@
-from functools import reduce
-
 from helusers.models import AbstractUser
 
 
@@ -20,10 +18,12 @@ class User(AbstractUser):
         ):
             return set()
         # regular users have rights to all organizations below their level
-        orgs = []
+        orgs = set()
         for org in self.admin_organizations.all():
-            orgs.append(org.get_descendants(include_self=True))
+            if org not in orgs:
+                orgs.update(org.get_descendants(include_self=True))
         for org in self.organization_memberships.all():
-            orgs.append(org.get_descendants(include_self=True))
+            if org not in orgs:
+                orgs.update(org.get_descendants(include_self=True))
         # for multiple orgs, we have to combine the querysets
-        return set(reduce(lambda a, b: a | b, orgs))
+        return orgs

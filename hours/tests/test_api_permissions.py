@@ -2,20 +2,180 @@ import json
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
+from django.http import HttpRequest
 from django.urls import reverse
+from rest_framework.request import Request
 
-from hours.models import (
-    DatePeriod,
-    Resource,
-    Rule,
-    TimeSpan,
-    _get_all_parent_organizations,
-)
+from hours.models import DatePeriod, Resource, Rule, TimeSpan
+from hours.permissions import filter_queryset_by_permission
 
 
 #
 # Resource
 #
+@pytest.mark.django_db
+def test_get_public_resource_anonymous(resource, api_client):
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_non_public_resource_anonymous(resource, api_client):
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_child_of_non_public_resource_anonymous(
+    resource, resource_factory, api_client
+):
+    child_resource = resource_factory(name="Test name")
+    child_resource.parents.add(resource)
+    url = reverse("resource-detail", kwargs={"pk": child_resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_non_public_resource_authenticated_no_org(resource, user, api_client):
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_non_public_resource_authenticated_has_org(
+    organization_factory, data_source, resource, user, api_client
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+    resource.organization = organization
+    resource.save()
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_non_public_resource_authenticated_parent_org(
+    organization_factory, data_source, resource, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization1.regular_users.add(user)
+    organization2.parent = organization1
+    organization2.save()
+    api_client.force_authenticate(user=user)
+    resource.organization = organization2
+    resource.save()
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource__is_public", [False])
+def test_get_non_public_resource_authenticated_different_org(
+    organization_factory, data_source, resource, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization1.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+    resource.organization = organization2
+    resource.save()
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
 @pytest.mark.django_db
 def test_create_resource_anonymous(api_client):
     url = reverse("resource-list")
@@ -70,6 +230,44 @@ def test_create_resource_authenticated_has_org(
     data = {
         "name": "Test name",
         "organization": organization.id,
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_create_resource_authenticated_parent_org(
+    organization_factory, data_source, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization2.parent = organization1
+    organization2.save()
+    organization1.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization2.id,
     }
 
     response = api_client.post(
@@ -159,7 +357,7 @@ def test_create_child_resource_authenticated(
 
 
 @pytest.mark.django_db
-def test_create_child_resource_authenticated_parent_different_org(
+def test_create_child_resource_authenticated_parent_has_different_org(
     resource, organization_factory, data_source, user, api_client
 ):
     organization1 = organization_factory(
@@ -292,8 +490,195 @@ def test_update_resource_authenticated_has_org_permission(
 
 
 @pytest.mark.django_db
-def test_get_all_parent_organizations(
-    resource_factory, data_source, organization_factory
+def test_update_resource_authenticated_has_parent_org_permission(
+    resource, data_source, organization_factory, user, api_client
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization",
+    )
+    organization.parent = organization2
+    organization.save()
+    organization2.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert resource.name == "New name"
+
+
+@pytest.mark.django_db
+def test_update_child_resource_authenticated_parent_has_different_org(
+    resource, resource_factory, organization_factory, data_source, user, api_client
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization1
+    resource.save()
+
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    sub_resource = resource_factory(name="Test resource", organization=organization2)
+    sub_resource.parents.add(resource)
+
+    organization2.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": sub_resource.id})
+
+    data = {
+        "parents": [],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_filter_queryset_by_read_permission(
+    resource_factory, data_source, organization_factory, user
+):
+    #         resource A
+    #         org 1
+    #         public
+    #             |
+    #      +------+------+
+    #      |             |
+    # resource B     resource C
+    # org 2          org 3
+    # public         non-public
+    #      |             |
+    #      +------+------+
+    #             |
+    #         resource D
+    #         org 4
+    #         non-public
+
+    org1 = organization_factory(
+        origin_id=1,
+        data_source=data_source,
+        name="Org 1",
+    )
+    org2 = organization_factory(
+        origin_id=2,
+        data_source=data_source,
+        name="Org 2",
+    )
+    org3 = organization_factory(
+        origin_id=3,
+        data_source=data_source,
+        name="Org 3",
+    )
+    org4 = organization_factory(
+        origin_id=4,
+        data_source=data_source,
+        name="Org 4",
+    )
+
+    resource_a = resource_factory(name="Resource A", organization=org1)
+    resource_b = resource_factory(name="Resource B", organization=org2)
+    resource_b.parents.add(resource_a)
+    resource_c = resource_factory(name="Resource C", organization=org3, is_public=False)
+    resource_c.parents.add(resource_a)
+    resource_d = resource_factory(name="Resource D", organization=org4, is_public=False)
+    resource_d.parents.add(resource_b)
+    resource_d.parents.add(resource_c)
+
+    queryset = Resource.objects.all()
+    request = Request(HttpRequest())
+    request.method = "GET"
+    request.user = user
+
+    # non-organization user only sees public resources
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+    }
+
+    # org4 user doesn't see org4 resource_d, because he doesn't belong
+    # to parent org3 or org2
+    org4.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+    }
+    org4.regular_users.remove(user)
+
+    # org4 resource_d is visible if user belongs to org2 or org3
+    org3.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+        resource_d,
+    }
+    org3.regular_users.remove(user)
+    org2.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+        resource_d,
+    }
+    org2.regular_users.remove(user)
+
+    # all resources are only visible if user belongs to org1
+    org1.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 4
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+        resource_c,
+        resource_d,
+    }
+
+
+@pytest.mark.django_db
+def test_filter_queryset_by_write_permission(
+    resource_factory, data_source, organization_factory, user
 ):
     #         resource A
     #         org 1
@@ -307,6 +692,7 @@ def test_get_all_parent_organizations(
     #             |
     #         resource D
     #         org 4
+
     org1 = organization_factory(
         origin_id=1,
         data_source=data_source,
@@ -337,7 +723,50 @@ def test_get_all_parent_organizations(
     resource_d.parents.add(resource_b)
     resource_d.parents.add(resource_c)
 
-    assert _get_all_parent_organizations(resource_d) == {org1, org2, org3}
+    queryset = Resource.objects.all()
+    request = Request(HttpRequest())
+    request.method = "POST"
+    request.user = user
+
+    # non-organization user has no write permissions
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 0
+    assert set(filtered) == set()
+
+    # org4 user cannot edit org4 resource_d, because he doesn't belong
+    # to parent org3 or org2
+    org4.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 0
+    assert set(filtered) == set()
+    org4.regular_users.remove(user)
+
+    # org4 resource_d is editable if user belongs to org2 or org3
+    org3.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 1
+    assert set(filtered) == {
+        resource_d,
+    }
+    org3.regular_users.remove(user)
+    org2.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 1
+    assert set(filtered) == {
+        resource_d,
+    }
+    org2.regular_users.remove(user)
+
+    # all resources are editable if user belongs to org1
+    org1.regular_users.add(user)
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 4
+    assert set(filtered) == {
+        resource_a,
+        resource_b,
+        resource_c,
+        resource_d,
+    }
 
 
 #

@@ -48,13 +48,24 @@ class TPRekImporter(Importer):
             "unit": Resource.objects.filter(
                 origins__data_source=self.data_source,
                 resource_type=ResourceType.UNIT,
+                is_public=True,
             ),
             "connection": Resource.objects.filter(
                 origins__data_source=self.data_source,
                 resource_type__in=set(CONNECTION_TYPE_MAPPING.values())
                 | set((ResourceType.SUBSECTION,)),
+                is_public=True,
             ),
         }
+
+    @staticmethod
+    def mark_non_public(obj: Resource) -> bool:
+        obj.is_public = False
+        obj.save()
+
+    @staticmethod
+    def check_non_public(obj: Resource) -> bool:
+        return not obj.is_public
 
     def get_unit_origins(self, data: dict) -> list:
         """
@@ -272,8 +283,8 @@ class TPRekImporter(Importer):
         syncher = ModelSyncher(
             queryset,
             get_object_id,
-            delete_func=self.mark_deleted,
-            check_deleted_func=self.check_deleted,
+            delete_func=self.mark_non_public,
+            check_deleted_func=self.check_non_public,
         )
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
         obj_dict = {}

@@ -132,6 +132,7 @@ class ResourceSerializer(
             "origins",
             "last_modified_by",
             "extra_data",
+            "is_public",
         ]
 
         read_only_fields = ["last_modified_by"]

@@ -1,11 +1,16 @@
+import datetime
 from operator import itemgetter
+from typing import Tuple
 
+from django.db.models import Exists, OuterRef
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.filters import BaseFilterBackend
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +23,7 @@ from .serializers import (
     DailyOpeningHoursSerializer,
     DatePeriodSerializer,
     OrganizationSerializer,
+    ResourceDailyOpeningHoursSerializer,
     ResourceSerializer,
     RuleCreateSerializer,
     RuleSerializer,
@@ -105,6 +111,32 @@ class ResourcePageNumberPagination(PageNumberPagination):
     page_size_query_param = "page_size"
 
 
+def get_start_and_end_from_params(request) -> Tuple[datetime.date, datetime.date]:
+    if not request.query_params.get("start_date") or not request.query_params.get(
+        "end_date"
+    ):
+        raise APIException("start_date and end_date GET parameters are required")
+
+    try:
+        start_date = parse_maybe_relative_date_string(
+            request.query_params.get("start_date", "")
+        )
+    except ValueError:
+        raise APIException("Invalid start_date")
+
+    try:
+        end_date = parse_maybe_relative_date_string(
+            request.query_params.get("end_date", ""), end_date=True
+        )
+    except ValueError:
+        raise APIException("Invalid end_date")
+
+    if start_date > end_date:
+        raise APIException("start_date must be before end_date")
+
+    return start_date, end_date
+
+
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
@@ -135,32 +167,9 @@ class ResourceViewSet(
 
     @action(detail=True)
     def opening_hours(self, request, pk=None):
-        try:
-            resource = Resource.objects.get(**get_resource_pk_filter(pk))
-        except Resource.DoesNotExist:
-            raise APIException("Resource does not exist")
+        resource = self.get_object()
 
-        if not request.query_params.get("start_date") or not request.query_params.get(
-            "end_date"
-        ):
-            raise APIException("start_date and end_date GET parameters are required")
-
-        try:
-            start_date = parse_maybe_relative_date_string(
-                request.query_params.get("start_date", "")
-            )
-        except ValueError:
-            raise APIException("Invalid start_date")
-
-        try:
-            end_date = parse_maybe_relative_date_string(
-                request.query_params.get("end_date", ""), end_date=True
-            )
-        except ValueError:
-            raise APIException("Invalid end_date")
-
-        if start_date > end_date:
-            raise APIException("start_date must be before end_date")
+        (start_date, end_date) = get_start_and_end_from_params(request)
 
         opening_hours = resource.get_daily_opening_hours(start_date, end_date)
 
@@ -248,3 +257,62 @@ class AuthRequiredTestView(viewsets.ViewSet):
                 "organization_ids": organization_ids,
             }
         )
+
+
+class OpeningHoursFilterBackend(BaseFilterBackend):
+    def filter_queryset(self, request, queryset, view):
+        data_source = request.query_params.get("data_source", None)
+
+        if data_source is not None:
+            queryset = queryset.filter(origins__data_source=data_source)
+
+        return queryset
+
+
+class OpeningHoursView(viewsets.GenericViewSet):
+    filter_backends = (DjangoFilterBackend, OpeningHoursFilterBackend)
+    serializer_class = ResourceDailyOpeningHoursSerializer
+
+    def get_queryset(self):
+        # TODO: is_public check
+        return Resource.objects.filter(
+            # Query only resources that have date periods
+            Exists(DatePeriod.objects.filter(resource=OuterRef("pk")))
+        ).prefetch_related(
+            "origins",
+            "origins__data_source",
+            "date_periods",
+            "date_periods__time_span_groups",
+            "date_periods__time_span_groups__time_spans",
+            "date_periods__time_span_groups__rules",
+        )
+
+    def list(self, request, *args, **kwargs):
+        # TODO: Maybe disallow listing all of the resources and require
+        #       data_source or possibly some other filter.
+        queryset = self.filter_queryset(self.get_queryset())
+
+        (start_date, end_date) = get_start_and_end_from_params(request)
+
+        results = []
+        for resource in queryset.all():
+            processed_opening_hours = resource.get_daily_opening_hours(
+                start_date, end_date
+            )
+
+            opening_hours_list = []
+            for the_date, time_elements in processed_opening_hours.items():
+                opening_hours_list.append(
+                    {
+                        "date": the_date,
+                        "times": time_elements,
+                    }
+                )
+
+            opening_hours_list.sort(key=itemgetter("date"))
+
+            results.append({"resource": resource, "opening_hours": opening_hours_list})
+
+        serializer = self.get_serializer(results, many=True)
+
+        return Response(serializer.data)

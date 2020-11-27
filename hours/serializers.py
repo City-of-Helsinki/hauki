@@ -165,6 +165,20 @@ class ResourceSerializer(
         return result
 
 
+class ResourceSimpleSerializer(
+    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+):
+    origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
+
+    class Meta:
+        model = Resource
+        fields = [
+            "id",
+            "name",
+            "origins",
+        ]
+
+
 class TimeSpanCreateSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
@@ -287,3 +301,9 @@ class TimeElementSerializer(serializers.Serializer):
 class DailyOpeningHoursSerializer(serializers.Serializer):
     date = serializers.DateField()
     times = TimeElementSerializer(many=True)
+
+
+class ResourceDailyOpeningHoursSerializer(serializers.Serializer):
+    origin_id = serializers.CharField(required=False)
+    resource = ResourceSimpleSerializer()
+    opening_hours = DailyOpeningHoursSerializer(many=True)

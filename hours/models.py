@@ -10,7 +10,6 @@ from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from enumfields import EnumField, EnumIntegerField
@@ -245,18 +244,21 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         self.last_modified_by = value
 
     def get_daily_opening_hours(self, start_date, end_date):
-        periods = self.date_periods.filter(
-            Q(
-                Q(Q(end_date=None) | Q(end_date__gte=start_date))
-                & Q(Q(start_date=None) | Q(start_date__lte=end_date))
-            )
-        )
-
         # TODO: This is just an MVP. Things yet to do:
         #       - Support full_day
 
         all_daily_opening_hours = defaultdict(list)
-        for period in periods:
+
+        # We can't filter the date_periods queryset here because we
+        # want to allow the callers to use prefetch_related.
+        for period in self.date_periods.all():
+            # Filter the dates in code instead
+            if period.start_date is not None and period.start_date > end_date:
+                continue
+
+            if period.end_date is not None and period.end_date < start_date:
+                continue
+
             period_daily_opening_hours = period.get_daily_opening_hours(
                 start_date, end_date
             )

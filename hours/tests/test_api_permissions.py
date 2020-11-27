@@ -626,7 +626,9 @@ def test_filter_queryset_by_read_permission(
     request.user = user
 
     # non-organization user only sees public resources
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
         resource_a,
         resource_b,
     }
@@ -634,7 +636,9 @@ def test_filter_queryset_by_read_permission(
     # org4 user doesn't see org4 resource_d, because he doesn't belong
     # to parent org3 or org2
     org4.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
         resource_a,
         resource_b,
     }
@@ -642,14 +646,18 @@ def test_filter_queryset_by_read_permission(
 
     # org4 resource_d is visible if user belongs to org2 or org3
     org3.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
         resource_a,
         resource_b,
         resource_d,
     }
     org3.regular_users.remove(user)
     org2.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
         resource_a,
         resource_b,
         resource_d,
@@ -658,7 +666,9 @@ def test_filter_queryset_by_read_permission(
 
     # all resources are only visible if user belongs to org1
     org1.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 4
+    assert set(filtered) == {
         resource_a,
         resource_b,
         resource_c,
@@ -719,29 +729,39 @@ def test_filter_queryset_by_write_permission(
     request.user = user
 
     # non-organization user has no write permissions
-    assert set(filter_queryset_by_permission(request, queryset)) == set()
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 0
+    assert set(filtered) == set()
 
     # org4 user cannot edit org4 resource_d, because he doesn't belong
     # to parent org3 or org2
     org4.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == set()
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 0
+    assert set(filtered) == set()
     org4.regular_users.remove(user)
 
     # org4 resource_d is editable if user belongs to org2 or org3
     org3.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 1
+    assert set(filtered) == {
         resource_d,
     }
     org3.regular_users.remove(user)
     org2.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 1
+    assert set(filtered) == {
         resource_d,
     }
     org2.regular_users.remove(user)
 
     # all resources are editable if user belongs to org1
     org1.regular_users.add(user)
-    assert set(filter_queryset_by_permission(request, queryset)) == {
+    filtered = filter_queryset_by_permission(request, queryset)
+    assert len(filtered) == 4
+    assert set(filtered) == {
         resource_a,
         resource_b,
         resource_c,

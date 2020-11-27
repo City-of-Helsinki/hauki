@@ -37,7 +37,9 @@ def filter_queryset_by_permission(request, queryset):
         )
         path_to_resource = "group__period__resource__"
     else:
-        raise Exception("Permissions not defined for model %s" % queryset.model)
+        raise NotImplementedError(
+            "Permissions not defined for model {0}".format(queryset.model)
+        )
 
     # if a resource has no parents, publicity and organization check is easy
     is_public = Q(**{path_to_resource + "is_public": True})

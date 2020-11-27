@@ -13,6 +13,7 @@ from hours.models import (
     DataSource,
     DatePeriod,
     Resource,
+    ResourceOrigin,
     Rule,
     SignedAuthKey,
     TimeSpan,
@@ -47,6 +48,14 @@ class ResourceFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Resource
+
+
+@register
+class ResourceOriginFactory(factory.django.DjangoModelFactory):
+    origin_id = factory.LazyAttribute(lambda x: "OID-" + faker.pystr())
+
+    class Meta:
+        model = ResourceOrigin
 
 
 @register

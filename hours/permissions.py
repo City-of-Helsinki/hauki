@@ -60,8 +60,8 @@ def filter_queryset_by_permission(request, queryset):
         path_to_resource += "parents__"
 
     if request.method in SAFE_METHODS:
-        return queryset.filter(is_public | has_request_organization)
-    return queryset.filter(has_request_organization)
+        return queryset.filter(is_public | has_request_organization).distinct()
+    return queryset.filter(has_request_organization).distinct()
 
 
 class ReadOnlyPublic(BasePermission):

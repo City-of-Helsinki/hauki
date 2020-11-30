@@ -31,12 +31,12 @@ def invalidate_hauki_auth_signature(request):
     try:
         validate_params_and_signature(params)
     except (InsufficientParamsError, SignatureValidationError):
-        raise ValidationError(detail=_("Invalid signature"))
+        raise ValidationError(detail=_("Invalid hsa_signature"))
 
     SignedAuthEntry.objects.create(
-        signature=params["signature"],
-        created_at=params["created_at"],
-        valid_until=params["valid_until"],
+        signature=params["hsa_signature"],
+        created_at=params["hsa_created_at"],
+        valid_until=params["hsa_valid_until"],
         invalidated_at=timezone.now(),
     )
 
@@ -102,10 +102,10 @@ def hauki_signed_auth_link_generator(request):
         form = HaukiSignedAuthGeneratorForm(request.POST)
         if form.is_valid():
             params = {
-                "source": form.cleaned_data["data_source"].id,
-                "username": form.cleaned_data["username"],
-                "created_at": now.isoformat() + "Z",
-                "valid_until": (
+                "hsa_source": form.cleaned_data["data_source"].id,
+                "hsa_username": form.cleaned_data["username"],
+                "hsa_created_at": now.isoformat() + "Z",
+                "hsa_valid_until": (
                     now
                     + datetime.timedelta(
                         minutes=int(form.cleaned_data["valid_minutes"])
@@ -114,21 +114,19 @@ def hauki_signed_auth_link_generator(request):
                 + "Z",
             }
 
-            print(form.cleaned_data)
-
             if form.cleaned_data["resource"]:
                 resource = form.cleaned_data["resource"]
                 tprek_origin = resource.origins.filter(data_source_id="tprek").first()
 
                 if tprek_origin:
-                    params["resource"] = (
+                    params["hsa_resource"] = (
                         f"{tprek_origin.data_source.id}:" f"{tprek_origin.origin_id}"
                     )
                 else:
-                    params["resource"] = form.cleaned_data["resource"].id
+                    params["hsa_resource"] = form.cleaned_data["resource"].id
 
             if form.cleaned_data["organization"]:
-                params["organization"] = form.cleaned_data["organization"].id
+                params["hsa_organization"] = form.cleaned_data["organization"].id
 
             try:
                 signed_auth_key = SignedAuthKey.objects.get(
@@ -136,7 +134,7 @@ def hauki_signed_auth_link_generator(request):
                 )
             except SignedAuthKey.DoesNotExist:
                 raise forms.ValidationError(
-                    _("No signing key for selected data " "source")
+                    _("No signing key for the selected data_source")
                 )
 
             data_string = join_params(params)
@@ -144,7 +142,7 @@ def hauki_signed_auth_link_generator(request):
                 signed_auth_key.signing_key, data_string
             )
 
-            params["signature"] = calculated_signature
+            params["hsa_signature"] = calculated_signature
             context["link"] = client_base_url + "?" + urlencode(params)
     else:
         form = HaukiSignedAuthGeneratorForm()

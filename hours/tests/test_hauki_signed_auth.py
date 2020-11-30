@@ -27,16 +27,16 @@ def test_get_auth_required_header_invalid_signature(
 
     authz_string = (
         "haukisigned"
-        " source=" + data_source.id + "&username=test_user"
-        "&created_at=2020-10-01T06%3A35%3A00.917Z"
-        "&valid_until=2020-11-01T06%3A45%3A00.917Z"
-        "&signature=invalid_signature"
+        " hsa_source=" + data_source.id + "&hsa_username=test_user"
+        "&hsa_created_at=2020-10-01T06%3A35%3A00.917Z"
+        "&hsa_valid_until=2020-11-01T06%3A45%3A00.917Z"
+        "&hsa_signature=invalid_signature"
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
 
     assert response.status_code == 403
-    assert str(response.data["detail"]) == "Invalid signature"
+    assert str(response.data["detail"]) == "Invalid hsa_signature"
 
 
 @pytest.mark.django_db
@@ -48,23 +48,23 @@ def test_get_auth_required_header_invalid_created_at(
     url = reverse("auth_required_test-list")
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": "2030-01-01T10:10:10.000Z",
-        "valid_until": "2030-01-01T10:20:10.000Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": "2030-01-01T10:10:10.000Z",
+        "hsa_valid_until": "2030-01-01T10:20:10.000Z",
     }
 
     source_string = join_params(data)
     signature = calculate_signature(signed_auth_key.signing_key, source_string)
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
 
     assert response.status_code == 403
-    assert str(response.data["detail"]) == "Invalid created_at"
+    assert str(response.data["detail"]) == "Invalid hsa_created_at"
 
 
 @pytest.mark.django_db
@@ -76,23 +76,23 @@ def test_get_auth_required_header_invalid_valid_until(
     url = reverse("auth_required_test-list")
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": "2020-01-01T10:10:10.000Z",
-        "valid_until": "2000-01-01T10:20:10.000Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": "2020-01-01T10:10:10.000Z",
+        "hsa_valid_until": "2000-01-01T10:20:10.000Z",
     }
 
     source_string = join_params(data)
     signature = calculate_signature(signed_auth_key.signing_key, source_string)
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
 
     assert response.status_code == 403
-    assert str(response.data["detail"]) == "Invalid valid_until"
+    assert str(response.data["detail"]) == "Invalid hsa_valid_until"
 
 
 @pytest.mark.django_db
@@ -106,17 +106,17 @@ def test_get_auth_required_header_authenticated(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
     }
 
     source_string = join_params(data)
     signature = calculate_signature(signed_auth_key.signing_key, source_string)
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -138,17 +138,17 @@ def test_join_user_to_organization(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "organization": org.id,
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_organization": org.id,
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -180,17 +180,17 @@ def test_join_user_to_organization_existing_user(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": user.username,
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "organization": org.id,
+        "hsa_source": data_source.id,
+        "hsa_username": user.username,
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_organization": org.id,
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -224,17 +224,17 @@ def test_join_user_to_organization_existing_user_and_organisation(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": user.username,
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "organization": org.id,
+        "hsa_source": data_source.id,
+        "hsa_username": user.username,
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_organization": org.id,
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -258,17 +258,17 @@ def test_join_user_to_organization_invalid_org(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "organization": "test:2345",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_organization": "test:2345",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -297,17 +297,17 @@ def test_join_user_to_organization_wrong_data_source_org(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source1.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "organization": org.id,
+        "hsa_source": data_source1.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_organization": org.id,
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
@@ -332,16 +332,16 @@ def test_signed_auth_entry_not_invalidated(
     valid_until = now + datetime.timedelta(minutes=10)
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": valid_until.isoformat() + "Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": valid_until.isoformat() + "Z",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     # Check that auth works
@@ -377,16 +377,16 @@ def test_invalidate_signature_success_header_params(
     valid_until = now + datetime.timedelta(minutes=10)
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": valid_until.isoformat() + "Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": valid_until.isoformat() + "Z",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     # Check that auth works
@@ -424,15 +424,15 @@ def test_invalidate_signature_success_query_params(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        "username": "test_user",
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
-    authz_string = "?" + urllib.parse.urlencode({**data, "signature": signature})
+    authz_string = "?" + urllib.parse.urlencode({**data, "hsa_signature": signature})
 
     # Check that auth works
     response = api_client.get(f"{url}{authz_string}")
@@ -472,16 +472,16 @@ def test_invalidate_signature_invalid_params(
     now = datetime.datetime.utcnow()
 
     data = {
-        "source": data_source.id,
-        # username missing
-        "created_at": now.isoformat() + "Z",
-        "valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_source": data_source.id,
+        # hsa_username missing
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
 
     authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "signature": signature}
+        {**data, "hsa_signature": signature}
     )
 
     # Invalidate the signature

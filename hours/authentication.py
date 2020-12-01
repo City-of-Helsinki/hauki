@@ -20,13 +20,17 @@ from hours.models import DataSource, SignedAuthEntry, SignedAuthKey
 User = get_user_model()
 
 REQUIRED_AUTH_PARAM_NAMES = [
-    "source",
-    "username",
-    "created_at",
-    "valid_until",
-    "signature",
+    "hsa_source",
+    "hsa_username",
+    "hsa_created_at",
+    "hsa_valid_until",
+    "hsa_signature",
 ]
-OPTIONAL_AUTH_PARAM_NAMES = ["organization", "resource"]
+OPTIONAL_AUTH_PARAM_NAMES = [
+    "hsa_organization",
+    "hsa_resource",
+    "hsa_has_organization_rights",
+]
 
 
 def get_auth_params_from_authz_header(request) -> dict:
@@ -74,7 +78,7 @@ def join_params(params):
     fields_in_order = [
         i
         for i in (REQUIRED_AUTH_PARAM_NAMES + OPTIONAL_AUTH_PARAM_NAMES)
-        if i != "signature"
+        if i != "hsa_signature"
     ]
 
     return "".join([params.get(field_name, "") for field_name in fields_in_order])
@@ -111,7 +115,7 @@ def validate_params_and_signature(params) -> bool:
 
     try:
         signed_auth_key = SignedAuthKey.objects.get(
-            Q(data_source__id=params["source"])
+            Q(data_source__id=params["hsa_source"])
             & Q(valid_after__lt=now)
             & (Q(valid_until__isnull=True) | Q(valid_until__gt=now))
         )
@@ -122,28 +126,28 @@ def validate_params_and_signature(params) -> bool:
         signed_auth_key.signing_key, join_params(params)
     )
 
-    if not compare_signatures(params["signature"], calculated_signature):
-        raise SignatureValidationError(_("Invalid signature"))
+    if not compare_signatures(params["hsa_signature"], calculated_signature):
+        raise SignatureValidationError(_("Invalid hsa_signature"))
 
     try:
-        created_at = parse(params["created_at"])
+        created_at = parse(params["hsa_created_at"])
         try:
             if created_at > timezone.now():
-                raise SignatureValidationError(_("Invalid created_at"))
+                raise SignatureValidationError(_("Invalid hsa_created_at"))
         except TypeError:
-            raise SignatureValidationError(_("Invalid created_at"))
+            raise SignatureValidationError(_("Invalid hsa_created_at"))
     except ValueError:
-        raise SignatureValidationError(_("Invalid created_at"))
+        raise SignatureValidationError(_("Invalid hsa_created_at"))
 
     try:
-        valid_until = parse(params["valid_until"])
+        valid_until = parse(params["hsa_valid_until"])
         try:
             if valid_until < timezone.now():
-                raise SignatureValidationError(_("Invalid valid_until"))
+                raise SignatureValidationError(_("Invalid hsa_valid_until"))
         except TypeError:
-            raise SignatureValidationError(_("Invalid valid_until"))
+            raise SignatureValidationError(_("Invalid hsa_valid_until"))
     except ValueError:
-        raise SignatureValidationError(_("Invalid valid_until"))
+        raise SignatureValidationError(_("Invalid hsa_valid_until"))
 
     return True
 
@@ -161,7 +165,7 @@ class HaukiSignedAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed(str(e))
 
         if SignedAuthEntry.objects.filter(
-            signature=params["signature"], invalidated_at__isnull=False
+            signature=params["hsa_signature"], invalidated_at__isnull=False
         ).exists():
             raise exceptions.AuthenticationFailed(_("Signature has been invalidated"))
 
@@ -169,23 +173,23 @@ class HaukiSignedAuthentication(BaseAuthentication):
         #       to users initially from the same integration. Also Only allow
         #       using organisations from the same integration.
         try:
-            user = User.objects.get(username=params["username"])
+            user = User.objects.get(username=params["hsa_username"])
         except User.DoesNotExist:
             user = User()
             user.set_unusable_password()
-            user.username = params["username"]
+            user.username = params["hsa_username"]
             user.save()
 
         if not user.is_active:
             raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
 
-        if params.get("organization"):
+        if params.get("hsa_organization"):
             try:
-                organization = Organization.objects.get(id=params["organization"])
+                organization = Organization.objects.get(id=params["hsa_organization"])
 
                 # Allow joining users only to organizations that are from
                 # the same data source
-                data_source = DataSource.objects.get(id=params["source"])
+                data_source = DataSource.objects.get(id=params["hsa_source"])
                 if data_source == organization.data_source:
                     users_organizations = user.organization_memberships.all()
 

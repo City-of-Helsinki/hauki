@@ -109,7 +109,7 @@ class PermissionCheckAction:
         return Response({"has_permission": has_permission})
 
 
-class ResourcePageNumberPagination(PageNumberPagination):
+class PageSizePageNumberPagination(PageNumberPagination):
     page_size = 100
     max_page_size = 1000
     page_size_query_param = "page_size"
@@ -146,7 +146,7 @@ class ResourceViewSet(
 ):
     serializer_class = ResourceSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
-    pagination_class = ResourcePageNumberPagination
+    pagination_class = PageSizePageNumberPagination
 
     def get_queryset(self):
         queryset = Resource.objects.prefetch_related(
@@ -278,22 +278,27 @@ class OpeningHoursFilterBackend(BaseFilterBackend):
         return queryset
 
 
-class OpeningHoursView(viewsets.GenericViewSet):
+class OpeningHoursViewSet(viewsets.GenericViewSet):
     filter_backends = (DjangoFilterBackend, OpeningHoursFilterBackend)
     serializer_class = ResourceDailyOpeningHoursSerializer
+    pagination_class = PageSizePageNumberPagination
 
     def get_queryset(self):
         # TODO: is_public check
-        return Resource.objects.filter(
-            # Query only resources that have date periods
-            Exists(DatePeriod.objects.filter(resource=OuterRef("pk")))
-        ).prefetch_related(
-            "origins",
-            "origins__data_source",
-            "date_periods",
-            "date_periods__time_span_groups",
-            "date_periods__time_span_groups__time_spans",
-            "date_periods__time_span_groups__rules",
+        return (
+            Resource.objects.filter(
+                # Query only resources that have date periods
+                Exists(DatePeriod.objects.filter(resource=OuterRef("pk")))
+            )
+            .prefetch_related(
+                "origins",
+                "origins__data_source",
+                "date_periods",
+                "date_periods__time_span_groups",
+                "date_periods__time_span_groups__time_spans",
+                "date_periods__time_span_groups__rules",
+            )
+            .order_by("id")
         )
 
     def list(self, request, *args, **kwargs):
@@ -303,8 +308,10 @@ class OpeningHoursView(viewsets.GenericViewSet):
 
         (start_date, end_date) = get_start_and_end_from_params(request)
 
+        page = self.paginate_queryset(queryset)
+
         results = []
-        for resource in queryset.all():
+        for resource in page:
             processed_opening_hours = resource.get_daily_opening_hours(
                 start_date, end_date
             )
@@ -324,4 +331,4 @@ class OpeningHoursView(viewsets.GenericViewSet):
 
         serializer = self.get_serializer(results, many=True)
 
-        return Response(serializer.data)
+        return self.get_paginated_response(serializer.data)

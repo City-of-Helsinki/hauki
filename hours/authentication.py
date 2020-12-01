@@ -26,7 +26,11 @@ REQUIRED_AUTH_PARAM_NAMES = [
     "hsa_valid_until",
     "hsa_signature",
 ]
-OPTIONAL_AUTH_PARAM_NAMES = ["hsa_organization", "hsa_resource"]
+OPTIONAL_AUTH_PARAM_NAMES = [
+    "hsa_organization",
+    "hsa_resource",
+    "hsa_has_organization_rights",
+]
 
 
 def get_auth_params_from_authz_header(request) -> dict:

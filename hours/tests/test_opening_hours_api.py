@@ -52,9 +52,9 @@ def test_opening_hours_date_period_no_opening_hours(
         response.status_code, response.data
     )
 
-    assert len(response.data) == 1
-    assert response.data[0]["resource"]["name"]["fi"] == resource.name_fi
-    assert len(response.data[0]["opening_hours"]) == 0
+    assert len(response.data["results"]) == 1
+    assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
+    assert len(response.data["results"][0]["opening_hours"]) == 0
 
 
 @pytest.mark.django_db
@@ -88,9 +88,9 @@ def test_opening_hours_two_resources_one_date_period(
         response.status_code, response.data
     )
 
-    assert len(response.data) == 1
-    assert response.data[0]["resource"]["name"]["fi"] == resource.name_fi
-    assert len(response.data[0]["opening_hours"]) == 0
+    assert len(response.data["results"]) == 1
+    assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
+    assert len(response.data["results"][0]["opening_hours"]) == 0
 
 
 @pytest.mark.django_db
@@ -131,7 +131,7 @@ def test_opening_hours_two_resources_two_date_periods(
         response.status_code, response.data
     )
 
-    resource_names = {i["resource"]["name"]["fi"] for i in response.data}
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     assert resource_names == {resource.name_fi, resource2.name_fi}
 
@@ -190,7 +190,7 @@ def test_opening_hours_data_source_filter_two_resources(
         response.status_code, response.data
     )
 
-    resource_names = {i["resource"]["name"]["fi"] for i in response.data}
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     assert resource_names == {resource.name_fi, resource2.name_fi}
 
@@ -250,7 +250,7 @@ def test_opening_hours_data_source_filter_two_resources_different_data_source(
         response.status_code, response.data
     )
 
-    resource_names = {i["resource"]["name"]["fi"] for i in response.data}
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     assert resource_names == {resource2.name_fi}
 
@@ -310,7 +310,7 @@ def test_opening_hours_data_source_filter_child_has_data_source(
         response.status_code, response.data
     )
 
-    resource_names = {i["resource"]["name"]["fi"] for i in response.data}
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     assert resource_names == {resource.name_fi, resource2.name_fi}
 
@@ -366,7 +366,7 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
         response.status_code, response.data
     )
 
-    resource_names = {i["resource"]["name"]["fi"] for i in response.data}
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     # TODO: This is not yet working. Change when ancestor data source logic
     #       has been implemented.

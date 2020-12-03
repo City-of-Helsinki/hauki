@@ -215,6 +215,18 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     )
     extra_data = models.JSONField(verbose_name=_("Extra data"), null=True, blank=True)
     is_public = models.BooleanField(default=True)
+    # Denormalized values from the parent resources
+    ancestry_is_public = models.BooleanField(null=True, blank=True)
+    ancestry_data_source = ArrayField(
+        models.CharField(max_length=255),
+        null=True,
+        blank=True,
+    )
+    ancestry_organization = ArrayField(
+        models.CharField(max_length=255),
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = _("Resource")
@@ -259,6 +271,68 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         }
 
         return processed_opening_hours
+
+    def _get_parent_data(self, acc=None):
+        if acc is None:
+            acc = {
+                "is_public": None,
+                "data_sources": set(),
+                "organizations": set(),
+            }
+
+        parents = (
+            self.parents.all()
+            .select_related("organization")
+            .prefetch_related(
+                "origins",
+                "origins__data_source",
+            )
+        )
+
+        if not parents:
+            return acc
+
+        for parent in parents:
+            if acc["is_public"] is None:
+                acc["is_public"] = parent.is_public
+
+            if not parent.is_public:
+                acc["is_public"] = False
+
+            acc["data_sources"].update([i.data_source.id for i in parent.origins.all()])
+            if parent.organization:
+                acc["organizations"].add(parent.organization.id)
+
+            parent._get_parent_data(acc)
+
+        return acc
+
+    def update_ancestry(self, update_child_ancestry_fields=True):
+        data = self._get_parent_data()
+
+        self.ancestry_is_public = data["is_public"]
+        self.ancestry_data_source = list(data["data_sources"])
+        self.ancestry_organization = list(data["organizations"])
+        self.save(update_child_ancestry_fields=update_child_ancestry_fields)
+
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+        update_child_ancestry_fields=True,
+    ):
+        super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )
+
+        if update_child_ancestry_fields:
+            for child in self.children.all():
+                child.update_ancestry()
 
 
 class ResourceOrigin(models.Model):

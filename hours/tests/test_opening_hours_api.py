@@ -334,6 +334,8 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
     resource2 = resource_factory()
     resource2.parents.set([resource])
 
+    resource3 = resource_factory()
+
     date_period_factory(
         resource=resource,
         name="Testperiod",
@@ -344,6 +346,13 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
     date_period_factory(
         resource=resource2,
         name="Testperiod2",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    date_period_factory(
+        resource=resource3,
+        name="Testperiod3",
         start_date=datetime.date(year=2020, month=1, day=1),
         end_date=datetime.date(year=2020, month=12, day=31),
     )
@@ -368,7 +377,4 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
-    # TODO: This is not yet working. Change when ancestor data source logic
-    #       has been implemented.
-    # assert resource_names == {resource.name_fi, resource2.name_fi}
-    assert resource_names == {resource.name_fi}
+    assert resource_names == {resource.name_fi, resource2.name_fi}

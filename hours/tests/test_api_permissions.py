@@ -2,9 +2,7 @@ import json
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
-from django.http import HttpRequest
 from django.urls import reverse
-from rest_framework.request import Request
 
 from hours.models import DatePeriod, Resource, Rule, TimeSpan
 from hours.permissions import filter_queryset_by_permission
@@ -621,12 +619,9 @@ def test_filter_queryset_by_read_permission(
     resource_d.parents.add(resource_c)
 
     queryset = Resource.objects.all()
-    request = Request(HttpRequest())
-    request.method = "GET"
-    request.user = user
 
     # non-organization user only sees public resources
-    filtered = filter_queryset_by_permission(request, queryset)
+    filtered = filter_queryset_by_permission(user, queryset)
     assert len(filtered) == 2
     assert set(filtered) == {
         resource_a,
@@ -636,7 +631,7 @@ def test_filter_queryset_by_read_permission(
     # org4 user doesn't see org4 resource_d, because he doesn't belong
     # to parent org3 or org2
     org4.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
+    filtered = filter_queryset_by_permission(user, queryset)
     assert len(filtered) == 2
     assert set(filtered) == {
         resource_a,
@@ -646,7 +641,7 @@ def test_filter_queryset_by_read_permission(
 
     # org4 resource_d is visible if user belongs to org2 or org3
     org3.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
+    filtered = filter_queryset_by_permission(user, queryset)
     assert len(filtered) == 3
     assert set(filtered) == {
         resource_a,
@@ -655,7 +650,7 @@ def test_filter_queryset_by_read_permission(
     }
     org3.regular_users.remove(user)
     org2.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
+    filtered = filter_queryset_by_permission(user, queryset)
     assert len(filtered) == 3
     assert set(filtered) == {
         resource_a,
@@ -666,100 +661,7 @@ def test_filter_queryset_by_read_permission(
 
     # all resources are only visible if user belongs to org1
     org1.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
-    assert len(filtered) == 4
-    assert set(filtered) == {
-        resource_a,
-        resource_b,
-        resource_c,
-        resource_d,
-    }
-
-
-@pytest.mark.django_db
-def test_filter_queryset_by_write_permission(
-    resource_factory, data_source, organization_factory, user
-):
-    #         resource A
-    #         org 1
-    #             |
-    #      +------+------+
-    #      |             |
-    # resource B     resource C
-    # org 2          org 3
-    #      |             |
-    #      +------+------+
-    #             |
-    #         resource D
-    #         org 4
-
-    org1 = organization_factory(
-        origin_id=1,
-        data_source=data_source,
-        name="Org 1",
-    )
-    org2 = organization_factory(
-        origin_id=2,
-        data_source=data_source,
-        name="Org 2",
-    )
-    org3 = organization_factory(
-        origin_id=3,
-        data_source=data_source,
-        name="Org 3",
-    )
-    org4 = organization_factory(
-        origin_id=4,
-        data_source=data_source,
-        name="Org 4",
-    )
-
-    resource_a = resource_factory(name="Resource A", organization=org1)
-    resource_b = resource_factory(name="Resource B", organization=org2)
-    resource_b.parents.add(resource_a)
-    resource_c = resource_factory(name="Resource C", organization=org3)
-    resource_c.parents.add(resource_a)
-    resource_d = resource_factory(name="Resource D", organization=org4)
-    resource_d.parents.add(resource_b)
-    resource_d.parents.add(resource_c)
-
-    queryset = Resource.objects.all()
-    request = Request(HttpRequest())
-    request.method = "POST"
-    request.user = user
-
-    # non-organization user has no write permissions
-    filtered = filter_queryset_by_permission(request, queryset)
-    assert len(filtered) == 0
-    assert set(filtered) == set()
-
-    # org4 user cannot edit org4 resource_d, because he doesn't belong
-    # to parent org3 or org2
-    org4.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
-    assert len(filtered) == 0
-    assert set(filtered) == set()
-    org4.regular_users.remove(user)
-
-    # org4 resource_d is editable if user belongs to org2 or org3
-    org3.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
-    assert len(filtered) == 1
-    assert set(filtered) == {
-        resource_d,
-    }
-    org3.regular_users.remove(user)
-    org2.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
-    assert len(filtered) == 1
-    assert set(filtered) == {
-        resource_d,
-    }
-    org2.regular_users.remove(user)
-
-    # all resources are editable if user belongs to org1
-    org1.regular_users.add(user)
-    filtered = filter_queryset_by_permission(request, queryset)
+    filtered = filter_queryset_by_permission(user, queryset)
     assert len(filtered) == 4
     assert set(filtered) == {
         resource_a,
@@ -772,6 +674,168 @@ def test_filter_queryset_by_write_permission(
 #
 # DatePeriod
 #
+@pytest.mark.django_db
+def test_list_date_periods_public(
+    api_client,
+    organization_factory,
+    data_source,
+    resource_factory,
+    date_period_factory,
+    user,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource = resource_factory(organization=organization)
+    date_period = date_period_factory(resource=resource)
+
+    organization2 = organization_factory(
+        origin_id=22222,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(organization=organization2)
+    date_period2 = date_period_factory(resource=resource2)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+
+    response = api_client.get(url, content_type="application/json")
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 2
+
+    date_period_ids = {i["id"] for i in response.data}
+
+    assert date_period_ids == {date_period.id, date_period2.id}
+
+
+@pytest.mark.django_db
+def test_list_date_periods_one_non_public_unauthenticated(
+    api_client, organization_factory, data_source, resource_factory, date_period_factory
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource = resource_factory(organization=organization, is_public=False)
+    date_period_factory(resource=resource)
+
+    organization2 = organization_factory(
+        origin_id=22222,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(organization=organization2)
+    date_period2 = date_period_factory(resource=resource2)
+
+    url = reverse("date_period-list")
+
+    response = api_client.get(url, content_type="application/json")
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+
+    date_period_ids = {i["id"] for i in response.data}
+
+    assert date_period_ids == {date_period2.id}
+
+
+@pytest.mark.django_db
+def test_list_date_periods_one_non_public_authenticated_user_not_in_org(
+    api_client,
+    organization_factory,
+    data_source,
+    resource_factory,
+    date_period_factory,
+    user,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource = resource_factory(organization=organization, is_public=False)
+    date_period_factory(resource=resource)
+
+    organization2 = organization_factory(
+        origin_id=22222,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(organization=organization2)
+    date_period2 = date_period_factory(resource=resource2)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+
+    response = api_client.get(url, content_type="application/json")
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+
+    date_period_ids = {i["id"] for i in response.data}
+
+    assert date_period_ids == {date_period2.id}
+
+
+@pytest.mark.django_db
+def test_list_date_periods_one_non_public_authenticated_user_in_org(
+    api_client,
+    organization_factory,
+    data_source,
+    resource_factory,
+    date_period_factory,
+    user,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource = resource_factory(organization=organization, is_public=False)
+    date_period = date_period_factory(resource=resource)
+
+    organization2 = organization_factory(
+        origin_id=22222,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(organization=organization2)
+    date_period2 = date_period_factory(resource=resource2)
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+
+    response = api_client.get(url, content_type="application/json")
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 2
+
+    date_period_ids = {i["id"] for i in response.data}
+
+    assert date_period_ids == {date_period.id, date_period2.id}
+
+
 @pytest.mark.django_db
 def test_create_date_period_anonymous(api_client):
     url = reverse("date_period-list")

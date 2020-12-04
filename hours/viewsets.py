@@ -141,17 +141,55 @@ def get_start_and_end_from_params(request) -> Tuple[datetime.date, datetime.date
     return start_date, end_date
 
 
+class ResourceFilterBackend(BaseFilterBackend):
+    def filter_queryset(self, request, queryset, view):
+        data_source = request.query_params.get("data_source", None)
+        origin_id_exists = request.query_params.get("origin_id_exists", None)
+
+        if data_source is not None:
+            queryset = queryset.filter(
+                Q(origins__data_source=data_source)
+                | Q(ancestry_data_source__contains=[data_source])
+            )
+
+        if origin_id_exists is not None and origin_id_exists:
+            origin_id_exists = origin_id_exists.lower() == "true"
+
+            if origin_id_exists or not data_source:
+                # Keep all resources that don't have any origin ids
+                # (when origin_id_exists=True)
+                # or Don't have origin id in any data source.
+                # (when data_source=None and origin_id_exists=False)
+                queryset = queryset.filter(
+                    Q(origins__origin_id__isnull=not origin_id_exists)
+                )
+            else:
+                # Exclude resources that have origin id in the provided
+                # data source
+                queryset = queryset.exclude(
+                    Q(origins__data_source=data_source)
+                    & Q(origins__origin_id__isnull=False)
+                )
+
+        return queryset
+
+
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
     serializer_class = ResourceSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     pagination_class = PageSizePageNumberPagination
+    filter_backends = (DjangoFilterBackend, ResourceFilterBackend)
 
     def get_queryset(self):
-        queryset = Resource.objects.prefetch_related(
-            "origins", "children", "parents", "origins__data_source"
-        ).order_by("id")
+        queryset = (
+            Resource.objects.prefetch_related(
+                "origins", "children", "parents", "origins__data_source"
+            )
+            .distinct()
+            .order_by("id")
+        )
 
         # Filter the queryset according to read permissions
         queryset = filter_queryset_by_permission(self.request.user, queryset)
@@ -327,6 +365,7 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
                 "date_periods__time_span_groups__time_spans",
                 "date_periods__time_span_groups__rules",
             )
+            .distinct()
             .order_by("id")
         )
 

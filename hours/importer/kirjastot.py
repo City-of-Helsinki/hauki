@@ -581,9 +581,6 @@ class KirjastotImporter(Importer):
             .filter(Q(end_date=None) | Q(end_date__gte=import_start_date))
             .prefetch_related("time_span_groups__time_spans")
         )
-        self.dateperiod_cache.update(
-            {self.get_object_id(period): period for period in queryset}
-        )
 
         syncher = ModelSyncher(
             queryset,
@@ -674,7 +671,7 @@ class KirjastotImporter(Importer):
                 periods.append(long_period)
 
             for period_data in periods:
-                period = self.save_period(period_data)
+                period = self.save_dateperiod(period_data)
                 syncher.mark(period)
 
         syncher.finish(force=self.options["force"])

@@ -1,13 +1,15 @@
 import time
-from typing import Callable, Hashable
+from calendar import different_locale, month_name
+from datetime import date
+from typing import Hashable
 
 from django import db
 from django.conf import settings
 from django.db.models import Model
 from django_orghierarchy.models import Organization
 
-from ..enums import ResourceType
-from ..models import DataSource, Resource
+from ..enums import ResourceType, State
+from ..models import DataSource, DatePeriod, Resource
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -56,7 +58,40 @@ class TPRekImporter(Importer):
                 | set((ResourceType.SUBSECTION,)),
                 is_public=True,
             ),
+            "opening_hours": DatePeriod.objects.filter(
+                origins__data_source=self.data_source,
+                is_public=True,
+            ),
         }
+        with different_locale("fi_FI"):
+            self.month_by_name = {
+                name.lower(): index + 1
+                for index, name in enumerate(list(month_name)[1:])
+            }
+
+        # if we are merging objects, we must override default get_id methods
+        # so that the cache and syncher merge identical connections
+        if self.options.get("merge", None):
+            self.get_object_id = self.merge_connections_get_object_id
+            self.get_data_id = self.merge_connections_get_data_id
+
+    def merge_connections_get_object_id(self, obj: Model) -> Hashable:
+        if type(obj) == Resource and obj.resource_type in set(
+            CONNECTION_TYPE_MAPPING.values()
+        ) | set((ResourceType.SUBSECTION,)):
+            return frozenset(obj.extra_data.items())
+        return obj.origins.get(data_source=self.data_source).origin_id
+
+    def merge_connections_get_data_id(self, data: dict) -> Hashable:
+        if data.get("resource_type", None) and data["resource_type"] in set(
+            CONNECTION_TYPE_MAPPING.values()
+        ) | set((ResourceType.SUBSECTION,)):
+            return frozenset(data["extra_data"].items())
+        return [
+            str(origin["origin_id"])
+            for origin in data["origins"]
+            if origin["data_source_id"] == self.data_source.id
+        ][0]
 
     @staticmethod
     def mark_non_public(obj: Resource) -> bool:
@@ -240,12 +275,109 @@ class TPRekImporter(Importer):
             if connection["section_type"] not in CONNECTION_TYPES_TO_IGNORE
         ]
 
+    def get_opening_hours_data(self, data: dict) -> list:
+        """
+        Takes connection data dict in TPREK v4 API format and returns the corresponding
+        serialized DatePeriods.
+        """
+        # Running id will be removed once tprek adds permanent ids to their API.
+        if "id" not in data:
+            data["id"] = int(time.time() * 100000)
+        connection_id = str(data.pop("id"))
+        unit_id = str(data.pop("unit_id"))
+        # resource may be missing if e.g. the unit has just been created or
+        # deleted, or is not public at the moment. Therefore, resource may be empty.
+        # TODO: in case we are importing hours in non-opening hours connection, add them
+        # to the original connection instead, not the unit!
+        print("trying to find resource with id")
+        print(unit_id)
+        resource = self.resource_cache.get(unit_id, None)
+        print("found resource")
+        print(resource)
+        period_string = data.get("name_fi", "")
+        if not period_string:
+            print(
+                "Error parsing data, Finnish opening hours not found! {0}".format(data)
+            )
+        try:
+            periods = self.parse_period_string(period_string)
+        except ValueError:
+            print(
+                "Error parsing string, most likely dates are invalid! {0}".format(
+                    period_string
+                )
+            )
+            periods = []
+        data = []
+        for period in periods:
+            try:
+                time_spans = self.parse_opening_string(period["string"])
+            except ValueError:
+                print(
+                    "Error parsing period, most likely delimiters are missing! "
+                    + "{0}".format(period)
+                )
+                continue
+            print(time_spans)
+            if (
+                not time_spans
+                or all([span["resource_state"] == State.CLOSED for span in time_spans])
+            ) and "suljettu" in period["string"]:
+                print("all time spans closed")
+                resource_state = State.CLOSED
+            elif (
+                not time_spans
+                and "avoinna" in period["string"]
+                and "suljettu" not in period["string"]
+            ):
+                resource_state = State.OPEN
+            elif (
+                "suljettu" not in period["string"]
+                and "joka päivä" in period["string"]
+                and "ympäri vuorokauden" in period["string"]
+            ):
+                resource_state = State.OPEN
+            else:
+                resource_state = State.UNDEFINED
+
+            start_date = period.get("start_date", date.today())
+            end_date = period.get("end_date", None)
+            origin = {
+                "data_source_id": self.data_source.id,
+                "origin_id": "connection-{0}-{1}".format(connection_id, start_date),
+            }
+            period_datum = {
+                "resource": resource,
+                "start_date": start_date,
+                "end_date": end_date,
+                "override": period["override"],
+                "resource_state": resource_state,
+                "origins": [origin],
+                "time_span_groups": [
+                    {
+                        "time_spans": time_spans,
+                        "rules": [],
+                    }
+                ],
+            }
+            data.append(period_datum)
+        print(data)
+        return data
+
+    def filter_opening_hours_data(self, data: list) -> list:
+        """
+        Takes connection data list and filters the connections that should be imported.
+        """
+        return [
+            connection
+            for connection in data
+            if connection["section_type"] == "OPENING_HOURS"
+        ]
+
     @db.transaction.atomic
     def import_objects(
         self,
         object_type: str,
-        get_object_id: Callable[[Model], Hashable] = None,
-        get_data_id: Callable[[dict], Hashable] = None,
     ):
         """
         Imports objects of the given type, using get_object_id and get_data_id
@@ -255,61 +387,62 @@ class TPRekImporter(Importer):
         with the same identifier will be merged.
         """
         queryset = self.data_to_match[object_type]
+        klass_str = queryset.model.__name__.lower()
+        api_object_type = (
+            "connection" if object_type == "opening_hours" else object_type
+        )
 
         if self.options.get("single", None):
             obj_id = self.options["single"]
-            obj_list = [self.api_get(object_type, obj_id, params={"official": "yes"})]
+            obj_list = [
+                self.api_get(api_object_type, obj_id, params={"official": "yes"})
+            ]
             self.logger.info("Loading TPREK " + object_type + " " + str(obj_list))
             queryset = queryset.filter(
                 origins__data_source=self.data_source, origins__origin_id=obj_id
             )
         else:
             self.logger.info("Loading TPREK " + object_type + "s...")
-            obj_list = self.api_get(object_type, params={"official": "yes"})
-            self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
-        # Fill the resource cache so we can match and link to existing objects
-        if not get_object_id and not get_data_id:
-            # Default origin_ids will be used
-            get_object_id = self.get_object_id
-            get_data_id = self.get_data_id
-        elif not get_object_id or not get_data_id:
-            raise Exception(
-                "Both get_object_id and get_data_id functions must be provided"
-                " to match existing objects to incoming data."
-            )
-        self.resource_cache.update(
-            {get_object_id(resource): resource for resource in queryset}
-        )
+            obj_list = self.api_get(api_object_type, params={"official": "yes"})
         syncher = ModelSyncher(
             queryset,
-            get_object_id,
+            self.get_object_id,
             delete_func=self.mark_non_public,
             check_deleted_func=self.check_non_public,
         )
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
+        self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         obj_dict = {}
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss read" % (idx, object_type))
             object_data = getattr(self, "get_%s_data" % object_type)(data)
-            object_data_id = get_data_id(object_data)
-            if object_data_id not in obj_dict:
-                obj_dict[object_data_id] = object_data
-            else:
-                # Duplicate object found. Just append its foreign keys instead of
-                # adding another object.
-                parents = object_data["parents"]
-                origins = object_data["origins"]
-                self.logger.info(
-                    "Adding duplicate parent %s and origin %s to object %s"
-                    % (parents, origins, object_data_id)
-                )
-                obj_dict[object_data_id]["parents"].extend(parents)
-                obj_dict[object_data_id]["origins"].extend(origins)
+            print("generating ids for data")
+            print(object_data)
+            if not isinstance(object_data, list):
+                # wrap single objects in list, because object_data may also contain
+                # multiple objects
+                object_data = [object_data]
+            for datum in object_data:
+                # TODO: multiple ids from datum
+                object_data_id = self.get_data_id(datum)
+                if object_data_id not in obj_dict:
+                    obj_dict[object_data_id] = datum
+                else:
+                    # Duplicate object found. Just append its foreign keys instead of
+                    # adding another object.
+                    parents = datum["parents"]
+                    origins = datum["origins"]
+                    self.logger.info(
+                        "Adding duplicate parent %s and origin %s to object %s"
+                        % (parents, origins, object_data_id)
+                    )
+                    obj_dict[object_data_id]["parents"].extend(parents)
+                    obj_dict[object_data_id]["origins"].extend(origins)
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss saved" % (idx, object_type))
-            obj = self.save_resource(object_data, get_data_id=get_data_id)
+            obj = getattr(self, f"save_{klass_str}")(object_data)
 
             syncher.mark(obj)
 
@@ -325,16 +458,12 @@ class TPRekImporter(Importer):
         self.logger.info("Importing TPREK connections")
         if self.options.get("merge", None):
             self.logger.info("Merging identical connections")
-            # Merge connections if their extra_data is identical.
-            # Extra_data contains all data apart from origin and parent.
-            self.import_objects(
-                "connection",
-                get_object_id=lambda obj: frozenset(obj.extra_data.items()),
-                get_data_id=lambda data: frozenset(data["extra_data"].items()),
-            )
-        else:
-            self.import_objects("connection")
+        self.import_objects("connection")
 
     def import_resources(self):
         self.import_units()
         self.import_connections()
+
+    def import_openings(self):
+        self.logger.info("Importing TPREK opening hours")
+        self.import_objects("opening_hours")

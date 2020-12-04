@@ -1,5 +1,6 @@
 import random
 import string
+import unittest
 
 import factory
 import pytest
@@ -22,6 +23,15 @@ from hours.models import (
 from users.models import User
 
 faker = FakerFactory.create(locale="fi_FI")
+
+
+@pytest.fixture
+def assert_count_equal():
+    def do_test(a, b):
+        tc = unittest.TestCase()
+        tc.assertCountEqual(a, b)
+
+    return do_test
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@ import datetime
 from operator import itemgetter
 from typing import Tuple
 
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,7 +13,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
@@ -152,10 +152,10 @@ class ResourceViewSet(
         queryset = Resource.objects.prefetch_related(
             "origins", "children", "parents", "origins__data_source"
         ).order_by("id")
-        # Object permissions are not checked in listings, so we have
-        # to filter the queryset according to permissions.
-        if self.request.method in SAFE_METHODS:
-            queryset = filter_queryset_by_permission(self.request, queryset)
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(self.request.user, queryset)
+
         return queryset
 
     def get_object(self):
@@ -200,24 +200,42 @@ class ResourceViewSet(
 class DatePeriodViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
-    queryset = DatePeriod.objects.prefetch_related(
-        "time_span_groups", "time_span_groups__time_spans", "time_span_groups__rules"
-    ).order_by("start_date", "end_date")
     serializer_class = DatePeriodSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
+
+    def get_queryset(self):
+        queryset = DatePeriod.objects.prefetch_related(
+            "origins",
+            "origins__data_source",
+            "time_span_groups",
+            "time_span_groups__time_spans",
+            "time_span_groups__rules",
+        ).order_by("start_date", "end_date")
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(self.request.user, queryset)
+
+        return queryset
 
 
 class RuleViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
-    queryset = (
-        Rule.objects.all()
-        .select_related("group", "group__period")
-        .order_by("group__period__start_date", "group__period__end_date")
-    )
     serializer_class = RuleSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
+
+    def get_queryset(self):
+        queryset = (
+            Rule.objects.all()
+            .select_related("group", "group__period")
+            .order_by("group__period__start_date", "group__period__end_date")
+        )
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(self.request.user, queryset)
+
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -229,10 +247,17 @@ class RuleViewSet(
 class TimeSpanViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
-    queryset = TimeSpan.objects.all()
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
+
+    def get_queryset(self):
+        queryset = TimeSpan.objects.all()
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(self.request.user, queryset)
+
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -242,7 +267,9 @@ class TimeSpanViewSet(
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Organization.objects.all()
+    queryset = Organization.objects.select_related("parent").prefetch_related(
+        "children"
+    )
     serializer_class = OrganizationSerializer
     filterset_fields = ["parent"]
 
@@ -273,7 +300,10 @@ class OpeningHoursFilterBackend(BaseFilterBackend):
         data_source = request.query_params.get("data_source", None)
 
         if data_source is not None:
-            queryset = queryset.filter(origins__data_source=data_source)
+            queryset = queryset.filter(
+                Q(origins__data_source=data_source)
+                | Q(ancestry_data_source__contains=[data_source])
+            )
 
         return queryset
 
@@ -284,8 +314,7 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
     pagination_class = PageSizePageNumberPagination
 
     def get_queryset(self):
-        # TODO: is_public check
-        return (
+        queryset = (
             Resource.objects.filter(
                 # Query only resources that have date periods
                 Exists(DatePeriod.objects.filter(resource=OuterRef("pk")))
@@ -300,6 +329,11 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
             )
             .order_by("id")
         )
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(self.request.user, queryset)
+
+        return queryset
 
     def list(self, request, *args, **kwargs):
         # TODO: Maybe disallow listing all of the resources and require

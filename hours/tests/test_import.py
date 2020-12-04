@@ -324,7 +324,8 @@ def test_import_tprek(mock_tprek_data):
     )
 
     # Check the units are imported correctly
-    kallio, oodi = Resource.objects.filter(resource_type=ResourceType.UNIT)
+    kallio = Resource.objects.get(origins__data_source="tprek", origins__origin_id=8215)
+    oodi = Resource.objects.get(origins__data_source="tprek", origins__origin_id=51342)
     mock_kallio, mock_oodi = mock_tprek_data["units"]
     assert kallio.name_fi == mock_kallio["name_fi"]
     assert kallio.name_sv == mock_kallio["name_sv"]

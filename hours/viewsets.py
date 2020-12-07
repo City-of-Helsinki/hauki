@@ -146,10 +146,10 @@ class ResourceFilterBackend(BaseFilterBackend):
         data_source = request.query_params.get("data_source", None)
         origin_id_exists = request.query_params.get("origin_id_exists", None)
 
+        filter_q = Q()
         if data_source is not None:
-            queryset = queryset.filter(
-                Q(origins__data_source=data_source)
-                | Q(ancestry_data_source__contains=[data_source])
+            filter_q = Q(origins__data_source=data_source) | Q(
+                ancestry_data_source__contains=[data_source]
             )
 
         if origin_id_exists is not None and origin_id_exists:
@@ -160,18 +160,16 @@ class ResourceFilterBackend(BaseFilterBackend):
                 # (when origin_id_exists=True)
                 # or Don't have origin id in any data source.
                 # (when data_source=None and origin_id_exists=False)
-                queryset = queryset.filter(
-                    Q(origins__origin_id__isnull=not origin_id_exists)
-                )
+                filter_q &= Q(origins__origin_id__isnull=not origin_id_exists)
             else:
                 # Exclude resources that have origin id in the provided
                 # data source
-                queryset = queryset.exclude(
+                return queryset.filter(filter_q).exclude(
                     Q(origins__data_source=data_source)
                     & Q(origins__origin_id__isnull=False)
                 )
 
-        return queryset
+        return queryset.filter(filter_q)
 
 
 class ResourceViewSet(

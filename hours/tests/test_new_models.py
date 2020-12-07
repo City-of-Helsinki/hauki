@@ -1415,16 +1415,6 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
         full_day=False,
     )
 
-    print()
-    from pprint import pprint
-
-    pprint(
-        resource.get_daily_opening_hours(
-            datetime.date(year=2020, month=12, day=23),
-            datetime.date(year=2020, month=12, day=25),
-        )
-    )
-
     assert resource.get_daily_opening_hours(
         datetime.date(year=2020, month=12, day=23),
         datetime.date(year=2020, month=12, day=25),

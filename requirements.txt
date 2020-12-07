@@ -20,7 +20,8 @@ django-modeltranslation==0.15.2  # via -r requirements.in
 django-mptt==0.11.0       # via django-orghierarchy
 django-orghierarchy==0.1.27  # via -r requirements.in
 django-simple-history==2.11.0  # via -r requirements.in
-django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, djangorestframework, drf-oidc-auth
+django-timezone-field==4.1.1  # via -r requirements.in
+django==3.1.2             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, django-timezone-field, djangorestframework, drf-oidc-auth
 djangorestframework==3.12.1  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-oidc-auth
 drf-oidc-auth==0.10.0     # via django-helusers
 drf-writable-nested==0.6.2  # via -r requirements.in
@@ -36,7 +37,7 @@ pyjwkest==1.4.2           # via drf-oidc-auth
 pymeeus==0.3.7            # via convertdate
 python-dateutil==2.8.1    # via holidays
 python-jose==3.2.0        # via django-helusers
-pytz==2020.1              # via convertdate, django
+pytz==2020.1              # via convertdate, django, django-timezone-field
 requests-cache==0.5.2     # via -r requirements.in
 requests==2.24.0          # via django-helusers, django-orghierarchy, pyjwkest, requests-cache
 rsa==4.6                  # via python-jose

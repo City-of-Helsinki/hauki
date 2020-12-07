@@ -6,6 +6,7 @@ from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from timezone_field.rest_framework import TimeZoneSerializerField
 
 from users.serializers import UserSerializer
 
@@ -117,6 +118,7 @@ class ResourceSerializer(
 ):
     last_modified_by = UserSerializer(read_only=True)
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
+    timezone = TimeZoneSerializerField(required=False)
 
     class Meta:
         model = Resource
@@ -133,6 +135,7 @@ class ResourceSerializer(
             "last_modified_by",
             "extra_data",
             "is_public",
+            "timezone",
         ]
 
         read_only_fields = ["last_modified_by"]
@@ -169,6 +172,7 @@ class ResourceSerializer(
 class ResourceSimpleSerializer(
     TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
 ):
+    timezone = TimeZoneSerializerField()
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
@@ -176,6 +180,7 @@ class ResourceSimpleSerializer(
         fields = [
             "id",
             "name",
+            "timezone",
             "origins",
         ]
 

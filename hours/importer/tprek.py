@@ -162,6 +162,7 @@ class TPRekImporter(Importer):
             "same_as": self.get_url("unit", data["id"]),
             "organization": obj_organization,
             "extra_data": self.get_unit_links(data),
+            "timezone": "Europe/Helsinki",
         }
         return unit_data
 

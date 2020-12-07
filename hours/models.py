@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from enumfields import EnumField, EnumIntegerField
 from model_utils.models import SoftDeletableModel, TimeStampedModel
+from timezone_field import TimeZoneField
 
 from hours.enums import (
     FrequencyModifier,
@@ -179,6 +180,14 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
         return self.id
 
 
+def get_resource_default_timezone():
+    """Return the value of RESOURCE_DEFAULT_TIMEZONE setting
+
+    Used in the default value of Resource.timezone to prevent the setting
+    triggering a database migration every time the setting is changed."""
+    return settings.RESOURCE_DEFAULT_TIMEZONE
+
+
 class Resource(SoftDeletableModel, TimeStampedModel):
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, null=True, blank=True
@@ -215,6 +224,9 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     )
     extra_data = models.JSONField(verbose_name=_("Extra data"), null=True, blank=True)
     is_public = models.BooleanField(default=True)
+    timezone = TimeZoneField(
+        default=get_resource_default_timezone, null=True, blank=True
+    )
     # Denormalized values from the parent resources
     ancestry_is_public = models.BooleanField(null=True, blank=True)
     ancestry_data_source = ArrayField(

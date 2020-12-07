@@ -55,6 +55,11 @@ class ResourceAdmin(HaukiModelAdmin):
     ordering = ("name",)
     raw_id_fields = ("children", "organization")
     inlines = (ResourceOriginInline, ParentResourceInline, ChildResourceInline)
+    readonly_fields = (
+        "ancestry_is_public",
+        "ancestry_data_source",
+        "ancestry_organization",
+    )
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)

@@ -1,4 +1,4 @@
-from django.utils.translation import pgettext_lazy as _
+from django.utils.translation import pgettext_lazy
 from enumfields import Enum
 
 
@@ -15,16 +15,16 @@ class State(Enum):
     WEATHER_PERMITTING = "weather_permitting"
 
     class Labels:
-        OPEN = _("State", "Open")
-        CLOSED = _("State", "Closed")
-        UNDEFINED = _("State", "Undefined")
-        SELF_SERVICE = _("State", "Self service")
-        WITH_KEY = _("State", "With key")
-        WITH_RESERVATION = _("State", "With reservation")
-        WITH_KEY_AND_RESERVATION = _("State", "With key and reservation")
-        ENTER_ONLY = _("State", "Enter only")
-        EXIT_ONLY = _("State", "Exit only")
-        WEATHER_PERMITTING = _("State", "Weather permitting")
+        OPEN = pgettext_lazy("State", "Open")
+        CLOSED = pgettext_lazy("State", "Closed")
+        UNDEFINED = pgettext_lazy("State", "Undefined")
+        SELF_SERVICE = pgettext_lazy("State", "Self service")
+        WITH_KEY = pgettext_lazy("State", "With key")
+        WITH_RESERVATION = pgettext_lazy("State", "With reservation")
+        WITH_KEY_AND_RESERVATION = pgettext_lazy("State", "With key and reservation")
+        ENTER_ONLY = pgettext_lazy("State", "Enter only")
+        EXIT_ONLY = pgettext_lazy("State", "Exit only")
+        WEATHER_PERMITTING = pgettext_lazy("State", "Weather permitting")
 
 
 class ResourceType(Enum):
@@ -42,18 +42,18 @@ class ResourceType(Enum):
     ENTRANCE = "entrance_or_exit"
 
     class Labels:
-        UNIT = _("ResourceType", "Unit")
-        SUBSECTION = _("ResourceType", "Section")
-        SPECIAL_GROUP = _("ResourceType", "Special group")
-        CONTACT = _("ResourceType", "Contact email or phone number")
-        ONLINE_SERVICE = _("ResourceType", "Online service")
-        SERVICE = _("ResourceType", "Service")
-        SERVICE_CHANNEL = _("ResourceType", "Service channel")
-        SERVICE_AT_UNIT = _("ResourceType", "Service at unit")
-        RESERVABLE = _("ResourceType", "Reservable resource")
-        BUILDING = _("ResourceType", "Building")
-        AREA = _("ResourceType", "Area")
-        ENTRANCE = _("ResourceType", "Entrance or exit")
+        UNIT = pgettext_lazy("ResourceType", "Unit")
+        SUBSECTION = pgettext_lazy("ResourceType", "Section")
+        SPECIAL_GROUP = pgettext_lazy("ResourceType", "Special group")
+        CONTACT = pgettext_lazy("ResourceType", "Contact email or phone number")
+        ONLINE_SERVICE = pgettext_lazy("ResourceType", "Online service")
+        SERVICE = pgettext_lazy("ResourceType", "Service")
+        SERVICE_CHANNEL = pgettext_lazy("ResourceType", "Service channel")
+        SERVICE_AT_UNIT = pgettext_lazy("ResourceType", "Service at unit")
+        RESERVABLE = pgettext_lazy("ResourceType", "Reservable resource")
+        BUILDING = pgettext_lazy("ResourceType", "Building")
+        AREA = pgettext_lazy("ResourceType", "Area")
+        ENTRANCE = pgettext_lazy("ResourceType", "Entrance or exit")
 
 
 class Weekday(Enum):
@@ -66,13 +66,13 @@ class Weekday(Enum):
     SUNDAY = 7
 
     class Labels:
-        MONDAY = _("Weekday", "Monday")
-        TUESDAY = _("Weekday", "Tuesday")
-        WEDNESDAY = _("Weekday", "Wednesday")
-        THURSDAY = _("Weekday", "Thursday")
-        FRIDAY = _("Weekday", "Friday")
-        SATURDAY = _("Weekday", "Saturday")
-        SUNDAY = _("Weekday", "Sunday")
+        MONDAY = pgettext_lazy("Weekday", "Monday")
+        TUESDAY = pgettext_lazy("Weekday", "Tuesday")
+        WEDNESDAY = pgettext_lazy("Weekday", "Wednesday")
+        THURSDAY = pgettext_lazy("Weekday", "Thursday")
+        FRIDAY = pgettext_lazy("Weekday", "Friday")
+        SATURDAY = pgettext_lazy("Weekday", "Saturday")
+        SUNDAY = pgettext_lazy("Weekday", "Sunday")
 
     @classmethod
     def business_days(cls):
@@ -96,10 +96,10 @@ class RuleContext(Enum):
     # WEEK = "week"
 
     class Labels:
-        PERIOD = _("RuleContext", "Period")
-        YEAR = _("RuleContext", "Year")
-        MONTH = _("RuleContext", "Month")
-        # WEEK = _("RuleContext", "Week")
+        PERIOD = pgettext_lazy("RuleContext", "Period")
+        YEAR = pgettext_lazy("RuleContext", "Year")
+        MONTH = pgettext_lazy("RuleContext", "Month")
+        # WEEK = pgettext_lazy("RuleContext", "Week")
 
 
 class RuleSubject(Enum):
@@ -115,16 +115,16 @@ class RuleSubject(Enum):
     SUNDAY = "sun"
 
     class Labels:
-        DAY = _("RuleSubject", "Day")
-        WEEK = _("RuleSubject", "Week")
-        MONTH = _("RuleSubject", "Month")
-        MONDAY = _("RuleSubject", "Monday")
-        TUESDAY = _("RuleSubject", "Tuesday")
-        WEDNESDAY = _("RuleSubject", "Wednesday")
-        THURSDAY = _("RuleSubject", "Thursday")
-        FRIDAY = _("RuleSubject", "Friday")
-        SATURDAY = _("RuleSubject", "Saturday")
-        SUNDAY = _("RuleSubject", "Sunday")
+        DAY = pgettext_lazy("RuleSubject", "Day")
+        WEEK = pgettext_lazy("RuleSubject", "Week")
+        MONTH = pgettext_lazy("RuleSubject", "Month")
+        MONDAY = pgettext_lazy("RuleSubject", "Monday")
+        TUESDAY = pgettext_lazy("RuleSubject", "Tuesday")
+        WEDNESDAY = pgettext_lazy("RuleSubject", "Wednesday")
+        THURSDAY = pgettext_lazy("RuleSubject", "Thursday")
+        FRIDAY = pgettext_lazy("RuleSubject", "Friday")
+        SATURDAY = pgettext_lazy("RuleSubject", "Saturday")
+        SUNDAY = pgettext_lazy("RuleSubject", "Sunday")
 
     def is_singular(self):
         return self in [
@@ -168,5 +168,5 @@ class FrequencyModifier(Enum):
     ODD = "odd"
 
     class Labels:
-        EVEN = _("FrequencyModifier", "Even")
-        ODD = _("FrequencyModifier", "Odd")
+        EVEN = pgettext_lazy("FrequencyModifier", "Even")
+        ODD = pgettext_lazy("FrequencyModifier", "Odd")

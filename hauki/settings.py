@@ -291,6 +291,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
+    "DEFAULT_METADATA_CLASS": "hours.metadata.TranslatedChoiceNamesMetadata",
 }
 
 # shown in the browsable API

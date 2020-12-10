@@ -1,4 +1,3 @@
-import time
 from typing import Callable, Hashable
 
 from django import db
@@ -202,14 +201,11 @@ class TPRekImporter(Importer):
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized Resource data.
         """
-        # Running id will be removed once tprek adds permanent ids to their API.
-        if "id" not in data:
-            data["id"] = int(time.time() * 100000)
-        connection_id = str(data.pop("id"))
+        connection_id = str(data.pop("connection_id"))
         unit_id = str(data.pop("unit_id"))
         origin = {
             "data_source_id": self.data_source.id,
-            "origin_id": "connection-%s" % connection_id,
+            "origin_id": connection_id,
         }
         # parent may be missing if e.g. the unit has just been created or
         # deleted, or is not public at the moment. Therefore, parent may be empty.
@@ -257,16 +253,22 @@ class TPRekImporter(Importer):
         """
         queryset = self.data_to_match[object_type]
 
+        api_params = {
+            "official": "yes",
+        }
+        if object_type == "connection":
+            api_params["connectionmode"] = "hauki"
+
         if self.options.get("single", None):
             obj_id = self.options["single"]
-            obj_list = [self.api_get(object_type, obj_id, params={"official": "yes"})]
+            obj_list = [self.api_get(object_type, obj_id, params=api_params)]
             self.logger.info("Loading TPREK " + object_type + " " + str(obj_list))
             queryset = queryset.filter(
                 origins__data_source=self.data_source, origins__origin_id=obj_id
             )
         else:
             self.logger.info("Loading TPREK " + object_type + "s...")
-            obj_list = self.api_get(object_type, params={"official": "yes"})
+            obj_list = self.api_get(object_type, params=api_params)
             self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         # Fill the resource cache so we can match and link to existing objects
         if not get_object_id and not get_data_id:

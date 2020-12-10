@@ -64,7 +64,7 @@ def mock_tprek_data(requests_mock, request):
         # Single connection should become duplicated.
         connections.append(
             {
-                "id": 28,
+                "connection_id": 28,
                 "unit_id": 8215,
                 "section_type": "ESERVICE_LINK",
                 "name_fi": "Ohjattuun liikuntaan ilmoittautuminen",

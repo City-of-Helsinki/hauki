@@ -253,6 +253,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+LOCALE_PATHS = [root("locale")]
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
@@ -291,6 +293,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
+    "DEFAULT_METADATA_CLASS": "hours.metadata.TranslatedChoiceNamesMetadata",
 }
 
 # shown in the browsable API

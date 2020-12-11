@@ -3,7 +3,6 @@ from calendar import Calendar
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
-from operator import attrgetter
 from typing import List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
@@ -77,6 +76,13 @@ def expand_range(start_date, end_date):
     return dates
 
 
+def _get_times_for_sort(item: TimeElement) -> tuple:
+    return (
+        item.start_time if item.start_time else datetime.time(hour=0, minute=0),
+        item.end_time if item.end_time else datetime.time(hour=0, minute=0),
+    )
+
+
 def combine_element_time_spans(elements):
     """Combines overlapping time elements
 
@@ -94,15 +100,20 @@ def combine_element_time_spans(elements):
         if not state_elements:
             continue
 
-        sorted_elements = sorted(
-            state_elements, key=attrgetter("start_time", "end_time")
-        )
+        sorted_elements = sorted(state_elements, key=_get_times_for_sort)
 
         new_range_start = None
         new_range_end = None
         periods = set()
 
         for element in sorted_elements:
+            if element.full_day:
+                # Full day element found, no need to go through the others
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                periods = element.periods if element.periods else []
+                break
+
             if new_range_start is None:
                 new_range_start = element.start_time
                 new_range_end = element.end_time
@@ -111,9 +122,6 @@ def combine_element_time_spans(elements):
             elif new_range_end >= element.start_time:
                 new_range_end = max(element.end_time, new_range_end)
             else:
-                if element.periods:
-                    periods.update(element.periods)
-
                 result.append(
                     TimeElement(
                         start_time=new_range_start,
@@ -127,6 +135,8 @@ def combine_element_time_spans(elements):
                 new_range_start = element.start_time
                 new_range_end = element.end_time
                 periods = set()
+                if element.periods:
+                    periods.update(element.periods)
 
         result.append(
             TimeElement(

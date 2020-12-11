@@ -122,9 +122,6 @@ def combine_element_time_spans(elements):
             elif new_range_end >= element.start_time:
                 new_range_end = max(element.end_time, new_range_end)
             else:
-                if element.periods:
-                    periods.update(element.periods)
-
                 result.append(
                     TimeElement(
                         start_time=new_range_start,
@@ -138,6 +135,8 @@ def combine_element_time_spans(elements):
                 new_range_start = element.start_time
                 new_range_end = element.end_time
                 periods = set()
+                if element.periods:
+                    periods.update(element.periods)
 
         result.append(
             TimeElement(

@@ -64,6 +64,91 @@ def test_resource_get_daily_opening_hours(
 
 
 @pytest.mark.django_db
+def test_resource_get_daily_opening_hours_periods_in_result(
+    assert_count_equal,
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.UNDEFINED,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=17, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.OPEN,
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=10, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.SELF_SERVICE,
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=17, minute=0),
+        end_time=datetime.time(hour=19, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.SELF_SERVICE,
+    )
+
+    weekday_time_element_open = TimeElement(
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=17, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+    weekday_time_element_self_service_morning = TimeElement(
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=10, minute=0),
+        resource_state=State.SELF_SERVICE,
+        override=False,
+        full_day=False,
+    )
+
+    weekday_time_element_self_service_evening = TimeElement(
+        start_time=datetime.time(hour=17, minute=0),
+        end_time=datetime.time(hour=19, minute=0),
+        resource_state=State.SELF_SERVICE,
+        override=False,
+        full_day=False,
+    )
+
+    opening_hours = resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=12),
+    )
+
+    assert list(opening_hours.keys()) == [datetime.date(year=2020, month=10, day=12)]
+    assert_count_equal(
+        opening_hours[datetime.date(year=2020, month=10, day=12)],
+        [
+            weekday_time_element_open,
+            weekday_time_element_self_service_morning,
+            weekday_time_element_self_service_evening,
+        ],
+    )
+
+    periods = [
+        i.periods for i in opening_hours[datetime.date(year=2020, month=10, day=12)]
+    ]
+    assert periods == [[date_period], [date_period], [date_period]]
+
+
+@pytest.mark.django_db
 def test_get_period_for_date(
     resource, date_period_factory, time_span_group_factory, time_span_factory
 ):

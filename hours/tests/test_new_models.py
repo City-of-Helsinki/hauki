@@ -1429,3 +1429,66 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
             expected_time_element_two_overrides
         ],
     }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        name="The whole year",
+        resource=resource,
+        resource_state=State.UNDEFINED,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+        override=False,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        resource_state=State.OPEN,
+        weekdays=list(Weekday),
+    )
+
+    date_period_factory(
+        name="Exception in december",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=12, day=3),
+        end_date=datetime.date(year=2020, month=12, day=5),
+        override=False,
+    )
+
+    expected_time_element_open = TimeElement(
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    expected_time_element_open_24h = TimeElement(
+        start_time=None,
+        end_time=None,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=True,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=12, day=1),
+        datetime.date(year=2020, month=12, day=8),
+    ) == {
+        datetime.date(year=2020, month=12, day=1): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=2): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=3): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=4): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=5): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=6): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=7): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=8): [expected_time_element_open],
+    }

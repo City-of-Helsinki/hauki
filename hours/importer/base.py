@@ -9,7 +9,6 @@ import requests
 from django import db
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
-from django.db.models.signals import m2m_changed
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
 
@@ -27,10 +26,6 @@ class Importer(object):
         # will be created.
         self.resource_cache = {}
         self.dateperiod_cache = {}
-
-        # Disconnect django signals for the duration of the import, to prevent huge
-        # db operations at every parent add/remove
-        m2m_changed.receivers = ()
 
     def get_object_id(self, obj: Model) -> str:
         try:

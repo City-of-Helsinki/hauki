@@ -4,10 +4,12 @@ import pytz
 from django import db
 from django.conf import settings
 from django.db.models import Model
+from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
 
 from ..enums import ResourceType
 from ..models import DataSource, Resource
+from ..signals import resource_children_changed, resource_children_cleared
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -57,6 +59,19 @@ class TPRekImporter(Importer):
                 is_public=True,
             ),
         }
+        # Disconnect django signals for the duration of the import, to prevent huge
+        # db operations at every parent add/remove
+        m2m_changed.receivers = []
+
+    @staticmethod
+    def reconnect_receivers():
+        # Reconnect signals at the end, in case the same runtime is used for all tests
+        m2m_changed.connect(
+            receiver=resource_children_changed, sender=Resource.children.through
+        )
+        m2m_changed.connect(
+            receiver=resource_children_cleared, sender=Resource.children.through
+        )
 
     @staticmethod
     def mark_non_public(obj: Resource) -> bool:
@@ -318,6 +333,7 @@ class TPRekImporter(Importer):
             syncher.mark(obj)
 
         syncher.finish(force=self.options["force"])
+        self.reconnect_receivers()
 
     @db.transaction.atomic
     def import_units(self):

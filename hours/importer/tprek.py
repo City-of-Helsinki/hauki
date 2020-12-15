@@ -1,5 +1,6 @@
 from typing import Callable, Hashable
 
+import pytz
 from django import db
 from django.conf import settings
 from django.db.models import Model
@@ -161,7 +162,7 @@ class TPRekImporter(Importer):
             "same_as": self.get_url("unit", data["id"]),
             "organization": obj_organization,
             "extra_data": self.get_unit_links(data),
-            "timezone": "Europe/Helsinki",
+            "timezone": pytz.timezone("Europe/Helsinki"),
         }
         return unit_data
 

@@ -9,6 +9,7 @@ import requests
 from django import db
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
+from django.db.models.signals import m2m_changed
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
 
@@ -26,6 +27,10 @@ class Importer(object):
         # will be created.
         self.resource_cache = {}
         self.dateperiod_cache = {}
+
+        # Disconnect django signals for the duration of the import, to prevent huge
+        # db operations at every parent add/remove
+        m2m_changed.receivers = ()
 
     def get_object_id(self, obj: Model) -> str:
         try:
@@ -263,7 +268,12 @@ class Importer(object):
                 self.logger.info(
                     "%s changed: %s" % (obj, ", ".join(obj._changed_fields))
                 )
-            obj.save()
+            # Child ancestry should be updated after they get parents.
+            # At this point, obj will not yet have children to update.
+            obj.save(update_child_ancestry_fields=False)
+            # It has all the necessary parents, on the other hand.
+            if "parents" in obj._changed_fields:
+                obj.update_ancestry()
 
         return obj
 

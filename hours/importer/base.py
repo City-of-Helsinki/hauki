@@ -273,7 +273,12 @@ class Importer(object):
                 self.logger.info(
                     "%s changed: %s" % (obj, ", ".join(obj._changed_fields))
                 )
-            obj.save()
+            # Child ancestry should be updated after they get parents.
+            # At this point, obj will not yet have children to update.
+            obj.save(update_child_ancestry_fields=False)
+            # It has all the necessary parents, on the other hand.
+            if "parents" in obj._changed_fields:
+                obj.update_ancestry()
 
         return obj
 

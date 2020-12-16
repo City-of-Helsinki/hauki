@@ -353,7 +353,7 @@ class KirjastotImporter(Importer):
             return [
                 {
                     "resource": resource,
-                    "name": {"fi": period.get("name")},
+                    "name": {"fi": period.get("name", "")},
                     "start_date": parse(period["validFrom"]).date(),
                     "end_date": parse(period["validUntil"]).date(),
                     "resource_state": State.CLOSED,
@@ -613,7 +613,7 @@ class KirjastotImporter(Importer):
                 self.logger.debug(
                     'period #{} "{}": {} - {}'.format(
                         kirkanta_period["id"],
-                        kirkanta_period["name"],
+                        kirkanta_period.get("name", ""),
                         valid_from,
                         valid_until,
                     )
@@ -646,7 +646,7 @@ class KirjastotImporter(Importer):
 
                 long_period = {
                     "resource": library,
-                    "name": {"fi": kirkanta_period.get("name")},
+                    "name": {"fi": kirkanta_period.get("name", "")},
                     "start_date": valid_from,
                     "end_date": valid_until,
                     "resource_state": state,

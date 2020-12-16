@@ -3,7 +3,6 @@ from calendar import Calendar
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
-from operator import attrgetter
 from typing import List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
@@ -14,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from enumfields import EnumField, EnumIntegerField
 from model_utils.models import SoftDeletableModel, TimeStampedModel
+from timezone_field import TimeZoneField
 
 from hours.enums import (
     FrequencyModifier,
@@ -76,6 +76,13 @@ def expand_range(start_date, end_date):
     return dates
 
 
+def _get_times_for_sort(item: TimeElement) -> tuple:
+    return (
+        item.start_time if item.start_time else datetime.time(hour=0, minute=0),
+        item.end_time if item.end_time else datetime.time(hour=0, minute=0),
+    )
+
+
 def combine_element_time_spans(elements):
     """Combines overlapping time elements
 
@@ -93,15 +100,20 @@ def combine_element_time_spans(elements):
         if not state_elements:
             continue
 
-        sorted_elements = sorted(
-            state_elements, key=attrgetter("start_time", "end_time")
-        )
+        sorted_elements = sorted(state_elements, key=_get_times_for_sort)
 
         new_range_start = None
         new_range_end = None
         periods = set()
 
         for element in sorted_elements:
+            if element.full_day:
+                # Full day element found, no need to go through the others
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                periods = element.periods if element.periods else []
+                break
+
             if new_range_start is None:
                 new_range_start = element.start_time
                 new_range_end = element.end_time
@@ -110,9 +122,6 @@ def combine_element_time_spans(elements):
             elif new_range_end >= element.start_time:
                 new_range_end = max(element.end_time, new_range_end)
             else:
-                if element.periods:
-                    periods.update(element.periods)
-
                 result.append(
                     TimeElement(
                         start_time=new_range_start,
@@ -126,6 +135,8 @@ def combine_element_time_spans(elements):
                 new_range_start = element.start_time
                 new_range_end = element.end_time
                 periods = set()
+                if element.periods:
+                    periods.update(element.periods)
 
         result.append(
             TimeElement(
@@ -179,6 +190,14 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
         return self.id
 
 
+def get_resource_default_timezone():
+    """Return the value of RESOURCE_DEFAULT_TIMEZONE setting
+
+    Used in the default value of Resource.timezone to prevent the setting
+    triggering a database migration every time the setting is changed."""
+    return settings.RESOURCE_DEFAULT_TIMEZONE
+
+
 class Resource(SoftDeletableModel, TimeStampedModel):
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, null=True, blank=True
@@ -215,6 +234,21 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     )
     extra_data = models.JSONField(verbose_name=_("Extra data"), null=True, blank=True)
     is_public = models.BooleanField(default=True)
+    timezone = TimeZoneField(
+        default=get_resource_default_timezone, null=True, blank=True
+    )
+    # Denormalized values from the parent resources
+    ancestry_is_public = models.BooleanField(null=True, blank=True)
+    ancestry_data_source = ArrayField(
+        models.CharField(max_length=255),
+        null=True,
+        blank=True,
+    )
+    ancestry_organization = ArrayField(
+        models.CharField(max_length=255),
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = _("Resource")
@@ -259,6 +293,68 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         }
 
         return processed_opening_hours
+
+    def _get_parent_data(self, acc=None):
+        if acc is None:
+            acc = {
+                "is_public": None,
+                "data_sources": set(),
+                "organizations": set(),
+            }
+
+        parents = (
+            self.parents.all()
+            .select_related("organization")
+            .prefetch_related(
+                "origins",
+                "origins__data_source",
+            )
+        )
+
+        if not parents:
+            return acc
+
+        for parent in parents:
+            if acc["is_public"] is None:
+                acc["is_public"] = parent.is_public
+
+            if not parent.is_public:
+                acc["is_public"] = False
+
+            acc["data_sources"].update([i.data_source.id for i in parent.origins.all()])
+            if parent.organization:
+                acc["organizations"].add(parent.organization.id)
+
+            parent._get_parent_data(acc)
+
+        return acc
+
+    def update_ancestry(self, update_child_ancestry_fields=True):
+        data = self._get_parent_data()
+
+        self.ancestry_is_public = data["is_public"]
+        self.ancestry_data_source = list(data["data_sources"])
+        self.ancestry_organization = list(data["organizations"])
+        self.save(update_child_ancestry_fields=update_child_ancestry_fields)
+
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+        update_child_ancestry_fields=True,
+    ):
+        super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )
+
+        if update_child_ancestry_fields:
+            for child in self.children.all():
+                child.update_ancestry()
 
 
 class ResourceOrigin(models.Model):

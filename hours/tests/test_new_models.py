@@ -64,6 +64,91 @@ def test_resource_get_daily_opening_hours(
 
 
 @pytest.mark.django_db
+def test_resource_get_daily_opening_hours_periods_in_result(
+    assert_count_equal,
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.UNDEFINED,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=17, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.OPEN,
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=10, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.SELF_SERVICE,
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=17, minute=0),
+        end_time=datetime.time(hour=19, minute=0),
+        weekdays=Weekday.business_days(),
+        resource_state=State.SELF_SERVICE,
+    )
+
+    weekday_time_element_open = TimeElement(
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=17, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+    weekday_time_element_self_service_morning = TimeElement(
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=10, minute=0),
+        resource_state=State.SELF_SERVICE,
+        override=False,
+        full_day=False,
+    )
+
+    weekday_time_element_self_service_evening = TimeElement(
+        start_time=datetime.time(hour=17, minute=0),
+        end_time=datetime.time(hour=19, minute=0),
+        resource_state=State.SELF_SERVICE,
+        override=False,
+        full_day=False,
+    )
+
+    opening_hours = resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=12),
+    )
+
+    assert list(opening_hours.keys()) == [datetime.date(year=2020, month=10, day=12)]
+    assert_count_equal(
+        opening_hours[datetime.date(year=2020, month=10, day=12)],
+        [
+            weekday_time_element_open,
+            weekday_time_element_self_service_morning,
+            weekday_time_element_self_service_evening,
+        ],
+    )
+
+    periods = [
+        i.periods for i in opening_hours[datetime.date(year=2020, month=10, day=12)]
+    ]
+    assert periods == [[date_period], [date_period], [date_period]]
+
+
+@pytest.mark.django_db
 def test_get_period_for_date(
     resource, date_period_factory, time_span_group_factory, time_span_factory
 ):
@@ -1415,16 +1500,6 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
         full_day=False,
     )
 
-    print()
-    from pprint import pprint
-
-    pprint(
-        resource.get_daily_opening_hours(
-            datetime.date(year=2020, month=12, day=23),
-            datetime.date(year=2020, month=12, day=25),
-        )
-    )
-
     assert resource.get_daily_opening_hours(
         datetime.date(year=2020, month=12, day=23),
         datetime.date(year=2020, month=12, day=25),
@@ -1438,4 +1513,67 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
         datetime.date(year=2020, month=12, day=25): [
             expected_time_element_two_overrides
         ],
+    }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        name="The whole year",
+        resource=resource,
+        resource_state=State.UNDEFINED,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+        override=False,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        resource_state=State.OPEN,
+        weekdays=list(Weekday),
+    )
+
+    date_period_factory(
+        name="Exception in december",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=12, day=3),
+        end_date=datetime.date(year=2020, month=12, day=5),
+        override=False,
+    )
+
+    expected_time_element_open = TimeElement(
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    expected_time_element_open_24h = TimeElement(
+        start_time=None,
+        end_time=None,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=True,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=12, day=1),
+        datetime.date(year=2020, month=12, day=8),
+    ) == {
+        datetime.date(year=2020, month=12, day=1): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=2): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=3): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=4): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=5): [expected_time_element_open_24h],
+        datetime.date(year=2020, month=12, day=6): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=7): [expected_time_element_open],
+        datetime.date(year=2020, month=12, day=8): [expected_time_element_open],
     }

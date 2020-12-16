@@ -30,13 +30,36 @@ class ResourceOriginInline(admin.TabularInline):
     extra = 1
 
 
+class ChildResourceInline(admin.TabularInline):
+    verbose_name = _("Child")
+    verbose_name_plural = _("Children")
+    model = Resource.children.through
+    fk_name = "from_resource"
+    raw_id_fields = ("from_resource", "to_resource")
+    extra = 1
+
+
+class ParentResourceInline(admin.TabularInline):
+    verbose_name = _("Parent")
+    verbose_name_plural = _("Parents")
+    model = Resource.children.through
+    fk_name = "to_resource"
+    raw_id_fields = ("from_resource", "to_resource")
+    extra = 1
+
+
 class ResourceAdmin(HaukiModelAdmin):
     search_fields = ("name", "description")
     list_display = ("name", "resource_type", "is_public")
     list_filter = ("resource_type", "data_sources", "is_public")
     ordering = ("name",)
     raw_id_fields = ("children", "organization")
-    inlines = (ResourceOriginInline,)
+    inlines = (ResourceOriginInline, ParentResourceInline, ChildResourceInline)
+    readonly_fields = (
+        "ancestry_is_public",
+        "ancestry_data_source",
+        "ancestry_organization",
+    )
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -51,6 +74,17 @@ class ResourceAdmin(HaukiModelAdmin):
             )
 
         return form
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+
+        if not change or not form.instance:
+            return
+
+        # Admin is not sending m2m_changed signals when saving the
+        # inline parent or child. We need to trigger the ancestry fields
+        # update manually.
+        form.instance.update_ancestry()
 
 
 class TimeSpanInline(admin.StackedInline):

@@ -9,6 +9,7 @@ django-model-utils
 django-modeltranslation
 django-orghierarchy
 django-simple-history
+django-timezone-field
 djangorestframework
 drf-writable-nested
 holidays

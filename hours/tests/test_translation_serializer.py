@@ -5,7 +5,7 @@ from hours.serializers import ResourceSerializer
 
 
 @pytest.mark.django_db
-def test_to_representation(resource):
+def test_to_representation(resource, settings):
     serializer = ResourceSerializer(resource)
     expected_data = {
         "address": {"en": None, "fi": resource.address_fi, "sv": None},
@@ -20,6 +20,7 @@ def test_to_representation(resource):
         "resource_type": "unit",
         "origins": [],
         "is_public": True,
+        "timezone": settings.RESOURCE_DEFAULT_TIMEZONE,
     }
 
     assert serializer.data == expected_data

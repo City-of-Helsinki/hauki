@@ -72,6 +72,7 @@ env = environ.Env(
     MAIL_MAILGUN_KEY=(str, ""),
     MAIL_MAILGUN_DOMAIN=(str, ""),
     MAIL_MAILGUN_API=(str, ""),
+    RESOURCE_DEFAULT_TIMEZONE=(str, None),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -100,6 +101,8 @@ AUTH_USER_MODEL = "users.User"
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/v1/"
 LOGOUT_REDIRECT_URL = "/v1/"
+
+RESOURCE_DEFAULT_TIMEZONE = env("RESOURCE_DEFAULT_TIMEZONE")
 
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = "hours.DataSource"
 
@@ -154,6 +157,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "django_orghierarchy",
+    "timezone_field",
     # Apps within this repository
     "users",
     "hours",
@@ -249,6 +253,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+LOCALE_PATHS = [root("locale")]
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
@@ -287,6 +293,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
+    "DEFAULT_METADATA_CLASS": "hours.metadata.TranslatedChoiceNamesMetadata",
 }
 
 # shown in the browsable API

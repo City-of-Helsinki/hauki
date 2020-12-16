@@ -5,13 +5,16 @@ from datetime import date
 from datetime import time as datetime_time
 from typing import Hashable, Tuple
 
+import pytz
 from django import db
 from django.conf import settings
 from django.db.models import Model
+from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
 
 from ..enums import ResourceType, State
 from ..models import DataSource, DatePeriod, Resource
+from ..signals import resource_children_changed, resource_children_cleared
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -97,6 +100,19 @@ class TPRekImporter(Importer):
             for origin in data["origins"]
             if origin["data_source_id"] == self.data_source.id
         ][0]
+        # Disconnect django signals for the duration of the import, to prevent huge
+        # db operations at every parent add/remove
+        m2m_changed.receivers = []
+
+    @staticmethod
+    def reconnect_receivers():
+        # Reconnect signals at the end, in case the same runtime is used for all tests
+        m2m_changed.connect(
+            receiver=resource_children_changed, sender=Resource.children.through
+        )
+        m2m_changed.connect(
+            receiver=resource_children_cleared, sender=Resource.children.through
+        )
 
     @staticmethod
     def mark_non_public(obj: Resource) -> bool:
@@ -475,6 +491,7 @@ class TPRekImporter(Importer):
             "same_as": self.get_url("unit", data["id"]),
             "organization": obj_organization,
             "extra_data": self.get_unit_links(data),
+            "timezone": pytz.timezone("Europe/Helsinki"),
         }
         return unit_data
 
@@ -514,14 +531,11 @@ class TPRekImporter(Importer):
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized Resource data.
         """
-        # Running id will be removed once tprek adds permanent ids to their API.
-        if "id" not in data:
-            data["id"] = int(time.time() * 100000)
-        connection_id = str(data.pop("id"))
+        connection_id = str(data.pop("connection_id"))
         unit_id = str(data.pop("unit_id"))
         origin = {
             "data_source_id": self.data_source.id,
-            "origin_id": "connection-%s" % connection_id,
+            "origin_id": connection_id,
         }
         # parent may be missing if e.g. the unit has just been created or
         # deleted, or is not public at the moment. Therefore, parent may be empty.
@@ -670,18 +684,22 @@ class TPRekImporter(Importer):
             "connection" if object_type == "opening_hours" else object_type
         )
 
+        api_params = {
+            "official": "yes",
+        }
+        if object_type == "connection":
+            api_params["connectionmode"] = "hauki"
+
         if self.options.get("single", None):
             obj_id = self.options["single"]
-            obj_list = [
-                self.api_get(api_object_type, obj_id, params={"official": "yes"})
-            ]
+            obj_list = [self.api_get(api_object_type, obj_id, params=api_params)]
             self.logger.info("Loading TPREK " + object_type + " " + str(obj_list))
             queryset = queryset.filter(
                 origins__data_source=self.data_source, origins__origin_id=obj_id
             )
         else:
             self.logger.info("Loading TPREK " + object_type + "s...")
-            obj_list = self.api_get(api_object_type, params={"official": "yes"})
+            obj_list = self.api_get(object_type, params=api_params)
         syncher = ModelSyncher(
             queryset,
             self.get_object_id,
@@ -725,6 +743,7 @@ class TPRekImporter(Importer):
             syncher.mark(obj)
 
         syncher.finish(force=self.options["force"])
+        self.reconnect_receivers()
 
     @db.transaction.atomic
     def import_units(self):

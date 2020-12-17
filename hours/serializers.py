@@ -54,6 +54,18 @@ class TranslationSerializerMixin:
             return super().to_internal_value(data)
 
         translated_values = {}
+
+        # Add the possibly existing already internalized values to the
+        # translated_values variable. Otherwise we would lose the values
+        # if to_internal_value is called twice (as is the case with nested serializers).
+        for field_name in translation_options.fields.keys():
+            for lang in mt_settings.AVAILABLE_LANGUAGES:
+                translation_field_name = f"{field_name}_{lang}"
+                if translation_field_name in data:
+                    translated_values[translation_field_name] = data.get(
+                        translation_field_name
+                    )
+
         for field_name in translation_options.fields.keys():
             if field_name not in data.keys():
                 continue
@@ -68,6 +80,9 @@ class TranslationSerializerMixin:
                     continue
 
                 translated_values[f"{field_name}_{lang}"] = field_values[lang]
+                # Set the fields also in the initial_data, because the serializer
+                # save uses the initial data and not the validated_data when saving
+                data[f"{field_name}_{lang}"] = field_values[lang]
 
             del data[field_name]
 

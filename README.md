@@ -7,6 +7,14 @@ Django application and REST API for managing opening hours across all services
 ## Issue tracking
 Jira: https://helsinkisolutionoffice.atlassian.net/projects/HAUKI/issues/?filter=allissues
 
+## Documentation
+
+API documentation automatically generated from OpenAPI schema can be found from [http://127.0.0.1:8000/api_docs/](http://127.0.0.1:8000/api_docs/).
+
+The OpenAPI schema is served from [http://127.0.0.1:8000/openapi/](http://127.0.0.1:8000/openapi/).
+
+(Assuming you are running the project locally)
+
 ## Prerequisites
 
 * Docker

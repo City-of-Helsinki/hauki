@@ -161,6 +161,8 @@ INSTALLED_APPS = [
     # Apps within this repository
     "users",
     "hours",
+    # OpenAPI
+    "drf_spectacular",
 ] + env("EXTRA_INSTALLED_APPS")
 
 if env("SENTRY_DSN"):
@@ -294,6 +296,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
     "DEFAULT_METADATA_CLASS": "hours.metadata.TranslatedChoiceNamesMetadata",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # shown in the browsable API
@@ -312,6 +315,29 @@ if env("MAIL_MAILGUN_KEY"):
     EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 elif not env("MAIL_MAILGUN_KEY") and DEBUG is True:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+#
+# Django spectacular (OpenAPI) settings
+#
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Hauki API",
+    "DESCRIPTION": """
+API for the City of Helsinki opening hours database
+
+# Introduction
+
+To do.
+
+# Authentication methods
+
+<SecurityDefinitions />
+""",
+    "VERSION": "0.0.1",
+    "EXTERNAL_DOCS": {
+        "description": "Hauki API in GitHub",
+        "url": "https://github.com/City-of-Helsinki/hauki",
+    },
+}
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

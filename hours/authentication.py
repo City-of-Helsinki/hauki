@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework import exceptions
 from rest_framework.authentication import (
     BaseAuthentication,
@@ -204,3 +205,17 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
 class HaukiTokenAuthentication(TokenAuthentication):
     keyword = "APIToken"
+
+
+class HaukiSignedAuthenticationScheme(OpenApiAuthenticationExtension):
+    target_class = "hours.authentication.HaukiSignedAuthentication"
+    name = "HaukiSignedAuthentication"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "description": "A simple query parameter based authentication method for "
+            "trusted third parties.",
+            "type": "apiKey",
+            "in": "query",
+            "name": "signature",
+        }

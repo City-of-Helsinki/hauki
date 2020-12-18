@@ -7,6 +7,7 @@ from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
@@ -172,6 +173,14 @@ class ResourceFilterBackend(BaseFilterBackend):
         return queryset.filter(filter_q)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Resources"),
+    create=extend_schema(summary="Create a Resource"),
+    retrieve=extend_schema(summary="Find Resource by ID"),
+    update=extend_schema(summary="Update existing Resource"),
+    partial_update=extend_schema(summary="Update existing Resource partially"),
+    destroy=extend_schema(summary="Delete existing Resource"),
+)
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
@@ -233,6 +242,14 @@ class ResourceViewSet(
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Date Periods"),
+    create=extend_schema(summary="Create a Date Period"),
+    retrieve=extend_schema(summary="Find Date Period by ID"),
+    update=extend_schema(summary="Update existing Date Period"),
+    partial_update=extend_schema(summary="Update existing Date Period partially"),
+    destroy=extend_schema(summary="Delete existing Date Period"),
+)
 class DatePeriodViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
@@ -255,6 +272,14 @@ class DatePeriodViewSet(
         return queryset
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Rules"),
+    create=extend_schema(summary="Create a Rule"),
+    retrieve=extend_schema(summary="Find Rule by ID"),
+    update=extend_schema(summary="Update existing Rule"),
+    partial_update=extend_schema(summary="Update existing Rule partially"),
+    destroy=extend_schema(summary="Delete existing Rule"),
+)
 class RuleViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
@@ -280,6 +305,14 @@ class RuleViewSet(
         return RuleSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Time Spans"),
+    create=extend_schema(summary="Create a Time Span"),
+    retrieve=extend_schema(summary="Find Time Span by ID"),
+    update=extend_schema(summary="Update existing Time Span"),
+    partial_update=extend_schema(summary="Update existing Time Span partially"),
+    destroy=extend_schema(summary="Delete existing Time Span"),
+)
 class TimeSpanViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
 ):
@@ -302,6 +335,10 @@ class TimeSpanViewSet(
         return TimeSpanSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Organizations"),
+    retrieve=extend_schema(summary="Find Organizations by ID"),
+)
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.select_related("parent").prefetch_related(
         "children"
@@ -313,6 +350,11 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
 class AuthRequiredTestView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Authentication test",
+        description="Can be used to see if the current request is authenticated. "
+        "Handy for testing HaukiSignedAuth links.",
+    )
     def list(self, request, *args, **kwargs):
         organization_ids = set()
         organization_ids.update(

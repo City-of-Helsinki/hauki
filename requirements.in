@@ -11,6 +11,7 @@ django-orghierarchy
 django-simple-history
 django-timezone-field
 djangorestframework
+drf-spectacular
 drf-writable-nested
 holidays
 psycopg2

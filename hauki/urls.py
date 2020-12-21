@@ -16,6 +16,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic.base import RedirectView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 from hours.api import APIRouter
 from hours.views import invalidate_hauki_auth_signature
@@ -27,6 +32,13 @@ router = APIRouter()
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("v1/", include(router.urls)),
+    path("openapi/", SpectacularAPIView.as_view(), name="schema"),
+    path("api_docs/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path(
+        "api_docs/swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
     path(
         "invalidate_signature/",
         invalidate_hauki_auth_signature,

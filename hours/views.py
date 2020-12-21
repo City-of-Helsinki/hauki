@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -13,6 +14,11 @@ from .authentication import (
 from .models import SignedAuthEntry
 
 
+@extend_schema(
+    operation_id="invalidate_signature",
+    summary="Invalidate the current Hauki Signed Auth signature",
+    description="Invalidate the current Hauki Signed Auth signature",
+)
 @api_view(http_method_names=["POST"])
 def invalidate_hauki_auth_signature(request):
     params = get_auth_params(request)

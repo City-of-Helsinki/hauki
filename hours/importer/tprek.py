@@ -88,6 +88,9 @@ class TPRekImporter(Importer):
         if self.options.get("merge", None):
             self.get_object_id = self.merge_connections_get_object_id
             self.get_data_id = self.merge_connections_get_data_id
+        # Disconnect django signals for the duration of the import, to prevent huge
+        # db operations at every parent add/remove
+        m2m_changed.receivers = []
 
     def merge_connections_get_object_id(self, obj: Model) -> Hashable:
         if type(obj) == Resource and obj.resource_type in set(
@@ -106,9 +109,6 @@ class TPRekImporter(Importer):
             for origin in data["origins"]
             if origin["data_source_id"] == self.data_source.id
         ][0]
-        # Disconnect django signals for the duration of the import, to prevent huge
-        # db operations at every parent add/remove
-        m2m_changed.receivers = []
 
     @staticmethod
     def reconnect_receivers():

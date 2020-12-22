@@ -177,9 +177,10 @@ class TPRekImporter(Importer):
                 except ValueError:
                     # start did not contain month
                     month = end.month
-                try:
+                if end and month <= end.month:
+                    # only use end year if start month is before end month
                     year = end.year
-                except AttributeError:
+                else:
                     # end did not contain year either, assume last occurrence of date
                     today = date.today()
                     if today > date(year=today.year, month=month, day=day):

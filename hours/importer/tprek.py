@@ -674,7 +674,7 @@ class TPRekImporter(Importer):
             end_date = period.get("end_date", None)
             origin = {
                 "data_source_id": self.data_source.id,
-                "origin_id": "{0}-{1}".format(connection_id, start_date),
+                "origin_id": "{0}-{1}-{2}".format(connection_id, start_date, end_date),
             }
             period_datum = {
                 "resource": resource,

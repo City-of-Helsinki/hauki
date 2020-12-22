@@ -33,6 +33,11 @@ CONNECTION_TYPE_MAPPING = {
 # here we list the tprek connection types that we do *not* want to import as resources
 CONNECTION_TYPES_TO_IGNORE = ["OPENING_HOURS", "SOCIAL_MEDIA_LINK"]
 
+date_or_span_regex = r"(([0-3]?[0-9]\.((((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)|(\s)?-(\s)?))((\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?)"  # noqa
+date_optional_month_regex = r"([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?"  # noqa
+multiple_weekday_spans_regex = r"(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su]))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?"  # noqa
+multiple_time_spans_regex = r"([0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?(((,|\sja)?\s([0-2]?[0-9]((\.|:)[0-9][0-9])?))((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?)?"  # noqa
+
 
 @register_importer
 class TPRekImporter(Importer):
@@ -193,12 +198,6 @@ class TPRekImporter(Importer):
             hour = 0
         return datetime_time(hour=hour, minute=min)
 
-    date_regex = r"([0-3])?[0-9]\.(10|11|12|[0-9])\.([0-9]{4})?"
-    date_optional_month_regex = r"([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?"
-    date_or_span_regex = r"([0-3])?[0-9]\.(10|11|12|[0-9])\.([0-9]{4})?(-([0-3])?[0-9]\.(10|11|12|[0-9])\.[0-9]{4})?"  # noqa
-    weekday_or_span_regex = r"([a-z][a-z])(-([a-z][a-z]))?"
-    time_regex = r"[0-9][0-9](:[0-9][0-9])?"
-
     def parse_period_string(self, string: str) -> list:
         """
         Takes TPREK simple Finnish opening hours string and returns any period data
@@ -219,9 +218,9 @@ class TPRekImporter(Importer):
         for index, potential_period_str in enumerate(potential_period_strs):
             # match to pattern with one or two dates, e.g. 1.12.2020 or 5.-10.12.2020
             # or 12.12.2020 asti
-            # https://regex101.com/r/UkhZ4e/4
+            # https://regex101.com/r/6vGxKo/1
             pattern = re.compile(
-                r"(alkaen )?([0-3]?[0-9]\.((((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)|(\s)?-(\s)?))((\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?( alkaen| asti)?",  # noqa
+                r"(alkaen )?" + date_or_span_regex + r"( alkaen| asti)?",  # noqa
                 re.IGNORECASE,
             )
 
@@ -244,24 +243,24 @@ class TPRekImporter(Importer):
                     )
                     # string has been saved, do not use the string for the next period
                     previous_period_str = ""
-                if match.group(14):
+                if match.group(15):
                     # two dates found, start and end!
                     start_date, end_date = self.parse_dates(
-                        match.group(2), match.group(14)
+                        match.group(3), match.group(15)
                     )
                 else:
                     if (match.group(1) and "alkaen" in match.group(1)) or (
-                        match.group(20) and "alkaen" in match.group(20)
+                        match.group(21) and "alkaen" in match.group(21)
                     ):
                         # starting date known
-                        start_date, end_date = self.parse_dates(match.group(2), None)
-                    elif match.group(20) and "asti" in match.group(20):
+                        start_date, end_date = self.parse_dates(match.group(3), None)
+                    elif match.group(21) and "asti" in match.group(21):
                         # end date known
-                        start_date, end_date = self.parse_dates(None, match.group(2))
+                        start_date, end_date = self.parse_dates(None, match.group(3))
                     else:
                         # single day exception
                         start_date, end_date = self.parse_dates(
-                            match.group(2), match.group(2)
+                            match.group(3), match.group(3)
                         )
 
             # paste strings together whether match is found or not
@@ -298,9 +297,19 @@ class TPRekImporter(Importer):
         time_spans = []
         # match to single span, e.g. ma-pe 8-16:30 or suljettu pe or joka päivä 07-
         # or ma, ke, su klo 8-12, 16-20
-        # https://regex101.com/r/UkhZ4e/15
+        # https://regex101.com/r/UkhZ4e/16
         pattern = re.compile(
-            r"((suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?(\s?-\s?([0-3])?[0-9]\.(10|11|12|[0-9])\.([0-9]{4})?)?)?\s?-?\s?((\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su]))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?|\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)|joka päivä|päivittäin|avoinna|Päivystys)(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24 h|([0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?(((,|\sja)?\s([0-2]?[0-9]((\.|:)[0-9][0-9])?))((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?)?)?(\s(alkaen|asti))?",  # noqa
+            r"((suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?"
+            + date_or_span_regex
+            + r"?\s?-?\s?((\s"
+            + multiple_weekday_spans_regex
+            + r"|\s"
+            + date_optional_month_regex
+            + r")|joka päivä|päivittäin|avoinna|Päivystys)(\s"
+            + date_optional_month_regex
+            + r")?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24 h|"
+            + multiple_time_spans_regex
+            + r")?(\s(alkaen|asti))?",  # noqa
             re.IGNORECASE,
         )
         # 1) standardize formatting to get single whitespaces everywhere
@@ -324,12 +333,12 @@ class TPRekImporter(Importer):
 
         for match in matches:
             # If we have no weekday matches, assume daily opening
-            if not match.group(15) or "joka päivä" in match.group(14):
+            if not match.group(24) or "joka päivä" in match.group(23):
                 weekdays = None
             else:
                 weekdays = []
                 # we might have several consecutive weekday ranges
-                start_weekday_indices = (15, 20, 25, 30)
+                start_weekday_indices = (25, 30, 35, 40)
                 for start_index in start_weekday_indices:
                     if match.group(start_index):
                         end_index = start_index + 2
@@ -344,23 +353,23 @@ class TPRekImporter(Importer):
                         else:
                             weekdays.extend([start_weekday])
             if (match.group(1) and "suljettu" in match.group(1)) or (
-                match.group(44) and "suljettu" in match.group(44)
+                match.group(54) and "suljettu" in match.group(54)
             ):
                 start_time = None
                 end_time = None
                 resource_state = State.CLOSED
                 full_day = True
-            elif match.group(67) == "asti":
+            elif match.group(77) == "asti":
                 start_time = datetime_time(hour=0, minute=0)
-                end_time = self.parse_time(match.group(45))
+                end_time = self.parse_time(match.group(55))
                 resource_state = State.OPEN
                 full_day = False
-            elif match.group(45) or match.group(51):
+            elif match.group(55) or match.group(61):
                 # require start or end time
-                start_time = self.parse_time(match.group(45))
+                start_time = self.parse_time(match.group(55))
                 if not start_time:
                     start_time = datetime_time(hour=0, minute=0)
-                end_time = self.parse_time(match.group(51))
+                end_time = self.parse_time(match.group(61))
                 if not end_time:
                     end_time = datetime_time(hour=0, minute=0)
                 if match.group(1) and "huoltotauko" in match.group(1):
@@ -368,8 +377,8 @@ class TPRekImporter(Importer):
                 else:
                     resource_state = State.OPEN
                 full_day = False
-            elif match.group(44) and (
-                "ympäri vuorokauden" in match.group(44) or "24 h" in match.group(44)
+            elif match.group(54) and (
+                "ympäri vuorokauden" in match.group(54) or "24 h" in match.group(54)
             ):
                 # always open
                 start_time = None
@@ -394,11 +403,11 @@ class TPRekImporter(Importer):
                 }
             )
 
-            if match.group(57):
+            if match.group(67):
                 # we might have another time span on the same day, if we're really
                 # unlucky
-                start_time = self.parse_time(match.group(57))
-                end_time = self.parse_time(match.group(63))
+                start_time = self.parse_time(match.group(67))
+                end_time = self.parse_time(match.group(73))
                 if not end_time:
                     end_time = datetime_time(hour=0, minute=0)
                 resource_state = State.OPEN

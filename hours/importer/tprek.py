@@ -316,16 +316,17 @@ class TPRekImporter(Importer):
             previous_period_str = ""
         return periods
 
-    def parse_opening_string(self, string: str) -> dict:
+    def parse_opening_string(self, string: str) -> list:
         """
         Takes TPREK simple Finnish opening hours string and returns corresponding
         opening time spans, if found.
         """
         time_spans = []
         # match to single span, e.g. ma-pe 8-16:30 or suljettu pe or joka päivä 07-
-        # https://regex101.com/r/UkhZ4e/13
+        # or ma, ke, su klo 8-12, 16-20
+        # https://regex101.com/r/UkhZ4e/15
         pattern = re.compile(
-            r"((suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?(\s?-\s?([0-3])?[0-9]\.(10|11|12|[0-9])\.([0-9]{4})?)?)?\s?-?\s?((\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su]))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?|\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)|joka päivä|päivittäin)(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)?(\s|$)(ke?ll?o\s)*(([0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?(((,|\sja)?\s[0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?)?|suljettu|ympäri vuorokauden)?(\s(alkaen|asti))?",  # noqa
+            r"((suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?(\s?-\s?([0-3])?[0-9]\.(10|11|12|[0-9])\.([0-9]{4})?)?)?\s?-?\s?((\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su]))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?|\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)|joka päivä|päivittäin|avoinna|Päivystys)(\s([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?)?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24 h|([0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?(((,|\sja)?\s([0-2]?[0-9]((\.|:)[0-9][0-9])?))((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?)?)?(\s(alkaen|asti))?",  # noqa
             re.IGNORECASE,
         )
         # 1) standardize formatting to get single whitespaces everywhere
@@ -350,40 +351,65 @@ class TPRekImporter(Importer):
                 )
 
         for match in matches:
-            print(match)
+            # print(match)
             # If we have no weekday matches, assume daily opening
             if not match.group(15) or "joka päivä" in match.group(14):
                 weekdays = None
             else:
-                start_weekday = self.weekday_by_abbr[match.group(15).lower()]
-                if match.group(17):
-                    end_weekday = self.weekday_by_abbr[match.group(17).lower()]
-                    weekdays = list(range(start_weekday, end_weekday + 1))
-                else:
-                    weekdays = [start_weekday]
-                # TODO: we might have three more tuples of weekdays, if we're really
-                # unlucky :(
-
-            if (match.group(2) and "suljettu" in match.group(2)) or (
+                weekdays = []
+                # we might have several consecutive weekday ranges
+                start_weekday_indices = (15, 20, 25, 30)
+                for start_index in start_weekday_indices:
+                    if match.group(start_index):
+                        end_index = start_index + 2
+                        start_weekday = self.weekday_by_abbr[
+                            match.group(start_index).lower()
+                        ]
+                        if match.group(end_index):
+                            end_weekday = self.weekday_by_abbr[
+                                match.group(end_index).lower()
+                            ]
+                            weekdays.extend(list(range(start_weekday, end_weekday + 1)))
+                        else:
+                            weekdays.extend([start_weekday])
+            if (match.group(1) and "suljettu" in match.group(1)) or (
                 match.group(44) and "suljettu" in match.group(44)
             ):
-                print("suljettu found")
                 start_time = None
                 end_time = None
                 resource_state = State.CLOSED
                 full_day = True
-            elif match.group(66) == "asti":
+            elif match.group(67) == "asti":
                 start_time = datetime_time(hour=0, minute=0)
                 end_time = self.parse_time(match.group(45))
                 resource_state = State.OPEN
                 full_day = False
-            else:
-                # TODO: we might have two time spans, if we're really unlucky :(
+            elif match.group(45) or match.group(51):
+                # require start or end time
                 start_time = self.parse_time(match.group(45))
+                if not start_time:
+                    start_time = datetime_time(hour=0, minute=0)
                 end_time = self.parse_time(match.group(51))
                 if not end_time:
                     end_time = datetime_time(hour=0, minute=0)
+                if match.group(1) and "huoltotauko" in match.group(1):
+                    resource_state = State.CLOSED
+                else:
+                    resource_state = State.OPEN
+                full_day = False
+            elif match.group(44) and (
+                "ympäri vuorokauden" in match.group(44) or "24 h" in match.group(44)
+            ):
+                # always open
+                start_time = None
+                end_time = None
                 resource_state = State.OPEN
+                full_day = True
+            else:
+                # mark undefined if no times were found
+                start_time = None
+                end_time = None
+                resource_state = State.UNDEFINED
                 full_day = False
 
             time_spans.append(
@@ -396,10 +422,29 @@ class TPRekImporter(Importer):
                     "full_day": full_day,
                 }
             )
-            # no need to consider past strings any more
-            # previous_time_span_str = ""
 
-        print(time_spans)
+            if match.group(57):
+                # print("parsing second time span")
+                # we might have another time span on the same day, if we're really
+                # unlucky
+                start_time = self.parse_time(match.group(57))
+                end_time = self.parse_time(match.group(63))
+                if not end_time:
+                    end_time = datetime_time(hour=0, minute=0)
+                resource_state = State.OPEN
+                full_day = False
+                time_spans.append(
+                    {
+                        "group": None,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "weekdays": weekdays,
+                        "resource_state": resource_state,
+                        "full_day": full_day,
+                    }
+                )
+
+        # print(time_spans)
         return time_spans
 
     def get_unit_origins(self, data: dict) -> list:
@@ -611,12 +656,14 @@ class TPRekImporter(Importer):
             try:
                 time_spans = self.parse_opening_string(period["string"])
             except ValueError:
-                print(
+                self.logger.info(
                     "Error parsing period, most likely delimiters are missing! "
                     + "{0}".format(period)
                 )
                 continue
-            print(time_spans)
+            # print(time_spans)
+
+            # also update the period resource_state based on the whole period string
             if (
                 not time_spans
                 or all([span["resource_state"] == State.CLOSED for span in time_spans])
@@ -624,19 +671,34 @@ class TPRekImporter(Importer):
                 print("all time spans closed")
                 resource_state = State.CLOSED
             elif (
-                not time_spans
-                and "avoinna" in period["string"]
-                and "suljettu" not in period["string"]
+                "suljettu" not in period["string"]
+                and (
+                    "joka päivä" in period["string"]
+                    or "päivystys" in period["string"]
+                    or "päivittäin" in period["string"]
+                )
+                and (
+                    "ympäri vuorokauden" in period["string"]
+                    or "24 h" in period["string"]
+                )
             ):
                 resource_state = State.OPEN
             elif (
-                "suljettu" not in period["string"]
-                and "joka päivä" in period["string"]
-                and "ympäri vuorokauden" in period["string"]
+                not time_spans
+                and "avoinna" in period["string"]
+                and "sopimukse" in period["string"]
             ):
-                resource_state = State.OPEN
+                resource_state = State.WITH_RESERVATION
             else:
                 resource_state = State.UNDEFINED
+
+            # weather permitting
+            if "säävarauksella" in period["string"]:
+                for time_span in time_spans:
+                    if time_span["resource_state"] == State.OPEN:
+                        time_span["resource_state"] = State.WEATHER_PERMITTING
+                if not time_spans:
+                    resource_state = State.WEATHER_PERMITTING
 
             start_date = period.get("start_date", date.today())
             end_date = period.get("end_date", None)

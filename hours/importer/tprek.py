@@ -30,7 +30,7 @@ CONNECTION_TYPE_MAPPING = {
     "OTHER_INFO": ResourceType.SUBSECTION,
 }
 
-# here we list the tprek connection types that we do *not* want to use in Hauki
+# here we list the tprek connection types that we do *not* want to import as resources
 CONNECTION_TYPES_TO_IGNORE = ["OPENING_HOURS", "SOCIAL_MEDIA_LINK"]
 
 
@@ -50,6 +50,12 @@ class TPRekImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
+        ds_args = dict(id="kirkanta")
+        defaults = dict(name="kirjastot.fi")
+        self.kirjastot_data_source, _ = DataSource.objects.get_or_create(
+            defaults=defaults, **ds_args
+        )
+
         # this maps the imported resource names to Hauki objects
         self.data_to_match = {
             "unit": Resource.objects.filter(
@@ -66,7 +72,7 @@ class TPRekImporter(Importer):
             "opening_hours": DatePeriod.objects.filter(
                 origins__data_source=self.data_source,
                 is_public=True,
-            ),
+            ).exclude(origins__data_source=self.kirjastot_data_source),
         }
         with different_locale("fi_FI"):
             self.month_by_name = {
@@ -659,11 +665,19 @@ class TPRekImporter(Importer):
     def filter_opening_hours_data(self, data: list) -> list:
         """
         Takes connection data list and filters the connections that should be imported.
+
+        We only wish to import opening hours, and only for objects that have no openings
+        from other sources.
         """
+        libraries = Resource.objects.filter(
+            origins__data_source=self.kirjastot_data_source
+        )
         return [
             connection
             for connection in data
             if connection["section_type"] == "OPENING_HOURS"
+            and self.resource_cache.get(str(connection["unit_id"]), None)
+            not in libraries
         ]
 
     @db.transaction.atomic
@@ -699,7 +713,7 @@ class TPRekImporter(Importer):
             )
         else:
             self.logger.info("Loading TPREK " + object_type + "s...")
-            obj_list = self.api_get(object_type, params=api_params)
+            obj_list = self.api_get(api_object_type, params=api_params)
         syncher = ModelSyncher(
             queryset,
             self.get_object_id,

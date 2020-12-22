@@ -633,20 +633,27 @@ class TPRekImporter(Importer):
         # deleted, or is not public at the moment. Therefore, resource may be empty.
         # TODO: in case we are importing hours in non-opening hours connection, add them
         # to the original connection instead, not the unit!
-        print("trying to find resource with id")
-        print(unit_id)
+        # print("trying to find resource with id")
+        # print(unit_id)
         resource = self.resource_cache.get(unit_id, None)
-        print("found resource")
-        print(resource)
+        # print("found resource")
+        # print(resource)
+        if not resource:
+            self.logger.info(
+                "Error in data, resource with given unit_id not found! {0}".format(
+                    unit_id
+                )
+            )
+            return []
         period_string = data.get("name_fi", "")
         if not period_string:
-            print(
+            self.logger.info(
                 "Error parsing data, Finnish opening hours not found! {0}".format(data)
             )
         try:
             periods = self.parse_period_string(period_string)
         except ValueError:
-            print(
+            self.logger.info(
                 "Error parsing string, most likely dates are invalid! {0}".format(
                     period_string
                 )

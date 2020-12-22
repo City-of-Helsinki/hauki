@@ -212,6 +212,10 @@ class TPRekImporter(Importer):
         # if we have no match, the default period starts today
         start_date = date.today()
         end_date = None
+        # TODO: iterate match instead of splitting beforehand, like opening times
+        # TODO: regex must contain all stuff up to the date and beyond, e.g. regex
+        # matches must exactly split the string
+
         for index, potential_period_str in enumerate(potential_period_strs):
             # match to pattern with one or two dates, e.g. 1.12.2020 or 5.-10.12.2020
             # or 12.12.2020 asti
@@ -224,11 +228,7 @@ class TPRekImporter(Importer):
             match = pattern.search(potential_period_str)
             if match:
                 # in case of date match, save previous strings as a separate period
-                print("match found")
-                print("previous string is")
-                print(previous_period_str)
                 if previous_period_str:
-                    print("appending period")
                     if "poikkeuksellisesti" in previous_period_str:
                         override = True
                     else:
@@ -242,26 +242,18 @@ class TPRekImporter(Importer):
                             "resource_state": State.UNDEFINED,
                         }
                     )
-                    print(periods)
                     # string has been saved, do not use the string for the next period
                     previous_period_str = ""
-                print("adding match")
-                print(potential_period_str)
-                print(match)
                 if match.group(14):
-                    print("two dates")
                     # two dates found, start and end!
                     start_date, end_date = self.parse_dates(
                         match.group(2), match.group(14)
                     )
-                    # end_date = self.parse_date(match.group(9))
                 else:
-                    print("only one date")
                     if (match.group(1) and "alkaen" in match.group(1)) or (
                         match.group(20) and "alkaen" in match.group(20)
                     ):
                         # starting date known
-                        print("only start date known")
                         start_date, end_date = self.parse_dates(match.group(2), None)
                     elif match.group(20) and "asti" in match.group(20):
                         # end date known
@@ -276,14 +268,11 @@ class TPRekImporter(Importer):
             if previous_period_str:
                 previous_period_str += ","
             previous_period_str += potential_period_str
-            print("previous string is now")
-            print(previous_period_str)
             if index < len(potential_period_strs) - 1:
                 # no need to save yet, more will follow
                 continue
             else:
                 # end of the loop without matching, use the pasted string
-                print("appending period")
                 if "poikkeuksellisesti" in previous_period_str:
                     override = True
                 else:
@@ -297,7 +286,6 @@ class TPRekImporter(Importer):
                         "resource_state": State.UNDEFINED,
                     }
                 )
-            print(periods)
             # string has been saved, do not use the string for the next period
             previous_period_str = ""
         return periods
@@ -318,9 +306,7 @@ class TPRekImporter(Importer):
         # 1) standardize formatting to get single whitespaces everywhere
         # 2) standardize dashes
         string = " " + " ".join(string.split()).replace("−", "-")
-        print(string)
         matches = pattern.finditer(string)
-        print("we have the matches:")
         if not matches:
             # TODO: do this in period if no time spans
             # no weekdays and times specified, resource might be closed
@@ -337,7 +323,6 @@ class TPRekImporter(Importer):
                 )
 
         for match in matches:
-            # print(match)
             # If we have no weekday matches, assume daily opening
             if not match.group(15) or "joka päivä" in match.group(14):
                 weekdays = None
@@ -410,7 +395,6 @@ class TPRekImporter(Importer):
             )
 
             if match.group(57):
-                # print("parsing second time span")
                 # we might have another time span on the same day, if we're really
                 # unlucky
                 start_time = self.parse_time(match.group(57))
@@ -430,7 +414,6 @@ class TPRekImporter(Importer):
                     }
                 )
 
-        # print(time_spans)
         return time_spans
 
     def get_unit_origins(self, data: dict) -> list:
@@ -618,11 +601,7 @@ class TPRekImporter(Importer):
         # deleted, or is not public at the moment. Therefore, resource may be empty.
         # TODO: in case we are importing hours in non-opening hours connection, add them
         # to the original connection instead, not the unit!
-        # print("trying to find resource with id")
-        # print(unit_id)
         resource = self.resource_cache.get(unit_id, None)
-        # print("found resource")
-        # print(resource)
         if not resource:
             self.logger.info(
                 "Error in data, resource with given unit_id not found! {0}".format(
@@ -654,14 +633,12 @@ class TPRekImporter(Importer):
                     + "{0}".format(period)
                 )
                 continue
-            # print(time_spans)
 
             # also update the period resource_state based on the whole period string
             if (
                 not time_spans
                 or all([span["resource_state"] == State.CLOSED for span in time_spans])
             ) and "suljettu" in period["string"]:
-                print("all time spans closed")
                 resource_state = State.CLOSED
             elif (
                 "suljettu" not in period["string"]
@@ -714,7 +691,6 @@ class TPRekImporter(Importer):
                 ],
             }
             data.append(period_datum)
-        print(data)
         return data
 
     def filter_opening_hours_data(self, data: list) -> list:
@@ -782,8 +758,6 @@ class TPRekImporter(Importer):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss read" % (idx, object_type))
             object_data = getattr(self, "get_%s_data" % object_type)(data)
-            print("generating ids for data")
-            print(object_data)
             if not isinstance(object_data, list):
                 # wrap single objects in list, because object_data may also contain
                 # multiple objects

@@ -135,20 +135,12 @@ class TPRekImporter(Importer):
         incomplete.
         """
         if end:
-            print(month_name)
-            print(list(month_name))
-            print(self.month_by_name)
-            print([name for name in self.month_by_name.keys()])
-            print(end)
-            print([name in end for name in self.month_by_name.keys()])
             if any([name in end for name in self.month_by_name.keys()]):
                 # month name found
                 day = int(end.split(".")[0])
                 month = self.month_by_name[
                     [name for name in self.month_by_name.keys() if name in end][0]
                 ]
-                print(end)
-                print(end[-4:])
                 year = int(end[-4:])
             else:
                 try:
@@ -164,9 +156,6 @@ class TPRekImporter(Importer):
                         year = today.year
             end = date(year=year, month=month, day=day)
         if start:
-            print("parsing start date")
-            print(start)
-            print(start.split("."))
             try:
                 day, month, year = map(int, start.split("."))
             except ValueError:
@@ -187,13 +176,7 @@ class TPRekImporter(Importer):
                         year = today.year
                     else:
                         year = today.year - 1
-            print(year)
-            print(month)
-            print(day)
             start = date(year=year, month=month, day=day)
-        print("returning")
-        print(start)
-        print(end)
         return start, end
 
     def parse_time(self, string: str) -> datetime_time:
@@ -222,6 +205,8 @@ class TPRekImporter(Importer):
         (start and end dates), or semi-infinite period if no dates found.
         """
         periods = []
+        # standardize formatting to use commas instead of newlines
+        string = string.replace("\n", ", ")
         potential_period_strs = string.split(",")
         previous_period_str = ""
         # if we have no match, the default period starts today

@@ -1577,3 +1577,138 @@ def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
         datetime.date(year=2020, month=12, day=7): [expected_time_element_open],
         datetime.date(year=2020, month=12, day=8): [expected_time_element_open],
     }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_past_midnight(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        weekdays=[Weekday.WEDNESDAY, Weekday.THURSDAY],
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        weekdays=[Weekday.FRIDAY, Weekday.SATURDAY],
+    )
+
+    weekday_time_element_night = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekday_time_element = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekend_time_element_night = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekend_time_element = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    ) == {
+        datetime.date(year=2020, month=10, day=14): [
+            weekday_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=15): [
+            weekday_time_element_night,
+            weekday_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=16): [
+            weekday_time_element_night,
+            weekend_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=17): [
+            weekend_time_element_night,
+            weekend_time_element,
+        ],
+    }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_past_midnight_combine(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=3, minute=0),
+        weekdays=Weekday.business_days() + Weekday.weekend(),
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=2, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        weekdays=Weekday.business_days() + Weekday.weekend(),
+    )
+
+    expected_time_element_morning = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    expected_time_element_evening = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=3, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=12),
+    ) == {
+        datetime.date(year=2020, month=10, day=12): [
+            expected_time_element_morning,
+            expected_time_element_evening,
+        ],
+    }

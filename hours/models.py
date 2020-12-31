@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 from calendar import Calendar
 from collections import defaultdict
@@ -52,6 +54,31 @@ class TimeElement:
 
         return sum(period_lengths)
 
+    def is_inter_day(self) -> bool:
+        """Does this time span span across day boundary"""
+        if not self.start_time or not self.end_time:
+            return False
+
+        return self.start_time > self.end_time
+
+    def get_next_day_part(self) -> Optional[TimeElement]:
+        """Get the next day part of this time span
+        Returns a new TimeElement with start time set to midnight, or None if
+        this time span doesn't pass midnight."""
+        if not self.is_inter_day():
+            return None
+
+        return TimeElement(
+            start_time=datetime.time(hour=0, minute=0),
+            end_time=self.end_time,
+            resource_state=self.resource_state,
+            override=self.override,
+            full_day=self.full_day,
+            name=self.name,
+            description=self.description,
+            periods=self.periods,
+        )
+
 
 def get_range_overlap(start1, end1, start2, end2):
     min_end = min(end1, end2) if end1 and end2 else end1 or end2
@@ -104,6 +131,7 @@ def combine_element_time_spans(elements):
 
         new_range_start = None
         new_range_end = None
+        new_range_end_is_next_day = False
         periods = set()
 
         for element in sorted_elements:
@@ -117,10 +145,26 @@ def combine_element_time_spans(elements):
             if new_range_start is None:
                 new_range_start = element.start_time
                 new_range_end = element.end_time
+                new_range_end_is_next_day = element.is_inter_day()
                 if element.periods:
                     periods.update(element.periods)
-            elif new_range_end >= element.start_time:
-                new_range_end = max(element.end_time, new_range_end)
+
+            # Compare using tuple (is_next_day, time_of_day) so that the next
+            # day times are bigger even if the time_of_day is smaller.
+            # TODO: Even then combining doesn't work correctly. Need to add
+            #       something like "end_is_in_the_next_day" flag to TimeSpan and
+            #       use that in TimeElements too.
+            elif (new_range_end_is_next_day, new_range_end) >= (
+                False,
+                element.start_time,
+            ):
+                latest_time = max(
+                    (element.is_inter_day(), element.end_time),
+                    (new_range_end_is_next_day, new_range_end),
+                )
+                new_range_end = latest_time[1]
+                new_range_end_is_next_day = latest_time[0]
+
             else:
                 result.append(
                     TimeElement(
@@ -134,6 +178,7 @@ def combine_element_time_spans(elements):
                 )
                 new_range_start = element.start_time
                 new_range_end = element.end_time
+                new_range_end_is_next_day = element.is_inter_day()
                 periods = set()
                 if element.periods:
                     periods.update(element.periods)
@@ -271,6 +316,10 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
         all_daily_opening_hours = defaultdict(list)
 
+        # Need to get one day before the start to handle cases where the previous days
+        # opening hours extend to the next day.
+        start_minus_one_day = start_date - relativedelta(days=1)
+
         # We can't filter the date_periods queryset here because we
         # want to allow the callers to use prefetch_related.
         for period in self.date_periods.all():
@@ -282,15 +331,33 @@ class Resource(SoftDeletableModel, TimeStampedModel):
                 continue
 
             period_daily_opening_hours = period.get_daily_opening_hours(
-                start_date, end_date
+                start_minus_one_day, end_date
             )
             for the_date, time_items in period_daily_opening_hours.items():
                 all_daily_opening_hours[the_date].extend(time_items)
 
-        processed_opening_hours = {
-            day: combine_and_apply_override(items)
-            for day, items in all_daily_opening_hours.items()
-        }
+        days = list(all_daily_opening_hours.keys())
+        days.sort()
+
+        processed_opening_hours = {}
+        for day in days:
+            previous_day = day - relativedelta(days=1)
+
+            # Add the time spans that might extend from the previous day to the
+            # daily opening hours list for them to be considered in the combining step.
+            for el in processed_opening_hours.get(previous_day, []):
+                if not el.is_inter_day():
+                    continue
+
+                all_daily_opening_hours[day].append(el.get_next_day_part())
+
+            processed_opening_hours[day] = combine_and_apply_override(
+                all_daily_opening_hours[day]
+            )
+
+        # Remove the excessive day from the start
+        if start_minus_one_day in processed_opening_hours:
+            del processed_opening_hours[start_minus_one_day]
 
         return processed_opening_hours
 

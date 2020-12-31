@@ -182,3 +182,31 @@ def test_combine_and_apply_full_day_no_override():
     )
 
     assert combine_and_apply_override([te1, te2]) == [te2]
+
+
+def test_combine_and_apply_override_with_previous_day():
+    te1 = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=6, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    te2 = TimeElement(
+        start_time=datetime.time(hour=5, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    expected = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    assert combine_and_apply_override([te1, te2]) == [expected]

@@ -299,7 +299,7 @@ class TPRekImporter(Importer):
         # or ma, ke, su klo 8-12, 16-20
         # https://regex101.com/r/UkhZ4e/16
         pattern = re.compile(
-            r"((suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?"
+            r"(\s(suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?"
             + date_or_span_regex
             + r"?\s?-?\s?((\s"
             + multiple_weekday_spans_regex

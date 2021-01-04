@@ -79,7 +79,7 @@ class TPRekImporter(Importer):
                 is_public=True,
             ).exclude(origins__data_source=self.kirjastot_data_source),
         }
-        with different_locale("fi_FI.utf8"):
+        with different_locale("fi_FI.utf-8"):
             self.month_by_name = {
                 name.lower(): index + 1
                 for index, name in enumerate(list(month_name)[1:])

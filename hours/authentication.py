@@ -17,6 +17,7 @@ from rest_framework.authentication import (
 )
 
 from hours.models import DataSource, SignedAuthEntry, SignedAuthKey
+from users.models import UserOrigin
 
 User = get_user_model()
 
@@ -170,16 +171,23 @@ class HaukiSignedAuthentication(BaseAuthentication):
         ).exists():
             raise exceptions.AuthenticationFailed(_("Signature has been invalidated"))
 
-        # TODO: Add separate PSKs for different integrations and only allow access
-        #       to users initially from the same integration. Also Only allow
-        #       using organisations from the same integration.
+        data_source = DataSource.objects.get(id=params["hsa_source"])
+
         try:
             user = User.objects.get(username=params["hsa_username"])
+
+            users_data_sources = [uo.data_source for uo in user.origins.all()]
+            if data_source not in users_data_sources:
+                raise exceptions.AuthenticationFailed(
+                    _("User not from the same data source")
+                )
         except User.DoesNotExist:
             user = User()
             user.set_unusable_password()
             user.username = params["hsa_username"]
             user.save()
+
+            UserOrigin.objects.create(user=user, data_source=data_source)
 
         if not user.is_active:
             raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
@@ -190,7 +198,6 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
                 # Allow joining users only to organizations that are from
                 # the same data source
-                data_source = DataSource.objects.get(id=params["hsa_source"])
                 if data_source == organization.data_source:
                     users_organizations = user.organization_memberships.all()
 

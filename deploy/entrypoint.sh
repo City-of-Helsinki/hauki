@@ -75,7 +75,7 @@ elif [ "$1" = "test" ]; then
         exit $exitcode
     fi
     _log_boxed "Running safety"
-    safety check
+    safety check -r requirements.txt
     exitcode=$?
     if [ $exitcode -ne 0 ]; then
         exit $exitcode

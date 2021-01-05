@@ -683,7 +683,7 @@ class TPRekImporter(Importer):
                 resource_state = State.UNDEFINED
 
             # weather permitting
-            if "säävarau" in period["string"]:
+            if "säävarau" in period["string"] or "salliessa" in period["string"]:
                 for time_span in time_spans:
                     if time_span["resource_state"] == State.OPEN:
                         time_span["resource_state"] = State.WEATHER_PERMITTING

@@ -365,7 +365,7 @@ class TPRekImporter(Importer):
                 resource_state = State.OPEN
                 full_day = False
             elif match.group(55) or match.group(61):
-                # require start or end time
+                # start or end time found!
                 start_time = self.parse_time(match.group(55))
                 if not start_time:
                     start_time = datetime_time(hour=0, minute=0)
@@ -385,12 +385,23 @@ class TPRekImporter(Importer):
                 end_time = None
                 resource_state = State.OPEN
                 full_day = True
-            else:
-                # mark undefined if no times were found
+            elif (
+                match.group(1) and "avoinna" in match.group(1)
+            ) or "avoinna" in match.group(23):
+                # sometimes open, no exact times
+                start_time = None
+                end_time = None
+                resource_state = State.OPEN
+                full_day = False
+            elif weekdays:
+                # mark days undefined if nothing was found
                 start_time = None
                 end_time = None
                 resource_state = State.UNDEFINED
                 full_day = False
+            else:
+                # no weekdays, so we don't have anything to go by :)
+                continue
 
             time_spans.append(
                 {
@@ -662,12 +673,6 @@ class TPRekImporter(Importer):
                 )
             ):
                 resource_state = State.OPEN
-            elif (
-                not time_spans
-                and "avoinna" in period["string"]
-                and "sopimukse" in period["string"]
-            ):
-                resource_state = State.WITH_RESERVATION
             else:
                 resource_state = State.UNDEFINED
 
@@ -678,6 +683,14 @@ class TPRekImporter(Importer):
                         time_span["resource_state"] = State.WEATHER_PERMITTING
                 if not time_spans:
                     resource_state = State.WEATHER_PERMITTING
+
+            # with reservation
+            if "sopimukse" in period["string"]:
+                for time_span in time_spans:
+                    if time_span["resource_state"] == State.OPEN:
+                        time_span["resource_state"] = State.WITH_RESERVATION
+                if not time_spans:
+                    resource_state = State.WITH_RESERVATION
 
             start_date = period.get("start_date", date.today())
             end_date = period.get("end_date", None)

@@ -328,3 +328,18 @@ class ResourceDailyOpeningHoursSerializer(serializers.Serializer):
     origin_id = serializers.CharField(required=False)
     resource = ResourceSimpleSerializer()
     opening_hours = DailyOpeningHoursSerializer(many=True)
+
+
+class IsOpenNowSerializer(serializers.Serializer):
+    is_open = serializers.BooleanField()
+    resource_timezone = TimeZoneSerializerField(required=False)
+    resource_time_now = serializers.DateTimeField()
+    matching_opening_hours = TimeElementSerializer(many=True)
+
+    other_timezone = TimeZoneSerializerField(required=False)
+    other_timezone_time_now = serializers.CharField(required=False)
+    matching_opening_hours_in_other_tz = TimeElementSerializer(
+        many=True, required=False
+    )
+
+    resource = ResourceSerializer()

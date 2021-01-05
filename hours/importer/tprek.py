@@ -297,7 +297,7 @@ class TPRekImporter(Importer):
         time_spans = []
         # match to single span, e.g. ma-pe 8-16:30 or suljettu pe or joka päivä 07-
         # or ma, ke, su klo 8-12, 16-20
-        # https://regex101.com/r/UkhZ4e/16
+        # https://regex101.com/r/UkhZ4e/18
         pattern = re.compile(
             r"(\s(suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?"
             + date_or_span_regex
@@ -307,7 +307,7 @@ class TPRekImporter(Importer):
             + date_optional_month_regex
             + r")|joka päivä|päivittäin|avoinna|Päivystys)(\s"
             + date_optional_month_regex
-            + r")?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24 h|"
+            + r")?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24\s?h|"
             + multiple_time_spans_regex
             + r")?(\s(alkaen|asti))?",  # noqa
             re.IGNORECASE,
@@ -333,7 +333,11 @@ class TPRekImporter(Importer):
 
         for match in matches:
             # If we have no weekday matches, assume daily opening
-            if not match.group(24) or "joka päivä" in match.group(23):
+            if (
+                not match.group(24)
+                or "joka päivä" in match.group(23)
+                or "päivittäin" in match.group(23)
+            ):
                 weekdays = None
             else:
                 weekdays = []
@@ -378,7 +382,9 @@ class TPRekImporter(Importer):
                     resource_state = State.OPEN
                 full_day = False
             elif match.group(54) and (
-                "ympäri vuorokauden" in match.group(54) or "24 h" in match.group(54)
+                "ympäri vuorokauden" in match.group(54)
+                or "24 h" in match.group(54)
+                or "24h" in match.group(54)
             ):
                 # always open
                 start_time = None
@@ -663,13 +669,13 @@ class TPRekImporter(Importer):
             elif (
                 "suljettu" not in period["string"]
                 and (
-                    "joka päivä" in period["string"]
+                    all([span["weekdays"] is None for span in time_spans])
                     or "päivystys" in period["string"]
-                    or "päivittäin" in period["string"]
                 )
                 and (
                     "ympäri vuorokauden" in period["string"]
                     or "24 h" in period["string"]
+                    or "24h" in period["string"]
                 )
             ):
                 resource_state = State.OPEN
@@ -677,7 +683,7 @@ class TPRekImporter(Importer):
                 resource_state = State.UNDEFINED
 
             # weather permitting
-            if "säävarauksella" in period["string"]:
+            if "säävarau" in period["string"]:
                 for time_span in time_spans:
                     if time_span["resource_state"] == State.OPEN:
                         time_span["resource_state"] = State.WEATHER_PERMITTING
@@ -685,11 +691,20 @@ class TPRekImporter(Importer):
                     resource_state = State.WEATHER_PERMITTING
 
             # with reservation
-            if "sopimukse" in period["string"]:
+            elif (
+                "sopimukse" in period["string"]
+                or "tilaukse" in period["string"]
+                or ("varau" in period["string"] and "ilman" not in period["string"])
+            ):
                 for time_span in time_spans:
                     if time_span["resource_state"] == State.OPEN:
                         time_span["resource_state"] = State.WITH_RESERVATION
-                if not time_spans:
+                if not time_spans or all(
+                    [
+                        span["resource_state"] == State.WITH_RESERVATION
+                        for span in time_spans
+                    ]
+                ):
                     resource_state = State.WITH_RESERVATION
 
             start_date = period.get("start_date", date.today())

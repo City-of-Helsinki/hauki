@@ -19,8 +19,14 @@ ENV STATIC_ROOT /srv/static
 ENV PYTHONUNBUFFERED True
 
 # less & netcat-openbsd are there for in-container manual debugging
-RUN apt-get update && apt-get install -y postgresql-client less netcat-openbsd gettext
+RUN apt-get update && apt-get install -y postgresql-client less netcat-openbsd gettext locales
+
+# we need the Finnish locale built
+RUN sed -i 's/^# *\(fi_FI.UTF-8\)/\1/' /etc/locale.gen
+RUN locale-gen
+
 RUN pip install --no-cache-dir uwsgi
+
 # Sentry CLI for sending events from non-Python processes to Sentry
 # eg. https://docs.sentry.io/cli/send-event/#bash-hook
 RUN curl -sL https://sentry.io/get-cli/ | bash

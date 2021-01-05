@@ -3,7 +3,6 @@ import os
 import re
 from collections.abc import Sized
 from itertools import zip_longest
-from typing import Callable, Hashable
 
 import requests
 from django import db
@@ -20,12 +19,20 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
-        # The cache needs to be populated by each consecutive import command
-        # if we want to match and link to existing and newly imported data.
-        # If resource_cache remains empty, new objects without foreign keys
-        # will be created.
-        self.resource_cache = {}
-        self.dateperiod_cache = {}
+        self.logger.info("Caching existing resources from db")
+        self.resource_cache = {
+            self.get_object_id(obj): obj
+            for obj in Resource.objects.filter(
+                origins__data_source=self.data_source
+            ).prefetch_related("origins")
+        }
+        self.logger.info("Caching existing date periods from db")
+        self.dateperiod_cache = {
+            self.get_object_id(obj): obj
+            for obj in DatePeriod.objects.filter(
+                origins__data_source=self.data_source
+            ).prefetch_related("origins")
+        }
 
     def get_object_id(self, obj: Model) -> str:
         try:
@@ -160,15 +167,15 @@ class Importer(object):
         self,
         klass: type,
         data: dict,
-        get_data_id: Callable[[dict], Hashable],
     ) -> Model:
         """
         Takes the class and serialized data, creates and/or updates the Model
         object, saves and returns it saved for class-specific processing.
         """
         # look for existing object
-        cache = getattr(self, "%s_cache" % klass.__name__.lower())
-        obj_id = get_data_id(data)
+        klass_str = klass.__name__.lower()
+        cache = getattr(self, "%s_cache" % klass_str)
+        obj_id = self.get_data_id(data)
         obj = cache.get(obj_id, None)
         if obj:
             obj._created = False
@@ -178,7 +185,7 @@ class Importer(object):
             # save the new object in the cache so related objects will find it
             setattr(
                 self,
-                "%s_cache" % klass.__name__.lower(),
+                "%s_cache" % klass_str,
                 {**cache, **{obj_id: obj}},
             )
         obj._changed = False
@@ -199,7 +206,7 @@ class Importer(object):
             data_source, created = DataSource.objects.get_or_create(id=data_source)
             if created:
                 self.logger.debug("Created missing data source %s" % data_source)
-        existing_origins = set(obj.origins.all())
+        object_origins = set(obj.origins.all())
         data_origins = set(
             [
                 klass.origins.field.model.objects.get_or_create(
@@ -213,14 +220,21 @@ class Importer(object):
         # Any existing origins referring to other objects must be updated
         for origin in data_origins:
             setattr(origin, klass.origins.field.name, obj)
-        for origin in data_origins.difference(existing_origins):
+        for origin in data_origins.difference(object_origins):
             origin.save()
             obj._changed = True
             obj._changed_fields.append("origins")
-        for origin in existing_origins.difference(data_origins):
-            # Removing an extra origin is the only way origins may be deleted.
-            # Soft deleted objects will retain their old origins.
-            origin.delete()
+        for origin in object_origins.difference(data_origins):
+            # object origins are prefetched, so we must double-check origin
+            # hasn't already moved to another object:
+            if (
+                getattr(
+                    klass.origins.field.model.objects.get(id=origin.id),
+                    klass.origins.field.name,
+                )
+                == obj
+            ):
+                origin.delete()
             obj._changed = True
             obj._changed_fields.append("origins")
         return obj
@@ -229,7 +243,6 @@ class Importer(object):
     def save_resource(
         self,
         data: dict,
-        get_data_id: Callable[[dict], Hashable] = None,
     ) -> Resource:
         """
         Takes the serialized resource data, creates and/or updates the corresponding
@@ -240,11 +253,8 @@ class Importer(object):
         id may be any hashable that can be used to index objects and implements __eq__.
         Objects must have unique ids.
         """
-        if not get_data_id:
-            # Default origin_ids will be used
-            get_data_id = self.get_data_id
 
-        obj = self._update_or_create_object(Resource, data, get_data_id)
+        obj = self._update_or_create_object(Resource, data)
 
         # Update parents only after the resource has been created
         existing_parents = set(obj.parents.all())
@@ -273,11 +283,15 @@ class Importer(object):
         return obj
 
     @db.transaction.atomic
-    def save_period(self, data: dict) -> DatePeriod:
+    def save_dateperiod(
+        self,
+        data: dict,
+    ) -> DatePeriod:
         """Takes the serialized period data, creates and/or updates the corresponding
         DatePeriod object, and returns it.
         """
-        period = self._update_or_create_object(DatePeriod, data, self.get_data_id)
+
+        period = self._update_or_create_object(DatePeriod, data)
         try:
             time_span_groups_data = data.pop("time_span_groups")
         except KeyError:

@@ -179,6 +179,22 @@ python manage.py hours_import kirjastot --openings --single 84860
 
 ---
 
+*Opening hours* may also be imported by trying to parse strings provided in [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) for all known TPREK units. This feature should not be run automatically in production, as you must manually verify that the resulting opening hours are the same as the intention of the TPREK data.
+
+Import all existing TPREK opening hours (and be prepared for errors and mistakes in the data) by
+
+```
+python manage.py hours_import tprek --openings
+```
+
+or, if your db contains merged TPREK resources,
+
+```
+python manage.py hours_import tprek --openings --merge
+```
+
+---
+
 *Organizations* may be imported for the City of Helsinki decision makers from the [Paatos API](http://api.hel.fi/paatos/v1/), or for the TPREK data publishers (including City of Helsinki opening hour publishers) from the [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html).
 
 Import all TPREK publisher organizations by

@@ -500,3 +500,45 @@ def test_data_source_and_origin_id_exists_true_different_data_source_in_child(
     resource_ids = {i["id"] for i in response.data["results"]}
 
     assert resource_ids == {resource.id}
+
+
+@pytest.mark.django_db
+def test_list_resources_parent_filter_match(admin_client, resource_factory):
+
+    resource_1 = resource_factory()
+    resource_2 = resource_factory()
+    resource_2.parents.add(resource_1)
+    resource_2.save()
+
+    url = reverse("resource-list")
+
+    response = admin_client.get(url, data={"parent": resource_1.id})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["count"] == 1
+
+    resource_ids = {i["id"] for i in response.data["results"]}
+
+    assert resource_ids == {resource_2.id}
+
+
+@pytest.mark.django_db
+def test_list_resources_parent_filter_no_match(admin_client, resource_factory):
+
+    resource_1 = resource_factory()
+    resource_2 = resource_factory()
+    resource_1.parents.add(resource_2)
+    resource_1.save()
+
+    url = reverse("resource-list")
+
+    response = admin_client.get(url, data={"parent": resource_1.id})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["count"] == 0

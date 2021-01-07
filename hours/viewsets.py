@@ -146,12 +146,16 @@ class ResourceFilterBackend(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
         data_source = request.query_params.get("data_source", None)
         origin_id_exists = request.query_params.get("origin_id_exists", None)
+        parent = request.query_params.get("parent", None)
 
         filter_q = Q()
         if data_source is not None:
             filter_q = Q(origins__data_source=data_source) | Q(
                 ancestry_data_source__contains=[data_source]
             )
+
+        if parent is not None:
+            filter_q &= Q(parents__id=parent)
 
         if origin_id_exists is not None and origin_id_exists:
             origin_id_exists = origin_id_exists.lower() == "true"

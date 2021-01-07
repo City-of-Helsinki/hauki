@@ -44,12 +44,12 @@ if [ "$1" = "start_django_development_server" ]; then
     _log_boxed "Running development server"
     exec deploy/dev_start.sh
 elif [ "$1" = 'maintenance_tasks' ]; then
-    shift
-    exec deploy/run_maintenance.sh "$@"
+    _log_boxed "Running scheduled data imports and maintenance"
+    deploy/run_maintenance.sh
 elif [ "$1" = 'initial_data' ]; then
     _log_boxed "Running initial imports to get test data"
-    ./manage.py hours_import tprek --all
-    ./manage.py hours_import kirjastot --all
+    deploy/run_maintenance.sh
+    ./manage.py hours_import tprek --openings
 elif [ "$1" = "migrate" ]; then
     _log_boxed "Running migrations"
     ./manage.py migrate

@@ -503,7 +503,7 @@ def test_data_source_and_origin_id_exists_true_different_data_source_in_child(
 
 
 @pytest.mark.django_db
-def test_list_resources_parent_filter_match(admin_client, resource_factory):
+def test_list_resources_parent_and_child_filter_match(admin_client, resource_factory):
 
     resource_1 = resource_factory()
     resource_2 = resource_factory()
@@ -524,9 +524,23 @@ def test_list_resources_parent_filter_match(admin_client, resource_factory):
 
     assert resource_ids == {resource_2.id}
 
+    response = admin_client.get(url, data={"child": resource_2.id})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["count"] == 1
+
+    resource_ids = {i["id"] for i in response.data["results"]}
+
+    assert resource_ids == {resource_1.id}
+
 
 @pytest.mark.django_db
-def test_list_resources_parent_filter_no_match(admin_client, resource_factory):
+def test_list_resources_parent_and_child_filter_no_match(
+    admin_client, resource_factory
+):
 
     resource_1 = resource_factory()
     resource_2 = resource_factory()
@@ -536,6 +550,14 @@ def test_list_resources_parent_filter_no_match(admin_client, resource_factory):
     url = reverse("resource-list")
 
     response = admin_client.get(url, data={"parent": resource_1.id})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["count"] == 0
+
+    response = admin_client.get(url, data={"child": resource_2.id})
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data

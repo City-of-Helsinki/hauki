@@ -7,7 +7,8 @@ from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
@@ -147,6 +148,7 @@ class ResourceFilterBackend(BaseFilterBackend):
         data_source = request.query_params.get("data_source", None)
         origin_id_exists = request.query_params.get("origin_id_exists", None)
         parent = request.query_params.get("parent", None)
+        child = request.query_params.get("child", None)
 
         filter_q = Q()
         if data_source is not None:
@@ -156,6 +158,9 @@ class ResourceFilterBackend(BaseFilterBackend):
 
         if parent is not None:
             filter_q &= Q(parents__id=parent)
+
+        if child is not None:
+            filter_q &= Q(children__id=child)
 
         if origin_id_exists is not None and origin_id_exists:
             origin_id_exists = origin_id_exists.lower() == "true"
@@ -178,7 +183,35 @@ class ResourceFilterBackend(BaseFilterBackend):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Resources"),
+    list=extend_schema(
+        summary="List Resources",
+        parameters=[
+            OpenApiParameter(
+                "data_source",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by data source",
+            ),
+            OpenApiParameter(
+                "origin_id_exists",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                description="Filter by existing/missing origin_id",
+            ),
+            OpenApiParameter(
+                "parent",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by parent id",
+            ),
+            OpenApiParameter(
+                "child",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by child id",
+            ),
+        ],
+    ),
     create=extend_schema(summary="Create a Resource"),
     retrieve=extend_schema(summary="Find Resource by ID"),
     update=extend_schema(summary="Update existing Resource"),

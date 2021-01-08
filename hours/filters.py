@@ -4,9 +4,10 @@ from typing import Optional
 
 from dateutil.parser import parse
 from dateutil.relativedelta import MO, SU, relativedelta
+from django.db.models import Q
 from django.forms import Field
 from django.utils import timezone
-from django_filters import Filter
+from django_filters import Filter, constants
 from django_filters import rest_framework as filters
 
 from .models import DatePeriod, Resource, TimeSpan
@@ -97,20 +98,42 @@ class MaybeRelativeDateField(Field):
         return parse_maybe_relative_date_string(value, end_date=self.end_date)
 
 
-class MaybeRelativeDateFilter(Filter):
+class MaybeRelativeNullableDateFilter(Filter):
     field_class = MaybeRelativeDateField
+
+    def filter(self, qs, value):
+        if value in constants.EMPTY_VALUES:
+            return qs
+        if self.distinct:
+            qs = qs.distinct()
+        if self.lookup_expr in ("lte_or_null", "gte_or_null"):
+            range_lookup = "%s__%s" % (
+                self.field_name,
+                self.lookup_expr.split("_or_")[0],
+            )
+            null_lookup = "%s__isnull" % self.field_name
+            q = Q(**{range_lookup: value}) | Q(**{null_lookup: True})
+            qs = self.get_method(qs)(q)
+        else:
+            lookup = "%s__%s" % (self.field_name, self.lookup_expr)
+            qs = self.get_method(qs)(**{lookup: value})
+        return qs
 
 
 class DatePeriodFilter(filters.FilterSet):
     resource = filters.CharFilter(method="resource_filter")
-    start_date = MaybeRelativeDateFilter()
-    end_date = MaybeRelativeDateFilter()
-    start_date_gte = MaybeRelativeDateFilter(field_name="start_date", lookup_expr="gte")
-    start_date_lte = MaybeRelativeDateFilter(field_name="start_date", lookup_expr="lte")
-    end_date_gte = MaybeRelativeDateFilter(
-        field_name="end_date", lookup_expr="gte", end_date=True
+    start_date = MaybeRelativeNullableDateFilter()
+    end_date = MaybeRelativeNullableDateFilter()
+    start_date_gte = MaybeRelativeNullableDateFilter(
+        field_name="start_date", lookup_expr="gte"
     )
-    end_date_lte = MaybeRelativeDateFilter(
+    start_date_lte = MaybeRelativeNullableDateFilter(
+        field_name="start_date", lookup_expr="lte_or_null"
+    )
+    end_date_gte = MaybeRelativeNullableDateFilter(
+        field_name="end_date", lookup_expr="gte_or_null", end_date=True
+    )
+    end_date_lte = MaybeRelativeNullableDateFilter(
         field_name="end_date", lookup_expr="lte", end_date=True
     )
 

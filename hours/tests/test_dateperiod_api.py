@@ -10,6 +10,162 @@ from hours.models import DatePeriod
 
 
 @pytest.mark.django_db
+def test_list_date_periods_empty(admin_client):
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 0
+
+
+@pytest.mark.django_db
+def test_list_date_periods_one_date_period(admin_client, resource, date_period_factory):
+
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=None,
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == date_period.id
+
+
+@pytest.mark.django_db
+def test_list_date_periods_multiple_date_periods(
+    admin_client, resource, date_period_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=None,
+    )
+    date_period2 = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=None,
+        end_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 2
+    assert response.data[0]["id"] == date_period.id
+    period_ids = {i["id"] for i in response.data}
+
+    assert period_ids == {date_period.id, date_period2.id}
+
+
+@pytest.mark.django_db
+def test_list_date_periods_filter_by_resource(
+    admin_client, resource_factory, date_period_factory
+):
+    resource = resource_factory()
+    resource2 = resource_factory()
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=None,
+    )
+    date_period_factory(
+        resource=resource2,
+        name="Testperiod",
+        start_date=None,
+        end_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url, data={"resource": resource.id})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == date_period.id
+
+
+@pytest.mark.django_db
+def test_list_date_periods_filter_start_date_lte(
+    admin_client, resource, date_period_factory
+):
+    date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=None,
+    )
+    date_period2 = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=None,
+        end_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url, data={"start_date_lte": "2019-01-01"})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == date_period2.id
+
+
+@pytest.mark.django_db
+def test_list_date_periods_filter_end_date_gte(
+    admin_client, resource, date_period_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=None,
+    )
+    date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=None,
+        end_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url, data={"end_date_gte": "2021-01-01"})
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == date_period.id
+
+
+@pytest.mark.django_db
 def test_create_date_period_no_time_span_groups(resource, admin_client):
     url = reverse("date_period-list")
 

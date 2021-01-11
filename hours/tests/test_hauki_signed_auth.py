@@ -4,8 +4,15 @@ import urllib.parse
 import pytest
 from django.urls import reverse
 from pytz import UTC
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.test import APIRequestFactory
+from rest_framework.views import APIView
 
-from hours.authentication import calculate_signature, join_params
+from hours.authentication import (
+    HaukiSignedAuthentication,
+    calculate_signature,
+    join_params,
+)
 from hours.models import SignedAuthEntry
 from users.models import User
 
@@ -165,13 +172,15 @@ def test_join_user_to_organization(
 def test_join_user_to_organization_existing_user(
     api_client,
     user_factory,
+    user_origin_factory,
     data_source_factory,
     signed_auth_key_factory,
     organization_factory,
 ):
-    user = user_factory(username="test_user")
-
     data_source = data_source_factory(id="test")
+    user = user_factory(username="test_user")
+    user_origin_factory(user=user, data_source=data_source)
+
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
     org = organization_factory(data_source=data_source, origin_id=1234)
 
@@ -207,13 +216,15 @@ def test_join_user_to_organization_existing_user(
 def test_join_user_to_organization_existing_user_and_organisation(
     api_client,
     user_factory,
+    user_origin_factory,
     data_source_factory,
     signed_auth_key_factory,
     organization_factory,
 ):
-    user = user_factory(username="test_user")
-
     data_source = data_source_factory(id="test")
+    user = user_factory(username="test_user")
+    user_origin_factory(user=user, data_source=data_source)
+
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
     org = organization_factory(data_source=data_source, origin_id=1234)
 
@@ -489,3 +500,146 @@ def test_invalidate_signature_invalid_params(
     response = api_client.post(invalidate_url, HTTP_AUTHORIZATION=authz_string)
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_authenticate_new_user(api_client, data_source, signed_auth_key_factory):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    params = {**data, "hsa_signature": signature}
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    authenticated_user = auth.authenticate(request)[0]
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+
+@pytest.mark.django_db
+def test_authenticate_existing_user_no_existing_data_source(
+    api_client, data_source, signed_auth_key_factory, user_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    user = user_factory()
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": user.username,
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    params = {**data, "hsa_signature": signature}
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+
+    with pytest.raises(AuthenticationFailed) as e:
+        auth.authenticate(request)[0]
+
+    assert e.value.detail == "User not from the same data source"
+
+
+@pytest.mark.django_db
+def test_authenticate_existing_user_existing_same_data_source(
+    api_client, data_source, signed_auth_key_factory, user_factory, user_origin_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    user = user_factory()
+    user_origin_factory(user=user, data_source=data_source)
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": user.username,
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    params = {**data, "hsa_signature": signature}
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    authenticated_user = auth.authenticate(request)[0]
+
+    assert authenticated_user.id == user.id
+    assert authenticated_user.username == user.username
+
+
+@pytest.mark.django_db
+def test_authenticate_existing_user_existing_different_data_source(
+    api_client,
+    data_source_factory,
+    signed_auth_key_factory,
+    user_factory,
+    user_origin_factory,
+):
+    data_source1 = data_source_factory()
+    data_source2 = data_source_factory()
+
+    signed_auth_key = signed_auth_key_factory(data_source=data_source1)
+
+    user = user_factory()
+    user_origin_factory(user=user, data_source=data_source2)
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source1.id,
+        "hsa_username": user.username,
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    params = {**data, "hsa_signature": signature}
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+
+    with pytest.raises(AuthenticationFailed) as e:
+        auth.authenticate(request)[0]
+
+    assert e.value.detail == "User not from the same data source"

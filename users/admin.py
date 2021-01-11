@@ -3,12 +3,17 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm
 from django.utils.translation import gettext_lazy as _
 
-from .models import User
+from .models import User, UserOrigin
 
 
 class HaukiUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = User
+
+
+class UserOriginInline(admin.TabularInline):
+    model = UserOrigin
+    extra = 1
 
 
 class HaukiUserAdmin(UserAdmin):
@@ -32,6 +37,7 @@ class HaukiUserAdmin(UserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
+    inlines = (UserOriginInline,)
 
 
 admin.site.register(User, HaukiUserAdmin)

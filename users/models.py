@@ -1,3 +1,5 @@
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 from helusers.models import AbstractUser
 
 
@@ -27,3 +29,24 @@ class User(AbstractUser):
                 orgs.update(org.get_descendants(include_self=True))
         # for multiple orgs, we have to combine the querysets
         return orgs
+
+
+class UserOrigin(models.Model):
+    user = models.ForeignKey(User, related_name="origins", on_delete=models.CASCADE)
+    data_source = models.ForeignKey("hours.DataSource", on_delete=models.CASCADE)
+    origin_id = models.CharField(
+        verbose_name=_("Origin ID"), max_length=100, null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = _("User origin")
+        verbose_name_plural = _("User origins")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["data_source", "origin_id"],
+                name="unique_user_origin_identifier_per_data_source",
+            ),
+        ]
+
+    def __str__(self):
+        return f"UserOrigin {self.data_source}:{self.origin_id}"

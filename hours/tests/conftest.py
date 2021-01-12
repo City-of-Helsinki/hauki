@@ -20,7 +20,7 @@ from hours.models import (
     TimeSpan,
     TimeSpanGroup,
 )
-from users.models import User
+from users.models import User, UserOrigin
 
 faker = FakerFactory.create(locale="fi_FI")
 
@@ -112,6 +112,12 @@ class UserFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = User
+
+
+@register
+class UserOriginFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = UserOrigin
 
 
 @register

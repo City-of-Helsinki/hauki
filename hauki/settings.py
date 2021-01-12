@@ -269,7 +269,15 @@ MEDIA_ROOT = env("MEDIA_ROOT")
 # where Django would need to make use of its own hostname
 # fe. generating absolute URLs pointing to itself
 # Most often used in reverse proxy setups
+# https://docs.djangoproject.com/en/3.0/ref/settings/#use-x-forwarded-host
 USE_X_FORWARDED_HOST = env("TRUST_X_FORWARDED_HOST")
+
+# Specifies a header that is trusted to indicate that the request was using
+# https while traversing over the Internet at large. This is used when
+# a proxy terminates the TLS connection and forwards the request over
+# a secure network. Specified using a tuple.
+# https://docs.djangoproject.com/en/3.0/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = env("SECURE_PROXY_SSL_HEADER")
 
 CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")

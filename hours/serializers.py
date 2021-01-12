@@ -11,6 +11,7 @@ from timezone_field.rest_framework import TimeZoneSerializerField
 from users.serializers import UserSerializer
 
 from .enums import State
+from .fields import TimezoneRetainingDateTimeField
 from .models import (
     DataSource,
     DatePeriod,
@@ -337,7 +338,7 @@ class IsOpenNowSerializer(serializers.Serializer):
     matching_opening_hours = TimeElementSerializer(many=True)
 
     other_timezone = TimeZoneSerializerField(required=False)
-    other_timezone_time_now = serializers.CharField(required=False)
+    other_timezone_time_now = TimezoneRetainingDateTimeField(required=False)
     matching_opening_hours_in_other_tz = TimeElementSerializer(
         many=True, required=False
     )

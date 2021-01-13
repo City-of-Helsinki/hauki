@@ -55,6 +55,7 @@ class ResourceFactory(factory.django.DjangoModelFactory):
     name = factory.LazyAttribute(lambda x: faker.company())
     address = factory.LazyAttribute(lambda x: faker.address())
     is_public = True
+    timezone = "Europe/Helsinki"
 
     class Meta:
         model = Resource

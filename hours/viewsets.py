@@ -2,8 +2,11 @@ import datetime
 from operator import itemgetter
 from typing import Tuple
 
+import pytz
+from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 from django.http import Http404
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
@@ -18,8 +21,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .enums import State
 from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
-from .models import DatePeriod, Resource, Rule, TimeSpan
+from .models import DatePeriod, Resource, Rule, TimeElement, TimeSpan
 from .permissions import (
     IsMemberOrAdminOfOrganization,
     ReadOnlyPublic,
@@ -28,6 +32,7 @@ from .permissions import (
 from .serializers import (
     DailyOpeningHoursSerializer,
     DatePeriodSerializer,
+    IsOpenNowSerializer,
     OrganizationSerializer,
     ResourceDailyOpeningHoursSerializer,
     ResourceSerializer,
@@ -275,6 +280,121 @@ class ResourceViewSet(
         opening_hours_list.sort(key=itemgetter("date"))
 
         serializer = DailyOpeningHoursSerializer(opening_hours_list, many=True)
+
+        return Response(serializer.data)
+
+    @action(detail=True)
+    def is_open_now(self, request, pk=None):
+        resource = self.get_object()
+        open_states = State.open_states()
+        time_now = timezone.now()
+
+        tz = resource.timezone
+        if not tz:
+            tz = pytz.timezone(settings.RESOURCE_DEFAULT_TIMEZONE)
+            if not tz:
+                tz = pytz.timezone("Europe/Helsinki")
+
+        resource_time_now = time_now.astimezone(tz)
+
+        other_tz = None
+        if request.query_params.get("timezone"):
+            try:
+                other_tz = pytz.timezone(request.query_params.get("timezone"))
+            except pytz.exceptions.UnknownTimeZoneError:
+                raise APIException("Unknown timezone")
+
+        opening_hours = resource.get_daily_opening_hours(
+            resource_time_now.date(), resource_time_now.date()
+        ).get(
+            datetime.date(
+                year=resource_time_now.year,
+                month=resource_time_now.month,
+                day=resource_time_now.day,
+            ),
+            [],
+        )
+
+        matching_opening_hours = []
+        matching_opening_hours_other_tz = []
+
+        for opening_hour in opening_hours:
+            start_datetime = tz.localize(
+                datetime.datetime(
+                    year=resource_time_now.year,
+                    month=resource_time_now.month,
+                    day=resource_time_now.day,
+                    hour=opening_hour.start_time.hour,
+                    minute=opening_hour.start_time.minute,
+                    second=opening_hour.start_time.second,
+                )
+            )
+
+            # TODO: inter day check when the branch is merged
+            # if opening_hour.is_inter_day():
+            #     tomorrow = resource_time_now + relativedelta(days=1)
+            #     end_datetime = tz.localize(datetime.datetime(
+            #         year=tomorrow.year,
+            #         month=tomorrow.month,
+            #         day=tomorrow.day,
+            #         hour=opening_hour.end_time.hour,
+            #         minute=opening_hour.end_time.minute,
+            #         second=opening_hour.end_time.second
+            #     ))
+            # else:
+            end_datetime = tz.localize(
+                datetime.datetime(
+                    year=resource_time_now.year,
+                    month=resource_time_now.month,
+                    day=resource_time_now.day,
+                    hour=opening_hour.end_time.hour,
+                    minute=opening_hour.end_time.minute,
+                    second=opening_hour.end_time.second,
+                )
+            )
+
+            if (
+                start_datetime <= resource_time_now <= end_datetime
+                and opening_hour.resource_state in open_states
+            ):
+                matching_opening_hours.append(opening_hour)
+
+                if other_tz:
+                    other_timezone_start_datetime = start_datetime.astimezone(other_tz)
+                    other_timezone_end_datetime = end_datetime.astimezone(other_tz)
+
+                    matching_opening_hours_other_tz.append(
+                        TimeElement(
+                            start_time=other_timezone_start_datetime.time(),
+                            end_time=other_timezone_end_datetime.time(),
+                            resource_state=opening_hour.resource_state,
+                            override=opening_hour.override,
+                            full_day=opening_hour.full_day,
+                            name=opening_hour.name,
+                            description=opening_hour.description,
+                            periods=opening_hour.periods,
+                        )
+                    )
+
+        other_timezone_time_now = resource_time_now.astimezone(other_tz)
+
+        data = {
+            "is_open": bool(matching_opening_hours),
+            "resource_timezone": tz,
+            "resource_time_now": resource_time_now,
+            "matching_opening_hours": matching_opening_hours,
+            "resource": resource,
+        }
+
+        if other_tz:
+            data = {
+                **data,
+                "other_timezone": other_tz,
+                "other_timezone_time_now": other_timezone_time_now,
+                "matching_opening_hours_in_other_tz": matching_opening_hours_other_tz,
+            }
+
+        serializer = IsOpenNowSerializer(data)
 
         return Response(serializer.data)
 

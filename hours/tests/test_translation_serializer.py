@@ -20,7 +20,7 @@ def test_to_representation(resource, settings):
         "resource_type": "unit",
         "origins": [],
         "is_public": True,
-        "timezone": settings.RESOURCE_DEFAULT_TIMEZONE,
+        "timezone": "Europe/Helsinki",
     }
 
     assert serializer.data == expected_data

@@ -390,9 +390,6 @@ class ResourceViewSet(
             data = {
                 **data,
                 "other_timezone": other_tz,
-                # Return the time in the other timezone as string as the DateTimeField
-                # would change the timezone.
-                # TODO: use the same output format as in the DateTimeField
                 "other_timezone_time_now": other_timezone_time_now,
                 "matching_opening_hours_in_other_tz": matching_opening_hours_other_tz,
             }

@@ -27,11 +27,17 @@ from hours.enums import (
 )
 
 
-# TimeElement represents one time span in days opening hours
-# The name, description and periods are ignored when comparing
 @dataclass(order=True, frozen=True)
 class TimeElement:
+    """Represents one time span in a days opening hours
+
+    The "end_time_on_next_day"-attribute is declared between the start and end time to
+    allow TimeElements to sort correctly.
+
+    The name, description, and periods attributes are ignored when comparing."""
+
     start_time: Optional[datetime.time]
+    end_time_on_next_day: bool
     end_time: Optional[datetime.time]
     resource_state: State = State.UNDEFINED
     override: bool = False
@@ -54,23 +60,17 @@ class TimeElement:
 
         return sum(period_lengths)
 
-    def is_inter_day(self) -> bool:
-        """Does this time span span across day boundary"""
-        if not self.start_time or not self.end_time:
-            return False
-
-        return self.start_time > self.end_time
-
     def get_next_day_part(self) -> Optional[TimeElement]:
         """Get the next day part of this time span
         Returns a new TimeElement with start time set to midnight, or None if
         this time span doesn't pass midnight."""
-        if not self.is_inter_day():
+        if not self.end_time_on_next_day:
             return None
 
         return TimeElement(
             start_time=datetime.time(hour=0, minute=0),
             end_time=self.end_time,
+            end_time_on_next_day=False,
             resource_state=self.resource_state,
             override=self.override,
             full_day=self.full_day,
@@ -106,6 +106,7 @@ def expand_range(start_date, end_date):
 def _get_times_for_sort(item: TimeElement) -> tuple:
     return (
         item.start_time if item.start_time else datetime.time(hour=0, minute=0),
+        item.end_time_on_next_day,
         item.end_time if item.end_time else datetime.time(hour=0, minute=0),
     )
 
@@ -145,21 +146,18 @@ def combine_element_time_spans(elements):
             if new_range_start is None:
                 new_range_start = element.start_time
                 new_range_end = element.end_time
-                new_range_end_is_next_day = element.is_inter_day()
+                new_range_end_is_next_day = element.end_time_on_next_day
                 if element.periods:
                     periods.update(element.periods)
 
             # Compare using tuple (is_next_day, time_of_day) so that the next
             # day times are bigger even if the time_of_day is smaller.
-            # TODO: Even then combining doesn't work correctly. Need to add
-            #       something like "end_is_in_the_next_day" flag to TimeSpan and
-            #       use that in TimeElements too.
             elif (new_range_end_is_next_day, new_range_end) >= (
                 False,
                 element.start_time,
             ):
                 latest_time = max(
-                    (element.is_inter_day(), element.end_time),
+                    (element.end_time_on_next_day, element.end_time),
                     (new_range_end_is_next_day, new_range_end),
                 )
                 new_range_end = latest_time[1]
@@ -170,6 +168,7 @@ def combine_element_time_spans(elements):
                     TimeElement(
                         start_time=new_range_start,
                         end_time=new_range_end,
+                        end_time_on_next_day=new_range_end_is_next_day,
                         resource_state=element.resource_state,
                         override=element.override,
                         full_day=element.full_day,
@@ -178,7 +177,7 @@ def combine_element_time_spans(elements):
                 )
                 new_range_start = element.start_time
                 new_range_end = element.end_time
-                new_range_end_is_next_day = element.is_inter_day()
+                new_range_end_is_next_day = element.end_time_on_next_day
                 periods = set()
                 if element.periods:
                     periods.update(element.periods)
@@ -187,6 +186,7 @@ def combine_element_time_spans(elements):
             TimeElement(
                 start_time=new_range_start,
                 end_time=new_range_end,
+                end_time_on_next_day=new_range_end_is_next_day,
                 resource_state=state,
                 override=False,
                 full_day=False if new_range_start and new_range_end else True,
@@ -346,7 +346,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
             # Add the time spans that might extend from the previous day to the
             # daily opening hours list for them to be considered in the combining step.
             for el in processed_opening_hours.get(previous_day, []):
-                if not el.is_inter_day():
+                if not el.end_time_on_next_day:
                     continue
 
                 all_daily_opening_hours[day].append(el.get_next_day_part())
@@ -497,6 +497,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
                         TimeElement(
                             start_time=None,
                             end_time=None,
+                            end_time_on_next_day=False,
                             resource_state=self.resource_state,
                             override=self.override,
                             full_day=True,
@@ -535,6 +536,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
                             TimeElement(
                                 start_time=time_span.start_time,
                                 end_time=time_span.end_time,
+                                end_time_on_next_day=time_span.end_time_on_next_day,
                                 resource_state=resource_state,
                                 override=self.override,
                                 full_day=time_span.full_day,
@@ -601,6 +603,9 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
     )
     end_time = models.TimeField(
         verbose_name=_("End time"), null=True, blank=True, db_index=True
+    )
+    end_time_on_next_day = models.BooleanField(
+        verbose_name=_("Is end time on the next day"), default=False
     )
     full_day = models.BooleanField(verbose_name=_("24 hours"), default=False)
     weekdays = ArrayField(

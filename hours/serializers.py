@@ -213,12 +213,23 @@ class TimeSpanCreateSerializer(
             "description",
             "start_time",
             "end_time",
+            "end_time_on_next_day",
             "full_day",
             "weekdays",
             "resource_state",
             "created",
             "modified",
         ]
+
+    def validate(self, attrs):
+        if "end_time_on_next_day" in attrs:
+            return attrs
+
+        if attrs.get("start_time") and attrs.get("end_time"):
+            # Populate end_time_on_next_day field if it's not set
+            attrs["end_time_on_next_day"] = attrs["end_time"] <= attrs["start_time"]
+
+        return attrs
 
 
 class TimeSpanSerializer(TimeSpanCreateSerializer):
@@ -310,6 +321,7 @@ class TimeElementSerializer(serializers.Serializer):
     description = serializers.CharField()
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
+    end_time_on_next_day = serializers.BooleanField()
     resource_state = EnumField(enum=State)
     full_day = serializers.BooleanField()
     periods = serializers.SerializerMethodField()

@@ -3,6 +3,7 @@ from operator import itemgetter
 from typing import Tuple
 
 import pytz
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 from django.http import Http404
@@ -319,34 +320,27 @@ class ResourceViewSet(
         matching_opening_hours_other_tz = []
 
         for opening_hour in opening_hours:
+            start_date = resource_time_now.date()
+            end_date = resource_time_now.date()
+            if opening_hour.end_time_on_next_day:
+                end_date = resource_time_now.date() + relativedelta(days=1)
+
             start_datetime = tz.localize(
                 datetime.datetime(
-                    year=resource_time_now.year,
-                    month=resource_time_now.month,
-                    day=resource_time_now.day,
+                    year=start_date.year,
+                    month=start_date.month,
+                    day=start_date.day,
                     hour=opening_hour.start_time.hour,
                     minute=opening_hour.start_time.minute,
                     second=opening_hour.start_time.second,
                 )
             )
 
-            # TODO: inter day check when the branch is merged
-            # if opening_hour.is_inter_day():
-            #     tomorrow = resource_time_now + relativedelta(days=1)
-            #     end_datetime = tz.localize(datetime.datetime(
-            #         year=tomorrow.year,
-            #         month=tomorrow.month,
-            #         day=tomorrow.day,
-            #         hour=opening_hour.end_time.hour,
-            #         minute=opening_hour.end_time.minute,
-            #         second=opening_hour.end_time.second
-            #     ))
-            # else:
             end_datetime = tz.localize(
                 datetime.datetime(
-                    year=resource_time_now.year,
-                    month=resource_time_now.month,
-                    day=resource_time_now.day,
+                    year=end_date.year,
+                    month=end_date.month,
+                    day=end_date.day,
                     hour=opening_hour.end_time.hour,
                     minute=opening_hour.end_time.minute,
                     second=opening_hour.end_time.second,
@@ -358,23 +352,26 @@ class ResourceViewSet(
                 and opening_hour.resource_state in open_states
             ):
                 matching_opening_hours.append(opening_hour)
+                if not other_tz:
+                    continue
 
-                if other_tz:
-                    other_timezone_start_datetime = start_datetime.astimezone(other_tz)
-                    other_timezone_end_datetime = end_datetime.astimezone(other_tz)
+                other_timezone_start_datetime = start_datetime.astimezone(other_tz)
+                other_timezone_end_datetime = end_datetime.astimezone(other_tz)
 
-                    matching_opening_hours_other_tz.append(
-                        TimeElement(
-                            start_time=other_timezone_start_datetime.time(),
-                            end_time=other_timezone_end_datetime.time(),
-                            resource_state=opening_hour.resource_state,
-                            override=opening_hour.override,
-                            full_day=opening_hour.full_day,
-                            name=opening_hour.name,
-                            description=opening_hour.description,
-                            periods=opening_hour.periods,
-                        )
+                matching_opening_hours_other_tz.append(
+                    TimeElement(
+                        start_time=other_timezone_start_datetime.time(),
+                        end_time=other_timezone_end_datetime.time(),
+                        end_time_on_next_day=other_timezone_start_datetime.date()
+                        != other_timezone_end_datetime.date(),
+                        resource_state=opening_hour.resource_state,
+                        override=opening_hour.override,
+                        full_day=opening_hour.full_day,
+                        name=opening_hour.name,
+                        description=opening_hour.description,
+                        periods=opening_hour.periods,
                     )
+                )
 
         other_timezone_time_now = resource_time_now.astimezone(other_tz)
 

@@ -511,6 +511,7 @@ class KirjastotImporter(Importer):
                     TimeElement(
                         start_time=None,
                         end_time=None,
+                        end_time_on_next_day=False,
                         resource_state=State.CLOSED,
                         override=True
                         if schedule.get("period") in override_periods
@@ -533,10 +534,15 @@ class KirjastotImporter(Importer):
                     except ValueError:
                         end_time = None
 
+                    end_time_on_next_day = False
+                    if start_time and end_time and end_time <= start_time:
+                        end_time_on_next_day = True
+
                     time_elements.append(
                         TimeElement(
                             start_time=start_time,
                             end_time=end_time,
+                            end_time_on_next_day=end_time_on_next_day,
                             resource_state=KIRKANTA_STATUS_MAP[schedule_time["status"]],
                             override=True
                             if schedule.get("period") in override_periods

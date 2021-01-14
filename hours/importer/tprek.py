@@ -33,6 +33,10 @@ CONNECTION_TYPE_MAPPING = {
 # here we list the tprek connection types that we do *not* want to import as resources
 CONNECTION_TYPES_TO_IGNORE = {"OPENING_HOURS", "SOCIAL_MEDIA_LINK"}
 
+# here we list the tprek resource types that always have common hours and may be
+# merged if the strings are identical
+RESOURCE_TYPES_TO_MERGE = {ResourceType.ONLINE_SERVICE, ResourceType.CONTACT}
+
 # https://regex101.com/r/HOIX1L/4
 date_or_span_regex = r"(alkaen\s)?(([0-3]?[0-9])\.(((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?(\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)(\salkaen|\sasti)?"  # noqa
 date_optional_month_regex = (
@@ -98,16 +102,20 @@ class TPRekImporter(Importer):
             self.get_data_id = self.merge_connections_get_data_id
 
     def merge_connections_get_object_id(self, obj: Model) -> Hashable:
-        if type(obj) == Resource and obj.resource_type in set(
-            CONNECTION_TYPE_MAPPING.values()
-        ) | set((ResourceType.SUBSECTION,)):
+        if type(obj) == Resource and obj.resource_type in RESOURCE_TYPES_TO_MERGE:
             return frozenset(obj.extra_data.items())
-        return obj.origins.get(data_source=self.data_source).origin_id
+        # If merge conditions (or connection type) have changed, it is possible
+        # that existing objects have several origin_ids even though the objects might
+        # be separate.
+        # In such a case, use the first origin_id for the existing object, and
+        # use remaining origin_ids to create new objects.
+        return obj.origins.filter(data_source=self.data_source)[0].origin_id
 
     def merge_connections_get_data_id(self, data: dict) -> Hashable:
-        if data.get("resource_type", None) and data["resource_type"] in set(
-            CONNECTION_TYPE_MAPPING.values()
-        ) | set((ResourceType.SUBSECTION,)):
+        if (
+            data.get("resource_type", None)
+            and data["resource_type"] in RESOURCE_TYPES_TO_MERGE
+        ):
             return frozenset(data["extra_data"].items())
         return [
             str(origin["origin_id"])
@@ -888,7 +896,7 @@ class TPRekImporter(Importer):
     def import_connections(self):
         self.logger.info("Importing TPREK connections")
         if self.options.get("merge", None):
-            self.logger.info("Merging identical connections")
+            self.logger.info("Merging mergeable connections")
         self.import_objects("connection")
 
     def import_resources(self):

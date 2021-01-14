@@ -36,6 +36,7 @@ def test_resource_get_daily_opening_hours(
     weekday_time_element = TimeElement(
         start_time=datetime.time(hour=8, minute=0),
         end_time=datetime.time(hour=16, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=False,
         full_day=False,
@@ -44,6 +45,7 @@ def test_resource_get_daily_opening_hours(
     weekend_time_element = TimeElement(
         start_time=datetime.time(hour=10, minute=0),
         end_time=datetime.time(hour=14, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=False,
         full_day=False,
@@ -107,6 +109,7 @@ def test_resource_get_daily_opening_hours_periods_in_result(
     weekday_time_element_open = TimeElement(
         start_time=datetime.time(hour=10, minute=0),
         end_time=datetime.time(hour=17, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=False,
         full_day=False,
@@ -114,6 +117,7 @@ def test_resource_get_daily_opening_hours_periods_in_result(
     weekday_time_element_self_service_morning = TimeElement(
         start_time=datetime.time(hour=8, minute=0),
         end_time=datetime.time(hour=10, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.SELF_SERVICE,
         override=False,
         full_day=False,
@@ -122,6 +126,7 @@ def test_resource_get_daily_opening_hours_periods_in_result(
     weekday_time_element_self_service_evening = TimeElement(
         start_time=datetime.time(hour=17, minute=0),
         end_time=datetime.time(hour=19, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.SELF_SERVICE,
         override=False,
         full_day=False,
@@ -176,6 +181,7 @@ def test_get_period_for_date(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -246,6 +252,7 @@ def test_get_period_for_date_with_rule(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -262,6 +269,7 @@ def test_get_period_for_date_with_rule(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -335,6 +343,7 @@ def test_get_period_for_dates_with_two_rules(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -407,6 +416,7 @@ def test_get_period_for_dates_with_two_time_span_groups(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -423,6 +433,7 @@ def test_get_period_for_dates_with_two_time_span_groups(
             TimeElement(
                 start_time=datetime.time(hour=10, minute=0),
                 end_time=datetime.time(hour=16, minute=0),
+                end_time_on_next_day=False,
                 resource_state=State.OPEN,
                 override=False,
                 full_day=False,
@@ -1241,6 +1252,7 @@ def test_resource_get_daily_opening_hours_override(
     expected_time_element = TimeElement(
         start_time=datetime.time(hour=10, minute=0),
         end_time=datetime.time(hour=15, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=True,
         full_day=False,
@@ -1317,6 +1329,7 @@ def test_resource_get_daily_opening_hours_multiple_full_day_overrides(
     expected_time_element_closed = TimeElement(
         start_time=None,
         end_time=None,
+        end_time_on_next_day=False,
         resource_state=State.CLOSED,
         override=True,
         full_day=True,
@@ -1325,6 +1338,7 @@ def test_resource_get_daily_opening_hours_multiple_full_day_overrides(
     expected_time_element_exit_only = TimeElement(
         start_time=None,
         end_time=None,
+        end_time_on_next_day=False,
         resource_state=State.EXIT_ONLY,
         override=True,
         full_day=True,
@@ -1401,6 +1415,7 @@ def test_resource_get_daily_opening_hours_multiple_full_day_overrides_unbounded(
     expected_time_element_closed = TimeElement(
         start_time=None,
         end_time=None,
+        end_time_on_next_day=False,
         resource_state=State.CLOSED,
         override=True,
         full_day=True,
@@ -1409,6 +1424,7 @@ def test_resource_get_daily_opening_hours_multiple_full_day_overrides_unbounded(
     expected_time_element_exit_only = TimeElement(
         start_time=None,
         end_time=None,
+        end_time_on_next_day=False,
         resource_state=State.EXIT_ONLY,
         override=True,
         full_day=True,
@@ -1487,6 +1503,7 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
     expected_time_element_one_override = TimeElement(
         start_time=datetime.time(hour=10, minute=0),
         end_time=datetime.time(hour=15, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=True,
         full_day=False,
@@ -1495,6 +1512,7 @@ def test_resource_get_daily_opening_hours_multiple_overrides(
     expected_time_element_two_overrides = TimeElement(
         start_time=datetime.time(hour=12, minute=0),
         end_time=datetime.time(hour=14, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=True,
         full_day=False,
@@ -1551,6 +1569,7 @@ def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
     expected_time_element_open = TimeElement(
         start_time=datetime.time(hour=8, minute=0),
         end_time=datetime.time(hour=16, minute=0),
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=False,
         full_day=False,
@@ -1559,6 +1578,7 @@ def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
     expected_time_element_open_24h = TimeElement(
         start_time=None,
         end_time=None,
+        end_time_on_next_day=False,
         resource_state=State.OPEN,
         override=False,
         full_day=True,
@@ -1576,4 +1596,148 @@ def test_resource_get_daily_opening_hours_combine_full_day_with_non_full_day(
         datetime.date(year=2020, month=12, day=6): [expected_time_element_open],
         datetime.date(year=2020, month=12, day=7): [expected_time_element_open],
         datetime.date(year=2020, month=12, day=8): [expected_time_element_open],
+    }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_past_midnight(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        end_time_on_next_day=True,
+        weekdays=[Weekday.WEDNESDAY, Weekday.THURSDAY],
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        end_time_on_next_day=True,
+        weekdays=[Weekday.FRIDAY, Weekday.SATURDAY],
+    )
+
+    weekday_time_element_night = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        end_time_on_next_day=False,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekday_time_element = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=2, minute=0),
+        end_time_on_next_day=True,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekend_time_element_night = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        end_time_on_next_day=False,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    weekend_time_element = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=5, minute=0),
+        end_time_on_next_day=True,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    ) == {
+        datetime.date(year=2020, month=10, day=14): [
+            weekday_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=15): [
+            weekday_time_element_night,
+            weekday_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=16): [
+            weekday_time_element_night,
+            weekend_time_element,
+        ],
+        datetime.date(year=2020, month=10, day=17): [
+            weekend_time_element_night,
+            weekend_time_element,
+        ],
+    }
+
+
+@pytest.mark.django_db
+def test_resource_get_daily_opening_hours_past_midnight_combine(
+    resource, date_period_factory, time_span_group_factory, time_span_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=3, minute=0),
+        end_time_on_next_day=True,
+        weekdays=Weekday.business_days() + Weekday.weekend(),
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=2, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        weekdays=Weekday.business_days() + Weekday.weekend(),
+    )
+
+    expected_time_element_morning = TimeElement(
+        start_time=datetime.time(hour=0, minute=0),
+        end_time=datetime.time(hour=9, minute=0),
+        end_time_on_next_day=False,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    expected_time_element_evening = TimeElement(
+        start_time=datetime.time(hour=16, minute=0),
+        end_time=datetime.time(hour=3, minute=0),
+        end_time_on_next_day=True,
+        resource_state=State.OPEN,
+        override=False,
+        full_day=False,
+    )
+
+    assert resource.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=12),
+    ) == {
+        datetime.date(year=2020, month=10, day=12): [
+            expected_time_element_morning,
+            expected_time_element_evening,
+        ],
     }

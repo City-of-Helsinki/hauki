@@ -680,17 +680,30 @@ class TPRekImporter(Importer):
         for period in periods:
             time_spans = self.parse_opening_string(period["string"])
 
-            # also update the period resource_state based on the whole period string
+            # finally update whole period resource_state based on timespans and string
             if (
                 not time_spans
+                # only mark period closed if *all* spans are closed
                 or all([span["resource_state"] == State.CLOSED for span in time_spans])
             ) and "suljettu" in period["string"]:
+                # "suljettu" found
                 resource_state = State.CLOSED
             elif (
-                "suljettu" not in period["string"]
+                # closed not found, looking for open
+                ("avoinna" in period["string"] or "päivystys" in period["string"])
                 and (
-                    all([span["weekdays"] is None for span in time_spans])
-                    or "päivystys" in period["string"]
+                    not time_spans
+                    # only mark period open if *all* weekdays are open
+                    or all(
+                        [
+                            (
+                                not span["weekdays"]
+                                or span["weekdays"] == set(range(1, 7))
+                            )
+                            and (span["resource_state"] == State.OPEN)
+                            for span in time_spans
+                        ]
+                    )
                 )
                 and (
                     "ympäri vuorokauden" in period["string"]
@@ -714,6 +727,8 @@ class TPRekImporter(Importer):
             elif (
                 "sopimukse" in period["string"]
                 or "tilaukse" in period["string"]
+                or "vuokrau" in period["string"]
+                or "ennalta" in period["string"]
                 or ("varau" in period["string"] and "ilman" not in period["string"])
             ):
                 for time_span in time_spans:
@@ -727,12 +742,32 @@ class TPRekImporter(Importer):
                 ):
                     resource_state = State.WITH_RESERVATION
 
+            # with key
+            elif "avai" in period["string"]:
+                for time_span in time_spans:
+                    if time_span["resource_state"] == State.OPEN:
+                        time_span["resource_state"] = State.WITH_KEY
+                if not time_spans or all(
+                    [span["resource_state"] == State.WITH_KEY for span in time_spans]
+                ):
+                    resource_state = State.WITH_KEY
+
             start_date = period.get("start_date", date.today())
             end_date = period.get("end_date", None)
             origin = {
                 "data_source_id": self.data_source.id,
                 "origin_id": "{0}-{1}-{2}".format(connection_id, start_date, end_date),
             }
+            if time_spans:
+                time_span_groups = [
+                    {
+                        "time_spans": time_spans,
+                        "rules": [],
+                    }
+                ]
+            else:
+                time_span_groups = []
+
             period_datum = {
                 "resource": resource,
                 "start_date": start_date,
@@ -740,12 +775,7 @@ class TPRekImporter(Importer):
                 "override": period["override"],
                 "resource_state": resource_state,
                 "origins": [origin],
-                "time_span_groups": [
-                    {
-                        "time_spans": time_spans,
-                        "rules": [],
-                    }
-                ],
+                "time_span_groups": time_span_groups,
             }
             data.append(period_datum)
         return data

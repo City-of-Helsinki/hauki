@@ -11,6 +11,7 @@ from timezone_field.rest_framework import TimeZoneSerializerField
 from users.serializers import UserSerializer
 
 from .enums import State
+from .fields import TimezoneRetainingDateTimeField
 from .models import (
     DataSource,
     DatePeriod,
@@ -212,12 +213,23 @@ class TimeSpanCreateSerializer(
             "description",
             "start_time",
             "end_time",
+            "end_time_on_next_day",
             "full_day",
             "weekdays",
             "resource_state",
             "created",
             "modified",
         ]
+
+    def validate(self, attrs):
+        if "end_time_on_next_day" in attrs:
+            return attrs
+
+        if attrs.get("start_time") and attrs.get("end_time"):
+            # Populate end_time_on_next_day field if it's not set
+            attrs["end_time_on_next_day"] = attrs["end_time"] <= attrs["start_time"]
+
+        return attrs
 
 
 class TimeSpanSerializer(TimeSpanCreateSerializer):
@@ -309,6 +321,7 @@ class TimeElementSerializer(serializers.Serializer):
     description = serializers.CharField()
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
+    end_time_on_next_day = serializers.BooleanField()
     resource_state = EnumField(enum=State)
     full_day = serializers.BooleanField()
     periods = serializers.SerializerMethodField()
@@ -328,3 +341,18 @@ class ResourceDailyOpeningHoursSerializer(serializers.Serializer):
     origin_id = serializers.CharField(required=False)
     resource = ResourceSimpleSerializer()
     opening_hours = DailyOpeningHoursSerializer(many=True)
+
+
+class IsOpenNowSerializer(serializers.Serializer):
+    is_open = serializers.BooleanField()
+    resource_timezone = TimeZoneSerializerField(required=False)
+    resource_time_now = serializers.DateTimeField()
+    matching_opening_hours = TimeElementSerializer(many=True)
+
+    other_timezone = TimeZoneSerializerField(required=False)
+    other_timezone_time_now = TimezoneRetainingDateTimeField(required=False)
+    matching_opening_hours_in_other_tz = TimeElementSerializer(
+        many=True, required=False
+    )
+
+    resource = ResourceSerializer()

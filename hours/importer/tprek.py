@@ -31,10 +31,13 @@ CONNECTION_TYPE_MAPPING = {
 }
 
 # here we list the tprek connection types that we do *not* want to import as resources
-CONNECTION_TYPES_TO_IGNORE = ["OPENING_HOURS", "SOCIAL_MEDIA_LINK"]
+CONNECTION_TYPES_TO_IGNORE = {"OPENING_HOURS", "SOCIAL_MEDIA_LINK"}
 
-date_or_span_regex = r"(([0-3]?[0-9]\.((((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)|(\s)?-(\s)?))((\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])\.|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?)"  # noqa
-date_optional_month_regex = r"([0-3])?[0-9]\.((10|11|12|[0-9])\.([0-9]{4})?)?"  # noqa
+# https://regex101.com/r/HOIX1L/4
+date_or_span_regex = r"(alkaen\s)?(([0-3]?[0-9])\.(((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?(\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)(\salkaen|\sasti)?"  # noqa
+date_optional_month_regex = (
+    r"(alkaen\s)?([0-3])?[0-9]\.((10|11|12|[0-9])\.?([0-9]{4})?)?"  # noqa
+)
 multiple_weekday_spans_regex = r"(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su]))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?((,|\sja)?\s(ma|ti|ke|to|pe|la|su)(\s?-\s?(ma|ti|ke|to|pe|la|su))?)?"  # noqa
 multiple_time_spans_regex = r"([0-2]?[0-9]((\.|:)[0-9][0-9])?)((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?(((,|\sja)?\s([0-2]?[0-9]((\.|:)[0-9][0-9])?))((\s)?-(\s)?([0-2]?[0-9]((\.|:)[0-9][0-9])?))?)?"  # noqa
 
@@ -208,75 +211,63 @@ class TPRekImporter(Importer):
         (start and end dates), or semi-infinite period if no dates found.
         """
         periods = []
-        # standardize formatting to use commas instead of newlines
-        string = string.replace("\n", ", ")
-        potential_period_strs = string.split(",")
-        previous_period_str = ""
-        # if we have no match, the default period starts today
-        start_date = date.today()
-        end_date = None
-        # TODO: iterate match instead of splitting beforehand, like opening times
-        # TODO: regex must contain all stuff up to the date and beyond, e.g. regex
-        # matches must exactly split the string
+        # Split the whole string using date pattern.
+        # match to pattern with one or two dates, e.g. 1.12.2020 or 5.-10.12.2020
+        # or 12.12.2020 asti
+        pattern = re.compile(date_or_span_regex, re.IGNORECASE)
 
-        for index, potential_period_str in enumerate(potential_period_strs):
-            # match to pattern with one or two dates, e.g. 1.12.2020 or 5.-10.12.2020
-            # or 12.12.2020 asti
-            # https://regex101.com/r/6vGxKo/1
-            pattern = re.compile(
-                r"(alkaen )?" + date_or_span_regex + r"( alkaen| asti)?",  # noqa
-                re.IGNORECASE,
-            )
+        # 1) get rid of multiple newlines
+        string = string.replace("\n\n", "\n")
+        # 2) add any missing spaces after commas
+        string = re.sub(r",([^\s])", lambda match: ", " + match.group(1), string)
+        # 3) standardize formatting to use comma + whitespace instead of newlines
+        # 4) start all period strings with whitespace
+        string = " " + ", ".join(string.splitlines())
+        # 5) standardize formatting to lowercase
+        string = string.lower()
 
-            match = pattern.search(potential_period_str)
-            if match:
-                # in case of date match, save previous strings as a separate period
-                if previous_period_str:
-                    if "poikkeuksellisesti" in previous_period_str:
-                        override = True
+        matches = list(pattern.finditer(string))
+
+        # no matches => just use the whole string
+        if not matches:
+            strings = [string]
+        # one or more matches => one or more date periods
+        else:
+            strings = []
+            for match_number, match in enumerate(matches):
+                # Split string at last comma before each period match.
+                # This might yield a default period without dates, plus exceptions.
+                if match_number == 0:
+                    default_period_end_index = string.rfind(",", 0, match.start())
+                    if default_period_end_index > -1:
+                        # default period found before comma
+                        strings.append(string[:default_period_end_index])
+                        last_string_end = default_period_end_index
                     else:
-                        override = False
-                    periods.append(
-                        {
-                            "start_date": start_date,
-                            "end_date": end_date,
-                            "string": previous_period_str.lower(),
-                            "override": override,
-                            "resource_state": State.UNDEFINED,
-                        }
-                    )
-                    # string has been saved, do not use the string for the next period
-                    previous_period_str = ""
-                if match.group(15):
-                    # two dates found, start and end!
-                    start_date, end_date = self.parse_dates(
-                        match.group(3), match.group(15)
-                    )
+                        # no comma found before date
+                        last_string_end = -1
+                if match_number < len(matches) - 1:
+                    next_match_start = matches[match_number + 1].start()
+                    splitting_index = string.rfind(",", match.end(), next_match_start)
+                    if splitting_index == -1:
+                        # No comma between periods, split before next period.
+                        splitting_index = next_match_start
+                    strings.append(string[last_string_end + 1 : splitting_index])
+                    last_string_end = splitting_index - 1
                 else:
-                    if (match.group(1) and "alkaen" in match.group(1)) or (
-                        match.group(21) and "alkaen" in match.group(21)
-                    ):
-                        # starting date known
-                        start_date, end_date = self.parse_dates(match.group(3), None)
-                    elif match.group(21) and "asti" in match.group(21):
-                        # end date known
-                        start_date, end_date = self.parse_dates(None, match.group(3))
-                    else:
-                        # single day exception
-                        start_date, end_date = self.parse_dates(
-                            match.group(3), match.group(3)
-                        )
+                    # we reached the end of the string
+                    strings.append(string[last_string_end + 1 :])
+        # offset matches by one if default period string was encountered first
+        if len(strings) > len(matches):
+            matches.insert(0, None)
 
-            # paste strings together whether match is found or not
-            if previous_period_str:
-                previous_period_str += ","
-            previous_period_str += potential_period_str
-            if index < len(potential_period_strs) - 1:
-                # no need to save yet, more will follow
-                continue
-            else:
-                # end of the loop without matching, use the pasted string
-                if "poikkeuksellisesti" in previous_period_str:
+        for period_str, match in zip(strings, matches):
+            # if we have no match, the default period starts today
+            start_date = date.today()
+            end_date = None
+            if not match:
+                # no dates known
+                if "poikkeuksellisesti" in period_str:
                     override = True
                 else:
                     override = False
@@ -284,100 +275,134 @@ class TPRekImporter(Importer):
                     {
                         "start_date": start_date,
                         "end_date": end_date,
+                        "string": period_str,
                         "override": override,
-                        "string": previous_period_str.lower(),
                         "resource_state": State.UNDEFINED,
                     }
                 )
-            # string has been saved, do not use the string for the next period
-            previous_period_str = ""
+            else:
+                if match.group(2):
+                    # two dates found, start and end!
+                    start_date, end_date = self.parse_dates(
+                        match.group(2), match.group(12)
+                    )
+                else:
+                    if (match.group(1) and "alkaen" in match.group(1)) or (
+                        match.group(19) and "alkaen" in match.group(19)
+                    ):
+                        # starting date known
+                        start_date, end_date = self.parse_dates(match.group(12), None)
+                    elif match.group(19) and "asti" in match.group(19):
+                        # end date known
+                        start_date, end_date = self.parse_dates(None, match.group(12))
+                    else:
+                        # single day exception
+                        start_date, end_date = self.parse_dates(
+                            match.group(12), match.group(12)
+                        )
+                if "poikkeuksellisesti" in period_str:
+                    override = True
+                else:
+                    override = False
+                if [
+                    period
+                    for period in periods
+                    if period["start_date"] == start_date
+                    and period["end_date"] == end_date
+                ]:
+                    self.logger.info(
+                        "Cannot import another string with same dates: {0}".format(
+                            period_str
+                        )
+                    )
+                    continue
+                periods.append(
+                    {
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "override": override,
+                        "string": period_str,
+                        "resource_state": State.UNDEFINED,
+                    }
+                )
         return periods
 
     def parse_opening_string(self, string: str) -> list:
         """
-        Takes TPREK simple Finnish opening hours string and returns corresponding
-        opening time spans, if found.
+        Takes TPREK simple Finnish opening hours string for a single period
+        and returns corresponding opening time spans, if found.
         """
         time_spans = []
-        # match to single span, e.g. ma-pe 8-16:30 or suljettu pe or joka päivä 07-
-        # or ma, ke, su klo 8-12, 16-20
-        # https://regex101.com/r/UkhZ4e/18
+        # match to single datum, e.g. "ma-pe 8-16:30" or "suljettu pe" or
+        # "joka päivä 07-" or "ma, ke, su klo 8-12, 16-20" or "8.12.2020 klo 8-16"
+        # https://regex101.com/r/UkhZ4e/25
         pattern = re.compile(
-            r"(\s(suljettu|avoinna)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?"
+            r"(\s(suljettu|kiinni|avoinna|auki)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?("  # noqa
             + date_or_span_regex
-            + r"?\s?-?\s?((\s"
+            + r")?\s?-?\s?(\s"
             + multiple_weekday_spans_regex
-            + r"|\s"
+            + r"|(\s"
+            + date_or_span_regex
+            + r")|joka päivä|päivittäin|avoinna|päivystys)(\s"
             + date_optional_month_regex
-            + r")|joka päivä|päivittäin|avoinna|Päivystys)(\s"
-            + date_optional_month_regex
-            + r")?(\s|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24\s?h|"
+            + r")?(\s|\.|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24\s?h|"
             + multiple_time_spans_regex
             + r")?(\s(alkaen|asti))?",  # noqa
             re.IGNORECASE,
         )
         # 1) standardize formatting to get single whitespaces everywhere
         # 2) standardize dashes
+        # 3) get rid of common typos:
+        #   - "klo.", "klo:" -> "klo "
         string = " " + " ".join(string.split()).replace("−", "-")
+        string = string.replace("klo.", "klo").replace("klo:", "klo")
+
         matches = pattern.finditer(string)
-        if not matches:
-            # TODO: do this in period if no time spans
-            # no weekdays and times specified, resource might be closed
-            if "suljettu" in string:
-                time_spans.append(
-                    {
-                        "group": None,
-                        "start_time": None,
-                        "end_time": None,
-                        "weekdays": None,
-                        "resource_state": State.CLOSED,
-                        "full_day": True,
-                    }
-                )
 
         for match in matches:
-            # If we have no weekday matches, assume daily opening
-            if (
-                not match.group(24)
-                or "joka päivä" in match.group(23)
-                or "päivittäin" in match.group(23)
-            ):
-                weekdays = None
-            else:
-                weekdays = []
-                # we might have several consecutive weekday ranges
-                start_weekday_indices = (25, 30, 35, 40)
-                for start_index in start_weekday_indices:
-                    if match.group(start_index):
-                        end_index = start_index + 2
-                        start_weekday = self.weekday_by_abbr[
-                            match.group(start_index).lower()
+            # 1) Try to find weekday ranges
+            weekdays = []
+            start_weekday_indices = (25, 30, 35, 40)
+            for start_index in start_weekday_indices:
+                if match.group(start_index):
+                    end_index = start_index + 2
+                    start_weekday = self.weekday_by_abbr[
+                        match.group(start_index).lower()
+                    ]
+                    if match.group(end_index):
+                        end_weekday = self.weekday_by_abbr[
+                            match.group(end_index).lower()
                         ]
-                        if match.group(end_index):
-                            end_weekday = self.weekday_by_abbr[
-                                match.group(end_index).lower()
-                            ]
-                            weekdays.extend(list(range(start_weekday, end_weekday + 1)))
-                        else:
-                            weekdays.extend([start_weekday])
-            if (match.group(1) and "suljettu" in match.group(1)) or (
-                match.group(54) and "suljettu" in match.group(54)
+                        weekdays.extend(list(range(start_weekday, end_weekday + 1)))
+                    else:
+                        weekdays.extend([start_weekday])
+            if not weekdays:
+                weekdays = None
+
+            # 2) Try to find start or end times
+            if weekdays and (
+                (
+                    match.group(2)
+                    and ("suljettu" in match.group(2) or "kiinni" in match.group(2))
+                )
+                or (match.group(71) and "suljettu" in match.group(71))
             ):
+                # only given weekdays closed
                 start_time = None
                 end_time = None
                 resource_state = State.CLOSED
                 full_day = True
-            elif match.group(77) == "asti":
+            elif match.group(94) == "asti":
                 start_time = datetime_time(hour=0, minute=0)
-                end_time = self.parse_time(match.group(55))
+                end_time = self.parse_time(match.group(72))
                 resource_state = State.OPEN
                 full_day = False
-            elif match.group(55) or match.group(61):
+            elif match.group(72) or match.group(78):
                 # start or end time found!
-                start_time = self.parse_time(match.group(55))
+                start_time = self.parse_time(match.group(72))
                 if not start_time:
                     start_time = datetime_time(hour=0, minute=0)
-                end_time = self.parse_time(match.group(61))
+                end_time = self.parse_time(match.group(78))
                 if not end_time:
                     end_time = datetime_time(hour=0, minute=0)
                 if match.group(1) and "huoltotauko" in match.group(1):
@@ -385,33 +410,30 @@ class TPRekImporter(Importer):
                 else:
                     resource_state = State.OPEN
                 full_day = False
-            elif match.group(54) and (
-                "ympäri vuorokauden" in match.group(54)
-                or "24 h" in match.group(54)
-                or "24h" in match.group(54)
+            elif match.group(71) and (
+                "ympäri vuorokauden" in match.group(71)
+                or "24 h" in match.group(71)
+                or "24h" in match.group(71)
             ):
                 # always open
                 start_time = None
                 end_time = None
                 resource_state = State.OPEN
                 full_day = True
-            elif (
-                match.group(1) and "avoinna" in match.group(1)
-            ) or "avoinna" in match.group(23):
-                # sometimes open, no exact times
+
+            # 3) No times found. We must have weekdays *or* päivittäin
+            else:
+                if not weekdays and not (
+                    "joka päivä" in match.group(24) or "päivittäin" in match.group(24)
+                ):
+                    # We might have dates, but we have no times or weekdays.
+                    # Skip time spans and let the whole period status suffice.
+                    continue
+                # mark given weekdays open with no exact times
                 start_time = None
                 end_time = None
                 resource_state = State.OPEN
                 full_day = False
-            elif weekdays:
-                # mark days undefined if nothing was found
-                start_time = None
-                end_time = None
-                resource_state = State.UNDEFINED
-                full_day = False
-            else:
-                # no weekdays, so we don't have anything to go by :)
-                continue
 
             time_spans.append(
                 {
@@ -424,11 +446,11 @@ class TPRekImporter(Importer):
                 }
             )
 
-            if match.group(67):
+            if match.group(81):
                 # we might have another time span on the same day, if we're really
                 # unlucky
-                start_time = self.parse_time(match.group(67))
-                end_time = self.parse_time(match.group(73))
+                start_time = self.parse_time(match.group(84))
+                end_time = self.parse_time(match.group(90))
                 if not end_time:
                     end_time = datetime_time(hour=0, minute=0)
                 resource_state = State.OPEN

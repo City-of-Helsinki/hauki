@@ -48,13 +48,13 @@ def mock_tprek_data(requests_mock, request):
     )
     if merge:
         call_command("hours_import", "tprek", resources=True, merge=True)
-        print("merged identical resources")
+        print("merged specified connections")
     else:
         call_command("hours_import", "tprek", resources=True)
     if change == "edit":
         # Modify one connection that is already imported duplicated.
         # Two single connections should appear.
-        connections[6]["name_fi"] = "Välipala peruttu"
+        connections[8]["name_fi"] = "Venepaikkavaraukset täällä nyt eri tavalla"
     if change == "remove":
         # Remove one connection that is already imported duplicated.
         # Duplicated connection should become single.
@@ -81,13 +81,13 @@ def mock_tprek_data(requests_mock, request):
         )
         if merge:
             call_command("hours_import", "tprek", resources=True, merge=True)
-            print("merged identical resources")
+            print("merged specified connections")
         else:
             call_command("hours_import", "tprek", resources=True)
         print("made a change and rerun")
         print(change)
     return {
-        "merged_identical_resources": merge,
+        "merged_specific_connections": merge,
         "made_a_change_and_rerun": change,
         "units": units,
         "connections": connections,
@@ -288,7 +288,7 @@ for merge in [False, True]:
 def test_import_tprek(mock_tprek_data):
     # The results should depend on whether we merge identical connections
     # and whether we have changed the connections and rerun the import
-    merge = mock_tprek_data["merged_identical_resources"]
+    merge = mock_tprek_data["merged_specific_connections"]
     change = mock_tprek_data["made_a_change_and_rerun"]
 
     # Check created objects
@@ -299,9 +299,9 @@ def test_import_tprek(mock_tprek_data):
     else:
         expected_n_resources = 21
     if change == "edit":
-        expected_n_merged_resources = 17
+        expected_n_merged_resources = 21
     else:
-        expected_n_merged_resources = 16
+        expected_n_merged_resources = 20
     if not merge:
         assert Resource.objects.filter(is_public=True).count() == expected_n_resources
     else:
@@ -373,31 +373,20 @@ def test_import_tprek(mock_tprek_data):
     )
 
     # Check subsections
-    if merge:
-        if change == "edit":
-            # snack changed in kallio
-            (covid, snack1, afternoon, berth, space, support, snack2) = subsections
-            subsections_expected_in_kallio = {covid, snack2, afternoon, berth, space}
-            subsections_expected_in_oodi = {covid, snack1, berth, space, support}
-        else:
-            (covid, snack, afternoon, berth, space, support) = subsections
-            subsections_expected_in_kallio = {covid, snack, afternoon, berth, space}
-            subsections_expected_in_oodi = {covid, snack, berth, space, support}
-    else:
-        (
-            covid1,
-            covid2,
-            snack1,
-            snack2,
-            afternoon,
-            berth1,
-            berth2,
-            space1,
-            space2,
-            support,
-        ) = subsections
-        subsections_expected_in_kallio = {covid1, snack1, afternoon, berth1, space1}
-        subsections_expected_in_oodi = {covid2, snack2, berth2, space2, support}
+    (
+        covid1,
+        covid2,
+        snack1,
+        snack2,
+        afternoon,
+        berth1,
+        berth2,
+        space1,
+        space2,
+        support,
+    ) = subsections
+    subsections_expected_in_kallio = {covid1, snack1, afternoon, berth1, space1}
+    subsections_expected_in_oodi = {covid2, snack2, berth2, space2, support}
 
     assert subsections_expected_in_kallio == set(
         kallio.children.filter(resource_type=ResourceType.SUBSECTION)
@@ -408,22 +397,34 @@ def test_import_tprek(mock_tprek_data):
 
     # Check contacts
     if merge:
-        (reservations, directorkallio, directoroodi) = contacts
+        if change == "edit":
+            # reservations changed in kallio
+            (reservations, directorkallio, directoroodi, reservationskallio) = contacts
+        else:
+            (reservations, directorkallio, directoroodi) = contacts
         if change == "remove":
             # reservations removed in kallio
             contacts_expected_in_kallio = {directorkallio}
+        elif change == "edit":
+            # reservations changed in kallio
+            contacts_expected_in_kallio = {directorkallio, reservationskallio}
         else:
             contacts_expected_in_kallio = {reservations, directorkallio}
         contacts_expected_in_oodi = {reservations, directoroodi}
     else:
         if change == "remove":
             # reservations removed in kallio
-            (reservations2, directorkallio, directoroodi) = contacts
+            (reservationsoodi, directorkallio, directoroodi) = contacts
             contacts_expected_in_kallio = {directorkallio}
         else:
-            (reservations1, reservations2, directorkallio, directoroodi) = contacts
-            contacts_expected_in_kallio = {reservations1, directorkallio}
-        contacts_expected_in_oodi = {reservations2, directoroodi}
+            (
+                reservationskallio,
+                reservationsoodi,
+                directorkallio,
+                directoroodi,
+            ) = contacts
+            contacts_expected_in_kallio = {reservationskallio, directorkallio}
+        contacts_expected_in_oodi = {reservationsoodi, directoroodi}
 
     assert contacts_expected_in_kallio == set(
         kallio.children.filter(resource_type=ResourceType.CONTACT, is_public=True)

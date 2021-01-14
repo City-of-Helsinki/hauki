@@ -409,18 +409,19 @@ class TPRekImporter(Importer):
                 resource_state = State.CLOSED
                 full_day = True
             elif match.group(94) == "asti":
-                start_time = datetime_time(hour=0, minute=0)
+                start_time = None
                 end_time = self.parse_time(match.group(72))
+                resource_state = State.OPEN
+                full_day = False
+            elif match.group(94) == "alkaen":
+                start_time = self.parse_time(match.group(72))
+                end_time = None
                 resource_state = State.OPEN
                 full_day = False
             elif match.group(72) or match.group(78):
                 # start or end time found!
                 start_time = self.parse_time(match.group(72))
-                if not start_time:
-                    start_time = datetime_time(hour=0, minute=0)
                 end_time = self.parse_time(match.group(78))
-                if not end_time:
-                    end_time = datetime_time(hour=0, minute=0)
                 if match.group(1) and "huoltotauko" in match.group(1):
                     resource_state = State.CLOSED
                 else:
@@ -451,6 +452,9 @@ class TPRekImporter(Importer):
                 resource_state = State.OPEN
                 full_day = False
 
+            end_time_on_next_day = False
+            if start_time and end_time and end_time <= start_time:
+                end_time_on_next_day = True
             time_spans.append(
                 {
                     "group": None,
@@ -459,6 +463,7 @@ class TPRekImporter(Importer):
                     "weekdays": weekdays,
                     "resource_state": resource_state,
                     "full_day": full_day,
+                    "end_time_on_next_day": end_time_on_next_day,
                 }
             )
 
@@ -467,10 +472,11 @@ class TPRekImporter(Importer):
                 # unlucky
                 start_time = self.parse_time(match.group(84))
                 end_time = self.parse_time(match.group(90))
-                if not end_time:
-                    end_time = datetime_time(hour=0, minute=0)
                 resource_state = State.OPEN
                 full_day = False
+                end_time_on_next_day = False
+                if start_time and end_time and end_time <= start_time:
+                    end_time_on_next_day = True
                 time_spans.append(
                     {
                         "group": None,
@@ -479,6 +485,7 @@ class TPRekImporter(Importer):
                         "weekdays": weekdays,
                         "resource_state": resource_state,
                         "full_day": full_day,
+                        "end_time_on_next_day": end_time_on_next_day,
                     }
                 )
 

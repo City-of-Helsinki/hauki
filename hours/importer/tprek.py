@@ -166,7 +166,11 @@ class TPRekImporter(Importer):
                         year = today.year + 1
                     else:
                         year = today.year
-            end = date(year=year, month=month, day=day)
+            try:
+                end = date(year=year, month=month, day=day)
+            except ValueError:
+                self.logger.info("Invalid end date {0}".format(end))
+                end = None
         if start:
             try:
                 day, month, year = map(int, start.split("."))
@@ -188,7 +192,11 @@ class TPRekImporter(Importer):
                         year = today.year
                     else:
                         year = today.year - 1
-            start = date(year=year, month=month, day=day)
+            try:
+                start = date(year=year, month=month, day=day)
+            except ValueError:
+                self.logger.info("Invalid start date {0}".format(start))
+                start = None
         return start, end
 
     def parse_time(self, string: str) -> datetime_time:
@@ -666,25 +674,11 @@ class TPRekImporter(Importer):
             self.logger.info(
                 "Error parsing data, Finnish opening hours not found! {0}".format(data)
             )
-        try:
-            periods = self.parse_period_string(period_string)
-        except ValueError:
-            self.logger.info(
-                "Error parsing string, most likely dates are invalid! {0}".format(
-                    period_string
-                )
-            )
-            periods = []
+        periods = self.parse_period_string(period_string)
+
         data = []
         for period in periods:
-            try:
-                time_spans = self.parse_opening_string(period["string"])
-            except ValueError:
-                self.logger.info(
-                    "Error parsing period, most likely delimiters are missing! "
-                    + "{0}".format(period)
-                )
-                continue
+            time_spans = self.parse_opening_string(period["string"])
 
             # also update the period resource_state based on the whole period string
             if (

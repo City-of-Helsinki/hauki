@@ -130,7 +130,9 @@ class ResourceOriginSerializer(serializers.ModelSerializer):
 
 
 class ResourceSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
+    TranslationSerializerMixin,
+    EnumSupportSerializerMixin,
+    WritableNestedModelSerializer,
 ):
     last_modified_by = UserSerializer(read_only=True)
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)

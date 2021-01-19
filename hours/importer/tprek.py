@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db.models import Model
 from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
+from model_utils.models import SoftDeletableModel
 
 from ..enums import ResourceType, State
 from ..models import DataSource, DatePeriod, Resource
@@ -143,14 +144,26 @@ class TPRekImporter(Importer):
             receiver=resource_children_cleared, sender=Resource.children.through
         )
 
-    @staticmethod
-    def mark_non_public(obj: Resource) -> bool:
+    def mark_non_public(self, obj: Resource) -> bool:
         obj.is_public = False
         obj.save()
 
-    @staticmethod
-    def check_non_public(obj: Resource) -> bool:
+    def check_non_public(self, obj: Resource) -> bool:
         return not obj.is_public
+
+    def mark_deleted(self, obj: SoftDeletableModel) -> bool:
+        # Only TPREK units will be marked non-public instead of deleted.
+        # They might still lurk in TPREK and be needed non-publicly.
+        if type(obj) == Resource and obj.resource_type == ResourceType.UNIT:
+            return self.mark_non_public(obj)
+        # TPREK does not have non-public connections. Connections and opening
+        # hours will be deleted.
+        return super().mark_deleted(obj)
+
+    def check_deleted(self, obj: SoftDeletableModel) -> bool:
+        if type(obj) == Resource and obj.resource_type == ResourceType.UNIT:
+            return self.check_non_public(obj)
+        return super().check_deleted(obj)
 
     def parse_dates(self, start: str, end: str) -> Tuple[date, date]:
         """
@@ -857,8 +870,8 @@ class TPRekImporter(Importer):
         syncher = ModelSyncher(
             queryset,
             self.get_object_id,
-            delete_func=self.mark_non_public,
-            check_deleted_func=self.check_non_public,
+            delete_func=self.mark_deleted,
+            check_deleted_func=self.check_deleted,
         )
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
         self.logger.info("%s %ss loaded" % (len(obj_list), object_type))

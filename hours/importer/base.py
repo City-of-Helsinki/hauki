@@ -99,13 +99,11 @@ class Importer(object):
         resp.raise_for_status()
         return resp.json()
 
-    @staticmethod
-    def mark_deleted(obj: SoftDeletableModel) -> bool:
+    def mark_deleted(self, obj: SoftDeletableModel) -> bool:
         # SoftDeletableModel does not return anything when *soft* deleting
         obj.delete()
 
-    @staticmethod
-    def check_deleted(obj: SoftDeletableModel) -> bool:
+    def check_deleted(self, obj: SoftDeletableModel) -> bool:
         return obj.is_removed
 
     @staticmethod
@@ -216,7 +214,7 @@ class Importer(object):
 
         self._update_fields(obj, data)
         self._set_field(obj, "is_removed", False)
-        self._set_field(obj, "is_public", True)
+        self._set_field(obj, "is_public", True)  # always set resource public at save
 
         # required fields are filled, so the object may be saved now
         if obj._created:

@@ -8,19 +8,19 @@ class ModelSyncher(object):
     def __init__(
         self,
         queryset,
-        generate_obj_id,
         delete_func=None,
         check_deleted_func=None,
         allow_deleting_func=None,
     ):
         d = {}
-        self.generate_obj_id = generate_obj_id
         self.delete_func = delete_func
         self.check_deleted_func = check_deleted_func
         self.allow_deleting_func = allow_deleting_func
-        # Generate a list of all objects
+
+        # here we assume the queryset is distinct. otherwise this will fail
         for obj in queryset:
-            d[generate_obj_id(obj)] = obj
+            # we need a dict to access all objects, luckily model instances are hashable
+            d[obj] = obj
             # this only resets the initial queryset, objects outside it may still have
             # _found or _changed True
             obj._found = False
@@ -31,20 +31,15 @@ class ModelSyncher(object):
     def mark(self, obj):
         if getattr(obj, "_found", False):
             raise Exception("Object %s already marked" % obj)
-
-        obj_id = self.generate_obj_id(obj)
-        if obj_id not in self.obj_dict:
-            self.obj_dict[obj_id] = obj
+        if obj not in self.obj_dict:
+            self.obj_dict[obj] = obj
         else:
-            obj = self.obj_dict[obj_id]
+            obj = self.obj_dict[obj]
         obj._found = True
-
-    def get(self, obj_id):
-        return self.obj_dict.get(obj_id, None)
 
     def finish(self, force=False):
         delete_list = []
-        for obj_id, obj in self.obj_dict.items():
+        for obj in self.obj_dict:
             if obj._found:
                 # We have to reset _found so we don't mark or match the same object
                 # across several synchers.

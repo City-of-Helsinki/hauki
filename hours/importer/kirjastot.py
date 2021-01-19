@@ -590,7 +590,6 @@ class KirjastotImporter(Importer):
 
         syncher = ModelSyncher(
             queryset,
-            self.get_object_id,
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )

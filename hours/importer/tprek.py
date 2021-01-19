@@ -869,7 +869,6 @@ class TPRekImporter(Importer):
             obj_list = self.api_get(api_object_type, params=api_params)
         syncher = ModelSyncher(
             queryset,
-            self.get_object_id,
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )

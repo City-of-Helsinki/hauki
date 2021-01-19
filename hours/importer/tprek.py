@@ -71,20 +71,23 @@ class TPRekImporter(Importer):
         # this maps the imported resource names to Hauki objects
         self.data_to_match = {
             "unit": Resource.objects.filter(
-                origins__data_source=self.data_source,
-                resource_type=ResourceType.UNIT,
-                is_public=True,
-            ),
+                origins__data_source=self.data_source, resource_type=ResourceType.UNIT
+            )
+            .distinct()
+            .prefetch_related("origins"),
             "connection": Resource.objects.filter(
                 origins__data_source=self.data_source,
                 resource_type__in=set(CONNECTION_TYPE_MAPPING.values())
                 | set((ResourceType.SUBSECTION,)),
-                is_public=True,
-            ),
+            )
+            .distinct()
+            .prefetch_related("origins"),
             "opening_hours": DatePeriod.objects.filter(
-                origins__data_source=self.data_source,
-                is_public=True,
-            ).exclude(origins__data_source=self.kirjastot_data_source),
+                origins__data_source=self.data_source
+            )
+            .exclude(origins__data_source=self.kirjastot_data_source)
+            .distinct()
+            .prefetch_related("origins"),
         }
         with different_locale("fi_FI.utf-8"):
             self.month_by_name = {

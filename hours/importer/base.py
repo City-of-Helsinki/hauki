@@ -19,13 +19,30 @@ class Importer(object):
         self.logger = logging.getLogger("%s_importer" % self.name)
         self.options = options
         self.setup()
+
         self.logger.info("Caching existing resources from db")
-        self.resource_cache = {
-            self.get_object_id(obj): obj
-            for obj in Resource.objects.filter(
-                origins__data_source=self.data_source
-            ).prefetch_related("origins")
-        }
+        self.resource_cache = {}
+        for obj in (
+            Resource.objects.filter(origins__data_source=self.data_source)
+            .distinct()
+            .prefetch_related("origins")
+        ):
+            obj_id = self.get_object_id(obj)
+            if obj_id in self.resource_cache:
+                if not self.options["force"]:
+                    raise Exception(
+                        f"Multiple objects with an identical generated id"
+                        f" {self.get_object_id(obj)} found in database."
+                        f" Most likely you are running the importer with the --merge"
+                        f" parameter while having separate non-merged objects in"
+                        f" database already. Merging will add their origin_ids to"
+                        f" the first object and delete duplicates, along with their"
+                        f" opening hours. If you are sure you want to do that,"
+                        f" please run the importer with the parameters --merge"
+                        f" --force."
+                    )
+            self.resource_cache[obj_id] = obj
+
         self.logger.info("Caching existing date periods from db")
         self.dateperiod_cache = {
             self.get_object_id(obj): obj
@@ -38,13 +55,19 @@ class Importer(object):
         try:
             return obj.origins.get(data_source=self.data_source).origin_id
         except MultipleObjectsReturned:
-            raise Exception(
-                "Seems like your database already contains multiple identifiers"
-                " for the same object in importer data source. Please run the"
-                " importer with --merge to combine identical objects into one,"
-                " or remove the duplicate origin_ids in the database before"
-                " trying to import identical connections as separate objects."
-            )
+            if self.options.get("force", None):
+                return obj.origins.filter(data_source=self.data_source)[0].origin_id
+            else:
+                raise Exception(
+                    f"Seems like your database already contains multiple origin_ids"
+                    f" for {obj} from data source {self.data_source}. This is the"
+                    f" result of running an importer with the --merge parameter."
+                    f" Please run the importer with --merge to combine identical"
+                    f" objects into one, or --force to un-merge any previously"
+                    f" combined objects. Their opening hours will only apply for"
+                    f" one of the un-merged objects from now on, and others will"
+                    f" not have opening data."
+                )
 
     def get_data_id(self, data: dict) -> str:
         origin_ids = [
@@ -90,7 +113,7 @@ class Importer(object):
         # remove non-breaking spaces and separators
         text = text.replace("\xa0", " ").replace("\x1f", "")
         # remove nil bytes
-        text = text.replace(u"\u0000", " ")
+        text = text.replace("\u0000", " ")
         if strip_newlines:
             text = text.replace("\r", "").replace("\n", " ")
         # remove consecutive whitespaces

@@ -242,7 +242,9 @@ class ResourceViewSet(
         )
 
         # Filter the queryset according to read permissions
-        queryset = filter_queryset_by_permission(self.request.user, queryset)
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
 
         return queryset
 

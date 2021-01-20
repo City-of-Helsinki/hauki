@@ -1,4 +1,5 @@
 import json
+import urllib.parse
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
@@ -566,6 +567,405 @@ def test_update_child_resource_authenticated_parent_has_different_org(
     assert response.status_code == 403, "{} {}".format(
         response.status_code, response.data
     )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, True),
+        (False, True, True, True),
+        (False, True, False, True),
+        (True, True, None, True),
+        (True, True, True, True),
+        (True, True, False, True),
+    ],
+)
+def test_get_non_public_resource_hsa_authenticated(
+    resource,
+    resource_origin_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.is_public = False
+    resource.organization = organization
+    resource.save()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = resource
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, True),
+        (False, True, True, True),
+        (False, True, False, True),
+        (True, True, None, True),
+        (True, True, True, True),
+        (True, True, False, True),
+    ],
+)
+def test_get_child_of_non_public_resource_hsa_authenticated(
+    resource,
+    resource_origin_factory,
+    resource_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.is_public = False
+    resource.organization = organization
+    resource.save()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    child_resource = resource_factory(name="Child resource")
+    child_resource.parents.add(resource)
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = resource
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("resource-detail", kwargs={"pk": child_resource.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, True),
+        (False, True, True, True),
+        (False, True, False, True),
+        (True, True, None, True),
+        (True, True, True, True),
+        (True, True, False, True),
+    ],
+)
+def test_update_resource_hsa_authenticated_resource_permissions(
+    resource,
+    resource_origin_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    resource_origin_factory(resource=resource, data_source=data_source)
+    existing_name = resource.name
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = resource
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    resource = Resource.objects.get(id=resource.id)
+
+    if should_succeed:
+        assert response.status_code == 200, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert resource.name == "New name"
+    else:
+        assert response.status_code == 403, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert resource.name == existing_name
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, True),
+        (False, True, True, True),
+        (False, True, False, True),
+        (True, True, None, True),
+        (True, True, True, True),
+        (True, True, False, True),
+    ],
+)
+def test_update_resource_hsa_authenticated_child_resource_permissions(
+    resource,
+    resource_factory,
+    resource_origin_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    child_resource = resource_factory(name="Child resource")
+    child_resource.parents.add(resource)
+    existing_name = child_resource.name
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = resource
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("resource-detail", kwargs={"pk": child_resource.id})
+
+    data = {"name": "New child resource name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    child_resource = Resource.objects.get(id=child_resource.id)
+
+    if should_succeed:
+        assert response.status_code == 200, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert child_resource.name == "New child resource name"
+    else:
+        assert response.status_code == 403, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert child_resource.name == existing_name
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, False),
+        (False, True, True, False),
+        (False, True, False, False),
+        (True, True, None, False),
+        (True, True, True, True),
+        (True, True, False, False),
+    ],
+)
+def test_update_resource_hsa_authenticated_same_org_other_resource_permissions(
+    resource,
+    resource_factory,
+    resource_origin_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    other_resource = resource_factory(name="Other resource", organization=organization)
+    existing_name = other_resource.name
+    resource_origin_factory(resource=other_resource, data_source=data_source)
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = resource
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("resource-detail", kwargs={"pk": other_resource.id})
+
+    data = {"name": "New other resource name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    other_resource = Resource.objects.get(id=other_resource.id)
+
+    if should_succeed:
+        assert response.status_code == 200, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert other_resource.name == "New other resource name"
+    else:
+        assert response.status_code == 403, "{} {}".format(
+            response.status_code, response.data
+        )
+
+        assert other_resource.name == existing_name
 
 
 @pytest.mark.django_db

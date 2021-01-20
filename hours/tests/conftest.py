@@ -1,3 +1,4 @@
+import datetime
 import random
 import string
 import unittest
@@ -10,6 +11,7 @@ from faker import Factory as FakerFactory
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
+from hours.authentication import calculate_signature, join_params
 from hours.models import (
     DataSource,
     DatePeriod,
@@ -129,3 +131,41 @@ class SignedAuthKeyFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignedAuthKey
+
+
+@pytest.fixture
+def hsa_params_factory():
+    def _make_hsa_params(
+        user=None,
+        username=None,
+        data_source=None,
+        organization=None,
+        resource=None,
+        has_organization_rights=False,
+        signed_auth_key=None,
+    ):
+        if not signed_auth_key:
+            signed_auth_key = SignedAuthKeyFactory(data_source=data_source)
+
+        now = datetime.datetime.utcnow()
+
+        data = {
+            "hsa_source": data_source.id,
+            "hsa_username": user.username if user else username,
+            "hsa_created_at": now.isoformat() + "Z",
+            "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+            "hsa_has_organization_rights": str(has_organization_rights),
+        }
+
+        if organization:
+            data["hsa_organization"] = str(organization.id)
+
+        if resource:
+            data["hsa_resource"] = str(resource.id)
+
+        source_string = join_params(data)
+        signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+        return {**data, "hsa_signature": signature}
+
+    return _make_hsa_params

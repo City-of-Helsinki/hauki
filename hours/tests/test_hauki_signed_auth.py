@@ -773,6 +773,46 @@ def test_auth_data_resource(
 
 
 @pytest.mark.django_db
+def test_auth_data_resource_data_source_id(
+    api_client,
+    data_source,
+    resource_factory,
+    resource_origin_factory,
+    hsa_params_factory,
+):
+    resource = resource_factory()
+    resource_origin = resource_origin_factory(
+        resource=resource, data_source=data_source, origin_id="12345"
+    )
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "resource": "{}:{}".format(
+            resource_origin.data_source.id, resource_origin.origin_id
+        ),
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource == resource
+
+
+@pytest.mark.django_db
 def test_auth_data_resource_different_data_source(
     api_client,
     data_source_factory,

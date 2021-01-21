@@ -17,6 +17,7 @@ from rest_framework.authentication import (
 )
 
 from hours.models import DataSource, Resource, SignedAuthEntry, SignedAuthKey
+from hours.utils import get_resource_pk_filter
 from users.models import UserOrigin
 
 User = get_user_model()
@@ -232,7 +233,9 @@ class HaukiSignedAuthentication(BaseAuthentication):
         hsa_auth_data.resource = None
         if params.get("hsa_resource"):
             try:
-                resource = Resource.objects.get(id=params["hsa_resource"])
+                resource = Resource.objects.get(
+                    **get_resource_pk_filter(params["hsa_resource"])
+                )
                 resource_data_source_ids = [ds.id for ds in resource.data_sources.all()]
                 if resource.ancestry_data_source:
                     resource_data_source_ids.extend(resource.ancestry_data_source)

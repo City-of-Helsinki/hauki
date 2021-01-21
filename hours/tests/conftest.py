@@ -161,7 +161,9 @@ def hsa_params_factory():
             data["hsa_organization"] = str(organization.id)
 
         if resource:
-            data["hsa_resource"] = str(resource.id)
+            data["hsa_resource"] = (
+                str(resource.id) if isinstance(resource, Resource) else resource
+            )
 
         source_string = join_params(data)
         signature = calculate_signature(signed_auth_key.signing_key, source_string)

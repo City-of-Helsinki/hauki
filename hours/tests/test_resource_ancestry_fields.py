@@ -368,3 +368,92 @@ def test_ancestry_multiple_organizations_and_data_sources(
     assert_count_equal(
         resource3.ancestry_data_source, [data_source.id, data_source2.id]
     )
+
+
+#
+# Resource.get_ancestors
+#
+@pytest.mark.django_db
+def test_get_ancestors_empty(resource_factory):
+    resource = resource_factory(name="resource1")
+
+    assert resource.get_ancestors() == set()
+
+
+@pytest.mark.django_db
+def test_get_ancestors_one_parent(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+
+    resource.parents.add(resource2)
+
+    assert resource.get_ancestors() == {resource2}
+
+
+@pytest.mark.django_db
+def test_get_ancestors_two_parents(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+
+    resource.parents.add(resource2)
+    resource.parents.add(resource3)
+
+    assert resource.get_ancestors() == {resource2, resource3}
+
+
+@pytest.mark.django_db
+def test_get_ancestors_one_grandparent(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+
+    resource.parents.add(resource2)
+    resource2.parents.add(resource3)
+
+    assert resource.get_ancestors() == {resource2, resource3}
+
+
+@pytest.mark.django_db
+def test_get_ancestors_two_grandparents(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+    resource4 = resource_factory(name="resource4")
+
+    resource.parents.add(resource2)
+    resource2.parents.add(resource3)
+    resource2.parents.add(resource4)
+
+    assert resource.get_ancestors() == {resource2, resource3, resource4}
+
+
+@pytest.mark.django_db
+def test_get_ancestors_two_grandparents_two_branches(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+    resource4 = resource_factory(name="resource4")
+    resource5 = resource_factory(name="resource5")
+
+    resource.parents.add(resource2)
+    resource.parents.add(resource3)
+
+    resource2.parents.add(resource4)
+    resource3.parents.add(resource5)
+
+    assert resource.get_ancestors() == {resource2, resource3, resource4, resource5}
+
+
+# TODO: this works, but signals.resource_children_changed doesn't work with loops
+# @pytest.mark.django_db
+# def test_get_ancestors_grandparent_loop(resource_factory):
+#     resource = resource_factory(name="resource1")
+#     resource2 = resource_factory(name="resource2")
+#     resource3 = resource_factory(name="resource3")
+#
+#     resource.parents.add(resource2)
+#     resource2.parents.add(resource3)
+#     resource3.parents.add(resource)
+#
+#     assert resource.get_ancestors() == {resource, resource2, resource3}

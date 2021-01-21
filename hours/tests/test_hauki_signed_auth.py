@@ -643,3 +643,208 @@ def test_authenticate_existing_user_existing_different_data_source(
         auth.authenticate(request)[0]
 
     assert e.value.detail == "User not from the same data source"
+
+
+@pytest.mark.django_db
+def test_auth_data_no_org_or_resource(api_client, data_source, hsa_params_factory):
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource is None
+
+
+@pytest.mark.django_db
+def test_auth_data_org(
+    api_client, data_source, organization_factory, hsa_params_factory
+):
+    org = organization_factory(data_source=data_source, origin_id=1234)
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "organization": org,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization == org
+    assert auth.resource is None
+
+
+@pytest.mark.django_db
+def test_auth_data_org_different_data_source(
+    api_client, data_source_factory, organization_factory, hsa_params_factory
+):
+    data_source = data_source_factory()
+    data_source2 = data_source_factory()
+
+    org = organization_factory(data_source=data_source2, origin_id=1234)
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "organization": org,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource is None
+
+
+@pytest.mark.django_db
+def test_auth_data_resource(
+    api_client,
+    data_source,
+    resource_factory,
+    resource_origin_factory,
+    hsa_params_factory,
+):
+    resource = resource_factory()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "resource": resource,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource == resource
+
+
+@pytest.mark.django_db
+def test_auth_data_resource_different_data_source(
+    api_client,
+    data_source_factory,
+    resource_factory,
+    resource_origin_factory,
+    hsa_params_factory,
+):
+    data_source = data_source_factory()
+    data_source2 = data_source_factory()
+
+    resource = resource_factory()
+    resource_origin_factory(resource=resource, data_source=data_source2)
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "resource": resource,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource is None
+
+
+@pytest.mark.django_db
+def test_auth_data_child_resource(
+    api_client,
+    data_source,
+    resource_factory,
+    resource_origin_factory,
+    hsa_params_factory,
+):
+    resource = resource_factory()
+    resource_origin_factory(resource=resource, data_source=data_source)
+
+    resource2 = resource_factory()
+    resource2.parents.add(resource)
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": data_source,
+        "resource": resource2,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    # Create a fake DRF request
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert authenticated_user.id is not None
+    assert authenticated_user.username == "test_user"
+
+    assert auth.user == authenticated_user
+    assert auth.user_origin.data_source == data_source
+    assert auth.has_organization_rights is False
+    assert auth.organization is None
+    assert auth.resource == resource2

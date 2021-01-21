@@ -16,7 +16,7 @@ from rest_framework.authentication import (
     get_authorization_header,
 )
 
-from hours.models import DataSource, SignedAuthEntry, SignedAuthKey
+from hours.models import DataSource, Resource, SignedAuthEntry, SignedAuthKey
 from users.models import UserOrigin
 
 User = get_user_model()
@@ -154,6 +154,16 @@ def validate_params_and_signature(params) -> bool:
     return True
 
 
+class HaukiSignedAuthData:
+    def __init__(self):
+        self.user = None
+        self.user_origin = None
+        self.original_params = None
+        self.organization = None
+        self.resource = None
+        self.has_organization_rights = False
+
+
 class HaukiSignedAuthentication(BaseAuthentication):
     def authenticate(self, request):
         params = get_auth_params(request)
@@ -176,8 +186,9 @@ class HaukiSignedAuthentication(BaseAuthentication):
         try:
             user = User.objects.get(username=params["hsa_username"])
 
-            users_data_sources = [uo.data_source for uo in user.origins.all()]
-            if data_source not in users_data_sources:
+            try:
+                user_origin = user.origins.get(data_source=data_source)
+            except UserOrigin.DoesNotExist:
                 raise exceptions.AuthenticationFailed(
                     _("User not from the same data source")
                 )
@@ -187,10 +198,15 @@ class HaukiSignedAuthentication(BaseAuthentication):
             user.username = params["hsa_username"]
             user.save()
 
-            UserOrigin.objects.create(user=user, data_source=data_source)
+            user_origin = UserOrigin.objects.create(user=user, data_source=data_source)
 
         if not user.is_active:
             raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
+
+        hsa_auth_data = HaukiSignedAuthData()
+        hsa_auth_data.user = user
+        hsa_auth_data.user_origin = user_origin
+        hsa_auth_data.original_params = params
 
         if params.get("hsa_organization"):
             try:
@@ -203,11 +219,31 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
                     if organization not in users_organizations:
                         user.organization_memberships.add(organization)
+
+                    hsa_auth_data.organization = organization
             except Organization.DoesNotExist:
                 # TODO: Should we raise exception here
                 pass
 
-        return user, None
+        hsa_auth_data.has_organization_rights = False
+        if params.get("hsa_has_organization_rights", "").lower() == "true":
+            hsa_auth_data.has_organization_rights = True
+
+        hsa_auth_data.resource = None
+        if params.get("hsa_resource"):
+            try:
+                resource = Resource.objects.get(id=params["hsa_resource"])
+                resource_data_source_ids = [ds.id for ds in resource.data_sources.all()]
+                if resource.ancestry_data_source:
+                    resource_data_source_ids.extend(resource.ancestry_data_source)
+
+                if data_source.id in resource_data_source_ids:
+                    hsa_auth_data.resource = resource
+            except Resource.DoesNotExist:
+                # TODO: Should we raise exception here
+                pass
+
+        return user, hsa_auth_data
 
 
 class HaukiTokenAuthentication(TokenAuthentication):

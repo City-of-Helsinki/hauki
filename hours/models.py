@@ -423,6 +423,24 @@ class Resource(SoftDeletableModel, TimeStampedModel):
             for child in self.children.all():
                 child.update_ancestry()
 
+    def get_ancestors(self, acc=None):
+        if acc is None:
+            acc = set()
+
+        parents = self.parents.all()
+
+        if not parents:
+            return acc
+
+        for parent in parents:
+            if parent == self or parent in acc:
+                continue
+
+            acc.add(parent)
+            parent.get_ancestors(acc)
+
+        return acc
+
 
 class ResourceOrigin(models.Model):
     resource = models.ForeignKey(

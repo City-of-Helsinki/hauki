@@ -3,6 +3,7 @@ from functools import reduce
 from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from hours.authentication import HaukiSignedAuthData
 from hours.models import DatePeriod, Resource, Rule, TimeSpan
 
 
@@ -23,7 +24,7 @@ def get_path_to_resource(klass):
     return None
 
 
-def filter_queryset_by_permission(user, queryset):
+def filter_queryset_by_permission(user, queryset, auth=None):
     """Returns the queryset filtered by permission of the request
 
     Returned queryset contains only objects of organizations the request has rights to.
@@ -64,7 +65,21 @@ def filter_queryset_by_permission(user, queryset):
         )
     )
 
-    return queryset.filter(is_public | has_request_organization)
+    # A special case for users signed in using the HaukiSignedAuthentication
+    is_resource = Q()
+    if auth and isinstance(auth, HaukiSignedAuthData):
+        if auth.resource:
+            is_resource = Q(
+                **{path_to_resource if path_to_resource else "id": auth.resource.id}
+            ) | Q(
+                # TODO: This supports only parents, not grandparents!
+                **{path_to_resource + "parents": auth.resource.id}
+            )
+
+        if not auth.has_organization_rights:
+            has_request_organization = Q()
+
+    return queryset.filter(is_public | has_request_organization | is_resource)
 
 
 class ReadOnlyPublic(BasePermission):
@@ -129,17 +144,31 @@ class IsMemberOrAdminOfOrganization(BasePermission):
         if request.user.is_superuser:
             return True
 
-        if request.user and request.user.is_authenticated:
-            users_organizations = request.user.get_all_organizations()
-        else:
-            users_organizations = set()
-
         path_to_resource = get_path_to_resource(obj.__class__)
 
         if path_to_resource is None:
             raise NotImplementedError(
                 "Permissions not defined for class {0}".format(obj.__class__)
             )
+
+        if path_to_resource == "":
+            resource = obj
+        else:
+            resource = deep_getattr(obj, path_to_resource.rstrip("_"))
+
+        # A special case for users signed in using the HaukiSignedAuthentication
+        if request.auth and isinstance(request.auth, HaukiSignedAuthData):
+            resource_ancestors = resource.get_ancestors()
+            if request.auth.resource in {resource} | resource_ancestors:
+                return True
+
+            if not request.auth.has_organization_rights:
+                return False
+
+        if request.user and request.user.is_authenticated:
+            users_organizations = request.user.get_all_organizations()
+        else:
+            users_organizations = set()
 
         resource_organization = deep_getattr(obj, path_to_resource + "organization")
         resource_ancestry_organization = deep_getattr(
@@ -151,7 +180,9 @@ class IsMemberOrAdminOfOrganization(BasePermission):
             and not resource_ancestry_organization
         ) or (
             resource_ancestry_organization
-            and users_organizations.intersection(resource_ancestry_organization)
+            and set(resource_ancestry_organization).intersection(
+                [uo.id for uo in users_organizations]
+            )
         ):
             return True
 

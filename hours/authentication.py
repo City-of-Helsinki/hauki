@@ -234,7 +234,8 @@ class HaukiSignedAuthentication(BaseAuthentication):
             try:
                 resource = Resource.objects.get(id=params["hsa_resource"])
                 resource_data_source_ids = [ds.id for ds in resource.data_sources.all()]
-                resource_data_source_ids.extend(resource.ancestry_data_source)
+                if resource.ancestry_data_source:
+                    resource_data_source_ids.extend(resource.ancestry_data_source)
 
                 if data_source.id in resource_data_source_ids:
                     hsa_auth_data.resource = resource

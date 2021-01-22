@@ -88,6 +88,12 @@ class TPRekImporter(Importer):
             .exclude(origins__data_source=self.kirjastot_data_source)
             .distinct()
             .prefetch_related("origins"),
+            "extra_subsections": Resource.objects.filter(
+                origins__data_source=self.data_source,
+                resource_type=ResourceType.SERVICE_AT_UNIT,
+            )
+            .distinct()
+            .prefetch_related("origins"),
         }
         with different_locale("fi_FI.utf-8"):
             self.month_by_name = {
@@ -896,6 +902,7 @@ class TPRekImporter(Importer):
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
         self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         obj_dict = {}
+        extra_subsections = []
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss read" % (idx, object_type))
@@ -905,21 +912,32 @@ class TPRekImporter(Importer):
                 # multiple objects
                 object_data = [object_data]
             for datum in object_data:
-                # TODO: multiple ids from datum
                 object_data_id = self.get_data_id(datum)
                 if object_data_id not in obj_dict:
                     obj_dict[object_data_id] = datum
                 else:
-                    # Duplicate object found. Just append its foreign keys instead of
-                    # adding another object.
-                    parents = datum["parents"]
-                    origins = datum["origins"]
-                    self.logger.info(
-                        "Adding duplicate parent %s and origin %s to object %s"
-                        % (parents, origins, object_data_id)
-                    )
-                    obj_dict[object_data_id]["parents"].extend(parents)
-                    obj_dict[object_data_id]["origins"].extend(origins)
+                    # We are trying to import an object whose id has already been
+                    # imported. How to handle it depends on object type.
+                    if object_type == "opening_hours":
+                        # Create new subsections from duplicate opening periods
+                        # that shouldn't be there in the first place.
+                        self.logger.info(
+                            f"Duplicate period {datum} found for same dates, period"
+                            f" {obj_dict[object_data_id]} read already. Saving this"
+                            f" as a new subsection."
+                        )
+                        extra_subsections.append(datum)
+                    if object_type == "connection":
+                        # Duplicate connection found. Just append its foreign keys
+                        # instead of adding another object.
+                        parents = datum["parents"]
+                        origins = datum["origins"]
+                        self.logger.info(
+                            "Adding duplicate parent %s and origin %s to object %s"
+                            % (parents, origins, object_data_id)
+                        )
+                        obj_dict[object_data_id]["parents"].extend(parents)
+                        obj_dict[object_data_id]["origins"].extend(origins)
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss saved" % (idx, object_type))
@@ -927,8 +945,59 @@ class TPRekImporter(Importer):
 
             syncher.mark(obj)
 
+        self.save_extra_subsections(syncher, extra_subsections)
         syncher.finish(force=self.options["force"])
+
         self.reconnect_receivers()
+
+    def save_extra_subsections(
+        self, period_syncher: ModelSyncher, extra_subsections: list
+    ):
+        """
+        Saves given date periods as subsections, along with their opening hours.
+        """
+        queryset = self.data_to_match["extra_subsections"]
+        subsection_syncher = ModelSyncher(
+            queryset,
+            delete_func=self.mark_deleted,
+            check_deleted_func=self.check_deleted,
+        )
+
+        obj_dict = {}
+        for datum in extra_subsections:
+            # We have no way of knowing what the subsection type should be.
+            # Use a different type so generated subsections won't be mixed
+            # with other ones.
+            subsection_data = {
+                "origins": datum["origins"],
+                "resource_type": ResourceType.SERVICE_AT_UNIT,
+                "name": datum["name"],
+                "description": datum["description"],
+                "parents": [datum["resource"]],
+            }
+            data_id = subsection_data["origins"][0]["origin_id"]
+
+            # if we had several duplicate periods, use running index in id
+            idx = 0
+            while data_id in obj_dict:
+                idx += 1
+                data_id = subsection_data["origins"][0]["origin_id"] + "-" + str(idx)
+            subsection_data["origins"][0]["origin_id"] = data_id
+            obj_dict[data_id] = datum
+            subsection = self.save_resource(subsection_data)
+            subsection_syncher.mark(subsection)
+
+            # get rid of data that is in subsection already
+            del datum["resource"]
+            del datum["name"]
+            del datum["description"]
+
+            # period id already used, add new subsection id to id
+            datum["resource"] = subsection
+            datum["origins"][0]["origin_id"] = "opening-" + data_id
+            period = self.save_dateperiod(datum)
+            period_syncher.mark(period)
+        subsection_syncher.finish(force=self.options["force"])
 
     @db.transaction.atomic
     def import_units(self):

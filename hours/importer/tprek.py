@@ -1,5 +1,4 @@
 import re
-import time
 from calendar import day_abbr, different_locale, month_name
 from datetime import date
 from datetime import time as datetime_time
@@ -694,11 +693,11 @@ class TPRekImporter(Importer):
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized DatePeriods.
         """
-        # Running id will be removed once tprek adds permanent ids to their API.
-        if "id" not in data:
-            data["id"] = int(time.time() * 100000)
-        connection_id = str(data.pop("id"))
+        # Use unit id for opening hours
         unit_id = str(data.pop("unit_id"))
+        if "id" not in data:
+            data["id"] = "opening-" + unit_id
+        connection_id = str(data.pop("id"))
         # resource may be missing if e.g. the unit has just been created or
         # deleted, or is not public at the moment. Therefore, resource may be empty.
         # TODO: in case we are importing hours in non-opening hours connection, add them

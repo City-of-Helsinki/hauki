@@ -39,7 +39,7 @@ CONNECTION_TYPES_TO_IGNORE = {"OPENING_HOURS", "SOCIAL_MEDIA_LINK"}
 RESOURCE_TYPES_TO_MERGE = {ResourceType.ONLINE_SERVICE, ResourceType.CONTACT}
 
 # https://regex101.com/r/HOIX1L/4
-date_or_span_regex = r"(alkaen\s)?(([0-3]?[0-9])\.(((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?(\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)(\salkaen|\sasti)?"  # noqa
+date_or_span_regex = r"(alkaen\s)?(([0-3]?[0-9])\.(((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)?(\s)?-(\s)?)?(([0-3]?[0-9])\.((10|11|12|[0-9])(\.|\s)|(\s[a-ö]{,6}kuuta\s))([0-9]{4})?)(\salkaen|\sasti)?,?"  # noqa
 date_optional_month_regex = (
     r"(alkaen\s)?([0-3])?[0-9]\.((10|11|12|[0-9])\.?([0-9]{4})?)?"  # noqa
 )
@@ -294,8 +294,8 @@ class TPRekImporter(Importer):
             matches.insert(0, None)
 
         for period_str, match in zip(strings, matches):
-            # if we have no match, the default period starts today
-            start_date = date.today()
+            # if we have no match, the default period is forever
+            start_date = None
             end_date = None
             if not match:
                 # no dates known
@@ -389,7 +389,16 @@ class TPRekImporter(Importer):
         string = " " + " ".join(string.split()).replace("−", "-")
         string = string.replace("klo.", "klo").replace("klo:", "klo")
 
-        matches = pattern.finditer(string)
+        matches = list(pattern.finditer(string))
+
+        # Save parts before first match
+        # and after last match as period name and description
+        if matches:
+            name = string[: matches[0].start()]
+            description = string[matches[len(matches) - 1].end() :]
+        else:
+            name = string
+            description = ""
 
         for match in matches:
             # 1) Try to find weekday ranges
@@ -505,7 +514,9 @@ class TPRekImporter(Importer):
                     }
                 )
 
-        return time_spans
+        name = name.strip(" ,:;-").capitalize()
+        description = description.strip(" ,:;-.").capitalize()
+        return time_spans, name, description
 
     def get_unit_origins(self, data: dict) -> list:
         """
@@ -709,7 +720,7 @@ class TPRekImporter(Importer):
 
         data = []
         for period in periods:
-            time_spans = self.parse_opening_string(period["string"])
+            time_spans, name, description = self.parse_opening_string(period["string"])
 
             # finally update whole period resource_state based on timespans and string
             if (
@@ -745,6 +756,10 @@ class TPRekImporter(Importer):
                 resource_state = State.OPEN
             else:
                 resource_state = State.UNDEFINED
+
+            # Use some generic strings if period got no name
+            if not name and "päivystys" in period["string"]:
+                name = "Päivystys"
 
             # weather permitting
             if "säävarau" in period["string"] or "salliessa" in period["string"]:
@@ -799,8 +814,15 @@ class TPRekImporter(Importer):
             else:
                 time_span_groups = []
 
+            # Period might have no time span groups. In this case, if also period state
+            # is undefined, it contains no data and should not be saved.
+            if not time_span_groups and resource_state == State.UNDEFINED:
+                continue
+
             period_datum = {
                 "resource": resource,
+                "name": {"fi": name[:255]},
+                "description": {"fi": description},
                 "start_date": start_date,
                 "end_date": end_date,
                 "override": period["override"],

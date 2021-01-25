@@ -242,6 +242,41 @@ class TPRekImporter(Importer):
             hour = 0
         return datetime_time(hour=hour, minute=min)
 
+    def split_string_between_matches(
+        self, string: str, matches: list, split_before_first=True
+    ) -> dict:
+        """
+        Takes a string and its containing regex matches. Splits the string at
+        last comma before each match, and returns dict where keys are the
+        string starting indices and values the partial strings.
+        """
+        strings = {}
+        for match_number, match in enumerate(matches):
+            # Split string at last comma before each pattern match.
+            # This might yield a default string without match, plus any number
+            # of strings corresponding to matches.
+            if match_number == 0:
+                last_comma_index = -1
+                if split_before_first:
+                    last_comma_index = string.rfind(",", 0, match.start())
+                    if last_comma_index > -1:
+                        # default string found before comma
+                        strings[last_comma_index + 1] = string[:last_comma_index]
+            if match_number < len(matches) - 1:
+                next_match_start = matches[match_number + 1].start()
+                splitting_index = string.rfind(",", match.end(), next_match_start)
+                if splitting_index == -1:
+                    # No comma between matches, split before next match.
+                    splitting_index = next_match_start
+                strings[last_comma_index + 1] = string[
+                    last_comma_index + 1 : splitting_index
+                ]
+                last_comma_index = splitting_index
+            else:
+                # we reached the end of the string
+                strings[last_comma_index + 1] = string[last_comma_index + 1 :]
+        return strings
+
     def parse_period_string(self, string: str) -> list:
         """
         Takes TPREK simple Finnish opening hours string and returns any period data
@@ -262,43 +297,22 @@ class TPRekImporter(Importer):
         string = " " + ", ".join(string.splitlines())
         # 5) standardize formatting to lowercase
         string = string.lower()
+        # 6) replace "sekä" with "ja"
+        string = string.replace("sekä", "ja")
 
         matches = list(pattern.finditer(string))
 
         # no matches => just use the whole string
         if not matches:
-            strings = [string]
+            strings = {0: string}
         # one or more matches => one or more date periods
         else:
-            strings = []
-            for match_number, match in enumerate(matches):
-                # Split string at last comma before each period match.
-                # This might yield a default period without dates, plus exceptions.
-                if match_number == 0:
-                    default_period_end_index = string.rfind(",", 0, match.start())
-                    if default_period_end_index > -1:
-                        # default period found before comma
-                        strings.append(string[:default_period_end_index])
-                        last_string_end = default_period_end_index
-                    else:
-                        # no comma found before date
-                        last_string_end = -1
-                if match_number < len(matches) - 1:
-                    next_match_start = matches[match_number + 1].start()
-                    splitting_index = string.rfind(",", match.end(), next_match_start)
-                    if splitting_index == -1:
-                        # No comma between periods, split before next period.
-                        splitting_index = next_match_start
-                    strings.append(string[last_string_end + 1 : splitting_index])
-                    last_string_end = splitting_index - 1
-                else:
-                    # we reached the end of the string
-                    strings.append(string[last_string_end + 1 :])
+            strings = self.split_string_between_matches(string, matches)
         # offset matches by one if default period string was encountered first
         if len(strings) > len(matches):
             matches.insert(0, None)
 
-        for period_str, match in zip(strings, matches):
+        for period_str, match in zip(strings.values(), matches):
             # if we have no match, the default period is forever
             start_date = None
             end_date = None
@@ -368,8 +382,13 @@ class TPRekImporter(Importer):
         """
         Takes TPREK simple Finnish opening hours string for a single period
         and returns corresponding opening time spans, if found.
+
+        The result may be a list of multiple time span lists, because
+        some period strings contain hours for multiple objects all put in one.
+        In such a case, the importer will create an extra subsection and
+        period for each time span list after the first.
         """
-        time_spans = []
+        time_span_lists = [[]]
         # match to single datum, e.g. "ma-pe 8-16:30" or "suljettu pe" or
         # "joka päivä 07-" or "ma, ke, su klo 8-12, 16-20" or "8.12.2020 klo 8-16"
         # https://regex101.com/r/UkhZ4e/25
@@ -396,16 +415,39 @@ class TPRekImporter(Importer):
 
         matches = list(pattern.finditer(string))
 
-        # Save parts before first match
-        # and after last match as period name and description
-        if matches:
-            name = string[: matches[0].start()]
-            description = string[matches[len(matches) - 1].end() :]
+        # no matches => just use the whole string
+        if not matches:
+            strings = {0: string}
+        # one or more matches => one or multiple time spans
         else:
-            name = string
-            description = ""
+            strings = self.split_string_between_matches(
+                string, matches, split_before_first=False
+            )
 
-        for match in matches:
+        subsection_number = 0
+        names = []
+        descriptions = []
+        for match_number, (str_start, match) in enumerate(zip(strings, matches)):
+            # 0) Remainder of the string may give period name and description
+            if match_number == 0:
+                # Save parts before first match
+                # and after last match as period name and description
+                name = string[: match.start()]
+                names.append(name)
+            elif str_start < match.start():
+                # Found match might be for a new subsection!
+                # This is indicated by an extra string after comma between matches
+                subsection_number += 1
+                time_span_lists.append([])
+                name = string[str_start : match.start()]
+                names.append(name)
+                # Now we also know the description after the end of previous match
+                descriptions.append(string[matches[match_number - 1].end() : str_start])
+            if match_number == len(matches) - 1:
+                # after the last match, what remains of the string is the last
+                # description
+                descriptions.append(string[match.end() :])
+
             # 1) Try to find weekday ranges
             weekdays = []
             start_weekday_indices = (25, 30, 35, 40)
@@ -485,6 +527,8 @@ class TPRekImporter(Importer):
             end_time_on_next_day = False
             if start_time and end_time and end_time <= start_time:
                 end_time_on_next_day = True
+
+            time_spans = time_span_lists[subsection_number]
             time_spans.append(
                 {
                     "group": None,
@@ -496,7 +540,6 @@ class TPRekImporter(Importer):
                     "end_time_on_next_day": end_time_on_next_day,
                 }
             )
-
             if match.group(81):
                 # we might have another time span on the same day, if we're really
                 # unlucky
@@ -519,9 +562,11 @@ class TPRekImporter(Importer):
                     }
                 )
 
-        name = name.strip(" ,:;-").capitalize()
-        description = description.strip(" ,:;-.").capitalize()
-        return time_spans, name, description
+        names = [name.strip(" ,:;-").capitalize() for name in names]
+        descriptions = [
+            description.strip(" ,:;-.").capitalize() for description in descriptions
+        ]
+        return time_span_lists, names, descriptions
 
     def get_unit_origins(self, data: dict) -> list:
         """
@@ -725,117 +770,144 @@ class TPRekImporter(Importer):
 
         data = []
         for period in periods:
-            time_spans, name, description = self.parse_opening_string(period["string"])
+            parsed_time_spans, names, descriptions = self.parse_opening_string(
+                period["string"]
+            )
+            # Time spans may be grouped if several different services are found!
+            # In this case, each additional group will give rise to an additional
+            # period in an additional subsection, even though only one period string
+            # was originally found.
 
-            # finally update whole period resource_state based on timespans and string
-            if (
-                not time_spans
-                # only mark period closed if *all* spans are closed
-                or all([span["resource_state"] == State.CLOSED for span in time_spans])
-            ) and "suljettu" in period["string"]:
-                # "suljettu" found
-                resource_state = State.CLOSED
-            elif (
-                # closed not found, looking for open
-                ("avoinna" in period["string"] or "päivystys" in period["string"])
-                and (
+            for time_spans, name, description in zip(
+                parsed_time_spans, names, descriptions
+            ):
+                # finally update whole period resource_state based on timespans and
+                # string
+                if (
                     not time_spans
-                    # only mark period open if *all* weekdays are open
+                    # only mark period closed if *all* spans are closed
                     or all(
+                        [span["resource_state"] == State.CLOSED for span in time_spans]
+                    )
+                ) and "suljettu" in period["string"]:
+                    # "suljettu" found
+                    resource_state = State.CLOSED
+                elif (
+                    # closed not found, looking for open
+                    ("avoinna" in period["string"] or "päivystys" in period["string"])
+                    and (
+                        not time_spans
+                        # only mark period open if *all* weekdays are open
+                        or all(
+                            [
+                                (
+                                    not span["weekdays"]
+                                    or span["weekdays"] == set(range(1, 7))
+                                )
+                                and (span["resource_state"] == State.OPEN)
+                                for span in time_spans
+                            ]
+                        )
+                    )
+                    and (
+                        "ympäri vuorokauden" in period["string"]
+                        or "24 h" in period["string"]
+                        or "24h" in period["string"]
+                    )
+                ):
+                    resource_state = State.OPEN
+                else:
+                    resource_state = State.UNDEFINED
+
+                # Use some generic strings if period got no name
+                if not name and "päivystys" in period["string"]:
+                    name = "Päivystys"
+
+                # weather permitting
+                if "säävarau" in period["string"] or "salliessa" in period["string"]:
+                    for time_span in time_spans:
+                        if time_span["resource_state"] == State.OPEN:
+                            time_span["resource_state"] = State.WEATHER_PERMITTING
+                    if not time_spans:
+                        resource_state = State.WEATHER_PERMITTING
+
+                # with reservation
+                elif (
+                    "sopimukse" in period["string"]
+                    or "tilaukse" in period["string"]
+                    or "vuokrau" in period["string"]
+                    or "ennalta" in period["string"]
+                    or ("varau" in period["string"] and "ilman" not in period["string"])
+                ):
+                    for time_span in time_spans:
+                        if time_span["resource_state"] == State.OPEN:
+                            time_span["resource_state"] = State.WITH_RESERVATION
+                    if not time_spans or all(
                         [
-                            (
-                                not span["weekdays"]
-                                or span["weekdays"] == set(range(1, 7))
-                            )
-                            and (span["resource_state"] == State.OPEN)
+                            span["resource_state"] == State.WITH_RESERVATION
                             for span in time_spans
                         ]
-                    )
-                )
-                and (
-                    "ympäri vuorokauden" in period["string"]
-                    or "24 h" in period["string"]
-                    or "24h" in period["string"]
-                )
-            ):
-                resource_state = State.OPEN
-            else:
-                resource_state = State.UNDEFINED
+                    ):
+                        resource_state = State.WITH_RESERVATION
 
-            # Use some generic strings if period got no name
-            if not name and "päivystys" in period["string"]:
-                name = "Päivystys"
+                # with key
+                elif "avai" in period["string"]:
+                    for time_span in time_spans:
+                        if time_span["resource_state"] == State.OPEN:
+                            time_span["resource_state"] = State.WITH_KEY
+                    if not time_spans or all(
+                        [
+                            span["resource_state"] == State.WITH_KEY
+                            for span in time_spans
+                        ]
+                    ):
+                        resource_state = State.WITH_KEY
 
-            # weather permitting
-            if "säävarau" in period["string"] or "salliessa" in period["string"]:
-                for time_span in time_spans:
-                    if time_span["resource_state"] == State.OPEN:
-                        time_span["resource_state"] = State.WEATHER_PERMITTING
-                if not time_spans:
-                    resource_state = State.WEATHER_PERMITTING
-
-            # with reservation
-            elif (
-                "sopimukse" in period["string"]
-                or "tilaukse" in period["string"]
-                or "vuokrau" in period["string"]
-                or "ennalta" in period["string"]
-                or ("varau" in period["string"] and "ilman" not in period["string"])
-            ):
-                for time_span in time_spans:
-                    if time_span["resource_state"] == State.OPEN:
-                        time_span["resource_state"] = State.WITH_RESERVATION
-                if not time_spans or all(
-                    [
-                        span["resource_state"] == State.WITH_RESERVATION
-                        for span in time_spans
+                start_date = period.get("start_date", date.today())
+                end_date = period.get("end_date", None)
+                origin = {
+                    "data_source_id": self.data_source.id,
+                    "origin_id": "{0}-{1}-{2}".format(
+                        connection_id, start_date, end_date
+                    ),
+                }
+                if time_spans:
+                    time_span_groups = [
+                        {
+                            "time_spans": time_spans,
+                            "rules": [],
+                        }
                     ]
-                ):
-                    resource_state = State.WITH_RESERVATION
+                else:
+                    time_span_groups = []
 
-            # with key
-            elif "avai" in period["string"]:
-                for time_span in time_spans:
-                    if time_span["resource_state"] == State.OPEN:
-                        time_span["resource_state"] = State.WITH_KEY
-                if not time_spans or all(
-                    [span["resource_state"] == State.WITH_KEY for span in time_spans]
-                ):
-                    resource_state = State.WITH_KEY
+                # Period might have no time spans. In this case, if also period state
+                # is undefined, it contains no data and should not be saved.
+                if not time_span_groups and resource_state == State.UNDEFINED:
+                    continue
 
-            start_date = period.get("start_date", date.today())
-            end_date = period.get("end_date", None)
-            origin = {
-                "data_source_id": self.data_source.id,
-                "origin_id": "{0}-{1}-{2}".format(connection_id, start_date, end_date),
-            }
-            if time_spans:
-                time_span_groups = [
-                    {
-                        "time_spans": time_spans,
-                        "rules": [],
-                    }
-                ]
-            else:
-                time_span_groups = []
+                # Often data does not contain name. Use certain default strings
+                # based on period status
+                if not name:
+                    if not start_date or not end_date:
+                        name = "Perusaukiolo"
+                    else:
+                        name = "Aukiolojakso"
+                    if period["override"]:
+                        name = "Poikkeusaukiolo"
 
-            # Period might have no time span groups. In this case, if also period state
-            # is undefined, it contains no data and should not be saved.
-            if not time_span_groups and resource_state == State.UNDEFINED:
-                continue
-
-            period_datum = {
-                "resource": resource,
-                "name": {"fi": name[:255]},
-                "description": {"fi": description},
-                "start_date": start_date,
-                "end_date": end_date,
-                "override": period["override"],
-                "resource_state": resource_state,
-                "origins": [origin],
-                "time_span_groups": time_span_groups,
-            }
-            data.append(period_datum)
+                period_datum = {
+                    "resource": resource,
+                    "name": {"fi": name[:255]},
+                    "description": {"fi": description},
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "override": period["override"],
+                    "resource_state": resource_state,
+                    "origins": [origin],
+                    "time_span_groups": time_span_groups,
+                }
+                data.append(period_datum)
         return data
 
     def filter_opening_hours_data(self, data: list) -> list:
@@ -968,10 +1040,13 @@ class TPRekImporter(Importer):
             # We have no way of knowing what the subsection type should be.
             # Use a different type so generated subsections won't be mixed
             # with other ones.
+
             subsection_data = {
                 "origins": datum["origins"],
                 "resource_type": ResourceType.SERVICE_AT_UNIT,
-                "name": datum["name"],
+                "name": datum["name"]
+                if "aukiolo" not in datum["name"]["fi"].lower()
+                else {"fi": "Alikohde"},
                 "description": datum["description"],
                 "parents": [datum["resource"]],
             }
@@ -992,9 +1067,10 @@ class TPRekImporter(Importer):
             del datum["name"]
             del datum["description"]
 
-            # period id already used, add new subsection id to id
+            # period id already used, add new subsection id to create period id
             datum["resource"] = subsection
             datum["origins"][0]["origin_id"] = "opening-" + data_id
+            datum["name"] = {"fi": "Perusaukiolo"}
             period = self.save_dateperiod(datum)
             period_syncher.mark(period)
         subsection_syncher.finish(force=self.options["force"])

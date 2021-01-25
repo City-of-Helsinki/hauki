@@ -29,7 +29,6 @@ variables:
       $(tag)_$(tag_postfix)
       latest
       latest_$(tag_postfix)
-
 pool:
   vmImage: 'ubuntu-latest'
 

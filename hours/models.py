@@ -494,6 +494,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Period")
         verbose_name_plural = _("Periods")
+        ordering = ["start_date"]
 
     def __str__(self):
         return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"

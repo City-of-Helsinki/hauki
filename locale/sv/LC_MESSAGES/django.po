@@ -100,52 +100,52 @@ msgstr ""
 #: hours/enums.py:18 hours/management/commands/joo.py:33
 msgctxt "State"
 msgid "Open"
-msgstr ""
+msgstr "Öppen"
 
 #: hours/enums.py:19
 msgctxt "State"
 msgid "Closed"
-msgstr ""
+msgstr "Stängd"
 
 #: hours/enums.py:20
 msgctxt "State"
 msgid "Undefined"
-msgstr ""
+msgstr "Odefinierad"
 
 #: hours/enums.py:21
 msgctxt "State"
 msgid "Self service"
-msgstr ""
+msgstr "Självbetjäning"
 
 #: hours/enums.py:22
 msgctxt "State"
 msgid "With key"
-msgstr ""
+msgstr "Med nyckel"
 
 #: hours/enums.py:23
 msgctxt "State"
 msgid "With reservation"
-msgstr ""
+msgstr "Med bokning"
 
 #: hours/enums.py:24
 msgctxt "State"
 msgid "With key and reservation"
-msgstr ""
+msgstr "Med nyckel och bokning"
 
 #: hours/enums.py:25
 msgctxt "State"
 msgid "Enter only"
-msgstr ""
+msgstr "Endast ingång"
 
 #: hours/enums.py:26
 msgctxt "State"
 msgid "Exit only"
-msgstr ""
+msgstr "Endast utgång"
 
 #: hours/enums.py:27
 msgctxt "State"
 msgid "Weather permitting"
-msgstr ""
+msgstr "Om vädret tillåter"
 
 #: hours/enums.py:45
 msgctxt "ResourceType"
@@ -210,112 +210,112 @@ msgstr ""
 #: hours/enums.py:69
 msgctxt "Weekday"
 msgid "Monday"
-msgstr ""
+msgstr "Måndag"
 
 #: hours/enums.py:70
 msgctxt "Weekday"
 msgid "Tuesday"
-msgstr ""
+msgstr "Tisdag"
 
 #: hours/enums.py:71
 msgctxt "Weekday"
 msgid "Wednesday"
-msgstr ""
+msgstr "Onsdag"
 
 #: hours/enums.py:72
 msgctxt "Weekday"
 msgid "Thursday"
-msgstr ""
+msgstr "Torsdag"
 
 #: hours/enums.py:73
 msgctxt "Weekday"
 msgid "Friday"
-msgstr ""
+msgstr "Fredag"
 
 #: hours/enums.py:74
 msgctxt "Weekday"
 msgid "Saturday"
-msgstr ""
+msgstr "Lördag"
 
 #: hours/enums.py:75
 msgctxt "Weekday"
 msgid "Sunday"
-msgstr ""
+msgstr "Söndag"
 
 #: hours/enums.py:99
 msgctxt "RuleContext"
 msgid "Period"
-msgstr ""
+msgstr "Period"
 
 #: hours/enums.py:100
 msgctxt "RuleContext"
 msgid "Year"
-msgstr ""
+msgstr "År"
 
 #: hours/enums.py:101
 msgctxt "RuleContext"
 msgid "Month"
-msgstr ""
+msgstr "Månad"
 
 #: hours/enums.py:118
 msgctxt "RuleSubject"
 msgid "Day"
-msgstr ""
+msgstr "Dag"
 
 #: hours/enums.py:119
 msgctxt "RuleSubject"
 msgid "Week"
-msgstr ""
+msgstr "Vecka"
 
 #: hours/enums.py:120
 msgctxt "RuleSubject"
 msgid "Month"
-msgstr ""
+msgstr "Månad"
 
 #: hours/enums.py:121
 msgctxt "RuleSubject"
 msgid "Monday"
-msgstr ""
+msgstr "Måndag"
 
 #: hours/enums.py:122
 msgctxt "RuleSubject"
 msgid "Tuesday"
-msgstr ""
+msgstr "Tisdag"
 
 #: hours/enums.py:123
 msgctxt "RuleSubject"
 msgid "Wednesday"
-msgstr ""
+msgstr "Onsdag"
 
 #: hours/enums.py:124
 msgctxt "RuleSubject"
 msgid "Thursday"
-msgstr ""
+msgstr "Torsdag"
 
 #: hours/enums.py:125
 msgctxt "RuleSubject"
 msgid "Friday"
-msgstr ""
+msgstr "Fredag"
 
 #: hours/enums.py:126
 msgctxt "RuleSubject"
 msgid "Saturday"
-msgstr ""
+msgstr "Lördag"
 
 #: hours/enums.py:127
 msgctxt "RuleSubject"
 msgid "Sunday"
-msgstr ""
+msgstr "Söndag"
 
 #: hours/enums.py:171
 msgctxt "FrequencyModifier"
 msgid "Even"
-msgstr ""
+msgstr "Jämn"
 
 #: hours/enums.py:172
 msgctxt "FrequencyModifier"
 msgid "Odd"
-msgstr ""
+msgstr "Udd"
 
 #: hours/models.py:169 hours/models.py:193 hours/models.py:378
 #: hours/models.py:519 hours/models.py:563

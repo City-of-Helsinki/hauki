@@ -646,7 +646,13 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Time span")
         verbose_name_plural = _("Time spans")
-        ordering = ["weekdays"]
+        ordering = [
+            "weekdays",
+            "start_time",
+            "end_time_on_next_day",
+            "end_time",
+            "resource_state",
+        ]
 
     def __str__(self):
         if self.weekdays:

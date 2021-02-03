@@ -35,4 +35,4 @@ resources:
     name: hauki/hauki-pipelines
 
 extends:
-  template: azure-pipelines-hauki-api@hauki-pipelines
+  template: azure-pipelines-hauki-api.yml@hauki-pipelines

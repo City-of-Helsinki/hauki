@@ -176,54 +176,69 @@ class TPRekImporter(Importer):
         incomplete.
         """
         if end:
-            if any([name in end for name in self.month_by_name.keys()]):
-                # month name found
+            try:
                 day = int(end.split(".")[0])
-                month = self.month_by_name[
-                    [name for name in self.month_by_name.keys() if name in end][0]
-                ]
-                year = int(end[-4:])
-            else:
+
+                if any([name in end for name in self.month_by_name.keys()]):
+                    # month name found
+                    month = self.month_by_name[
+                        [name for name in self.month_by_name.keys() if name in end][0]
+                    ]
+                else:
+                    month = int(end.split(".")[1])
+
                 try:
-                    day, month, year = map(int, end.split("."))
+                    year = int(end[-4:])
                 except ValueError:
                     # end did not contain year, assume next occurrence of date
-                    day = int(end.split(".")[0])
-                    month = int(end.split(".")[1])
                     today = date.today()
                     if today > date(year=today.year, month=month, day=day):
                         year = today.year + 1
                     else:
                         year = today.year
-            try:
+
                 end = date(year=year, month=month, day=day)
             except ValueError:
                 self.logger.info("Invalid end date {0}".format(end))
                 end = None
         if start:
             try:
-                day, month, year = map(int, start.split("."))
-            except ValueError:
+                day = int(start.split(".")[0])
+
                 try:
-                    # start did not contain year
-                    day = int(start.split(".")[0])
-                    month = int(start.split(".")[1])
+                    if any([name in start for name in self.month_by_name.keys()]):
+                        # month name found
+                        month = self.month_by_name[
+                            [
+                                name
+                                for name in self.month_by_name.keys()
+                                if name in start
+                            ][0]
+                        ]
+                    else:
+                        month = int(start.split(".")[1])
                 except ValueError:
                     # start did not contain month
                     month = end.month
-                if end and month <= end.month:
-                    # only use end year if start month is before end month
-                    year = end.year
-                else:
-                    # end did not contain year either, assume last occurrence of date
-                    today = date.today()
-                    if today > date(year=today.year, month=month, day=day):
-                        year = today.year
+
+                try:
+                    year = int(start[-4:])
+                except ValueError:
+                    # start did not contain year
+                    if end and month <= end.month:
+                        # only use end year if start month is before end month
+                        year = end.year
                     else:
-                        year = today.year - 1
-            try:
+                        # end did not contain year either, assume last occurrence of
+                        # date
+                        today = date.today()
+                        if today > date(year=today.year, month=month, day=day):
+                            year = today.year
+                        else:
+                            year = today.year - 1
+
                 start = date(year=year, month=month, day=day)
-            except ValueError:
+            except (ValueError, AttributeError):
                 self.logger.info("Invalid start date {0}".format(start))
                 start = None
         return start, end

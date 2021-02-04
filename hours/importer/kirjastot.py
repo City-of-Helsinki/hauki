@@ -560,7 +560,8 @@ class KirjastotImporter(Importer):
             time_elements.sort(key=self._get_times_for_sort)
             opening_hours[schedule_date].sort(key=self._get_times_for_sort)
 
-            assert time_elements == opening_hours[schedule_date]
+            if not time_elements == opening_hours[schedule_date]:
+                raise AssertionError()
 
     @db.transaction.atomic
     def import_openings(self):

@@ -987,7 +987,9 @@ class TPRekImporter(Importer):
                     or all(
                         [span["resource_state"] == State.CLOSED for span in time_spans]
                     )
-                ) and "suljettu" in period["string"]:
+                ) and (
+                    "suljettu" in period["string"] or "suljetaan" in period["string"]
+                ):
                     # "suljettu" found
                     resource_state = State.CLOSED
                 elif (

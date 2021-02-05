@@ -411,7 +411,29 @@ class TPRekImporter(Importer):
                         start_date, end_date = self.parse_dates(
                             match.group(12), match.group(12)
                         )
-                if "poikkeuksellisesti" in period_str:
+                if (
+                    "poikkeuksellisesti" in period_str
+                    or (start_date and start_date == end_date)
+                    or (
+                        [
+                            period
+                            for period in periods
+                            if (
+                                start_date
+                                and (
+                                    not period["start_date"]
+                                    or start_date > period["start_date"]
+                                )
+                                and end_date
+                                and (
+                                    not period["end_date"]
+                                    or end_date < period["end_date"]
+                                )
+                            )
+                        ]
+                    )
+                ):
+                    # single day exception, or short period within longer period
                     override = True
                 else:
                     override = False

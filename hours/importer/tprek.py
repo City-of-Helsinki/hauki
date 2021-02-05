@@ -2,6 +2,7 @@ import re
 from calendar import day_abbr, different_locale, month_name
 from datetime import date
 from datetime import time as datetime_time
+from itertools import zip_longest
 from typing import Hashable, Tuple
 
 import pytz
@@ -82,14 +83,46 @@ class TPRekImporter(Importer):
             )
             .distinct()
             .prefetch_related("origins"),
+            # these are the proper TPR unit opening hours:
             "opening_hours": DatePeriod.objects.filter(
-                origins__data_source=self.data_source
+                origins__data_source=self.data_source,
+                origins__origin_id__startswith="opening-",
+                resource__resource_type=ResourceType.UNIT,
             )
             .exclude(origins__data_source=self.kirjastot_data_source)
             .distinct()
             .prefetch_related("origins"),
-            "extra_subsections": Resource.objects.filter(
+            # these are the hours that are hidden in TPR unit description strings:
+            "unit_opening_hours": DatePeriod.objects.filter(
                 origins__data_source=self.data_source,
+                origins__origin_id__startswith="description-",
+                resource__resource_type=ResourceType.UNIT,
+            )
+            .exclude(origins__data_source=self.kirjastot_data_source)
+            .distinct()
+            .prefetch_related("origins"),
+            # these are the subsections with hours that are hidden in TPR unit strings:
+            "unit_subsections": Resource.objects.filter(
+                origins__data_source=self.data_source,
+                origins__origin_id__startswith="description-",
+                resource_type=ResourceType.SERVICE_AT_UNIT,
+            )
+            .distinct()
+            .prefetch_related("origins"),
+            # these are the hours that are hidden in TPR connection strings:
+            "connection_opening_hours": DatePeriod.objects.filter(
+                origins__data_source=self.data_source,
+                resource__resource_type__in=set(CONNECTION_TYPE_MAPPING.values())
+                | set((ResourceType.SUBSECTION,)),
+            )
+            .exclude(origins__data_source=self.kirjastot_data_source)
+            .distinct()
+            .prefetch_related("origins"),
+            # these are the subsections with hours that are hidden in TPR opening hours
+            # strings:
+            "opening_hours_subsections": Resource.objects.filter(
+                origins__data_source=self.data_source,
+                origins__origin_id__startswith="opening-",
                 resource_type=ResourceType.SERVICE_AT_UNIT,
             )
             .distinct()
@@ -257,12 +290,24 @@ class TPRekImporter(Importer):
             hour = 0
         return datetime_time(hour=hour, minute=min)
 
+    def clean_parsed_subsection_name(self, name: str) -> name:
+        # The hours are for a new subsection, remove superfluous words
+        while (
+            name.endswith(" on")
+            or name.endswith(" ovat")
+            or name.endswith(" ja")
+            or name.endswith(" olemme")
+            or name.endswith(" (")
+        ):
+            name = name.rsplit(" ", 1)[0]
+        return name
+
     def split_string_between_matches(
-        self, string: str, matches: list, split_before_first=True
+        self, string: str, matches: list, split_before_first=True, delimiter=","
     ) -> dict:
         """
         Takes a string and its containing regex matches. Splits the string at
-        last comma before each match, and returns dict where keys are the
+        last delimiter before each match, and returns dict where keys are the
         string starting indices and values the partial strings.
         """
         strings = {}
@@ -273,13 +318,13 @@ class TPRekImporter(Importer):
             if match_number == 0:
                 last_comma_index = -1
                 if split_before_first:
-                    last_comma_index = string.rfind(",", 0, match.start())
+                    last_comma_index = string.rfind(delimiter, 0, match.start())
                     if last_comma_index > -1:
                         # default string found before comma
                         strings[last_comma_index + 1] = string[:last_comma_index]
             if match_number < len(matches) - 1:
                 next_match_start = matches[match_number + 1].start()
-                splitting_index = string.rfind(",", match.end(), next_match_start)
+                splitting_index = string.rfind(delimiter, match.end(), next_match_start)
                 if splitting_index == -1:
                     # No comma between matches, split before next match.
                     splitting_index = next_match_start
@@ -669,17 +714,78 @@ class TPRekImporter(Importer):
         )
         if created:
             self.logger.debug("Created missing organization tprek:%s" % data["dept_id"])
+
+        origins = self.get_unit_origins(data)
+        description = self.get_multilanguage_string("desc", data)
+
+        periods = []
+        subsections = []
+        if description["fi"]:
+            # unit description may itself contain opening hour strings to import.
+            # however, they are only small parts of the whole string composed
+            # of multiple sentences.
+            initials_sentences_and_delimiters = re.split(
+                r"(\.)([\n\r\s][A-ZÅÄÖ])", description["fi"]
+            )
+            initials_sentences_and_delimiters.insert(0, "")
+            sentences = []
+            for initial, sentence, delimiter in zip_longest(
+                initials_sentences_and_delimiters[::3],
+                initials_sentences_and_delimiters[1::3],
+                initials_sentences_and_delimiters[2::3],
+                fillvalue="",
+            ):
+                sentences.append(initial + sentence + delimiter)
+
+            unit_id = self.get_data_id({"origins": origins})
+            # construct period ids by referring to the originating field
+            opening_hours_by_sentence = [
+                self.get_opening_hours_data(
+                    {
+                        "unit_id": unit_id,
+                        "name_fi": sentence,
+                        "connection_id": "description-" + unit_id,
+                    }
+                )
+                for sentence in sentences
+            ]
+
+            description["fi"] = ""
+            for sentence, hours in zip(sentences, opening_hours_by_sentence):
+                if hours:
+                    # Sentence contained opening hour strings.
+                    # Omit sentence from description
+                    name = hours[0]["name"]["fi"]
+                    if (
+                        name.lower() == "aukioloajat"
+                        or name.lower() == "aukiolojakso"
+                        or name.lower() == "perusaukiolo"
+                        or name.lower() == "poikkeusaukiolo"
+                    ):
+                        # The hours are for the unit itself
+                        periods.extend(hours)
+                    else:
+                        # The hours are for a new subsection
+                        hours[0]["name"]["fi"] = self.clean_parsed_subsection_name(name)
+                        subsections.extend(hours)
+                else:
+                    # Concatenate sentences with no opening hours
+                    description["fi"] += sentence
+
         unit_data = {
-            "origins": self.get_unit_origins(data),
+            "origins": origins,
             "resource_type": ResourceType.UNIT,
             "name": self.get_resource_name(data),
-            "description": self.get_multilanguage_string("desc", data),
+            "description": description,
             "address": self.get_unit_address(data),
             "same_as": self.get_url("unit", data["id"]),
             "organization": obj_organization,
             "extra_data": self.get_unit_links(data),
             "timezone": pytz.timezone("Europe/Helsinki"),
+            "periods": periods,
+            "subsections": subsections,
         }
+
         return unit_data
 
     def filter_unit_data(self, data: list) -> list:
@@ -718,8 +824,8 @@ class TPRekImporter(Importer):
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized Resource data.
         """
-        connection_id = str(data.pop("connection_id"))
-        unit_id = str(data.pop("unit_id"))
+        connection_id = str(data.get("connection_id"))
+        unit_id = str(data.get("unit_id"))
         origin = {
             "data_source_id": self.data_source.id,
             "origin_id": connection_id,
@@ -728,18 +834,41 @@ class TPRekImporter(Importer):
         # deleted, or is not public at the moment. Therefore, parent may be empty.
         parent = self.resource_cache.get(unit_id, None)
         parents = [parent] if parent else []
+        name = self.get_resource_name(data)
+        description = self.get_connection_description(data)
+
+        # connection may also contain opening hour strings that we want to import
+        opening_hours = self.get_opening_hours_data(data)
+        if opening_hours:
+            # connection string contained opening hour strings, use strings
+            # stripped of opening hours data instead.
+            if "aukiolo" in opening_hours[0]["name"]["fi"].lower():
+                # String refers to period, no resource name found
+                print("we have aukiolo")
+                name["fi"] = "Alikohde"
+            else:
+                # String refers to resource, no period name found
+                print("taking name from hours")
+                name["fi"] = self.clean_parsed_subsection_name(
+                    opening_hours[0]["name"]["fi"]
+                )
+                description["fi"] = opening_hours[0]["description"]["fi"]
+                opening_hours[0]["name"]["fi"] = "Perusaukiolo"
+                opening_hours[0]["description"]["fi"] = ""
+
         # incoming data will be saved raw in extra_data, to allow matching identical
         # connections
         connection_data = {
             "origins": [origin],
             "resource_type": CONNECTION_TYPE_MAPPING[data["section_type"]],
-            "name": self.get_resource_name(data),
-            "description": self.get_connection_description(data),
+            "name": name,
+            "description": description,
             "address": self.get_resource_name(data)
             if CONNECTION_TYPE_MAPPING[data["section_type"]] == ResourceType.ENTRANCE
             else "",
             "parents": parents,
             "extra_data": data,
+            "periods": opening_hours,
         }
 
         return connection_data
@@ -759,20 +888,36 @@ class TPRekImporter(Importer):
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized DatePeriods.
         """
-        # Use unit id for opening hours
         unit_id = str(data.pop("unit_id"))
-        if "id" not in data:
-            data["id"] = "opening-" + unit_id
-        connection_id = str(data.pop("id"))
+        if "connection_id" not in data:
+            # opening hours do not have id in TPREK API, generate id from unit id
+            data["connection_id"] = "opening-" + unit_id
+        connection_id = str(data.pop("connection_id"))
+
+        if data.get("section_type", None) in CONNECTION_TYPE_MAPPING:
+            # In case we are importing hours in non-opening hours connection, add hours
+            # to the original connection instead, not the unit directly
+            if (
+                self.options.get("merge", None)
+                and CONNECTION_TYPE_MAPPING[data["section_type"]]
+                in RESOURCE_TYPES_TO_MERGE
+            ):
+                # the connection is in cache with merged id
+                resource_id = frozenset(data.items())
+            else:
+                # the connection is in cache with connection id
+                resource_id = connection_id
+        else:
+            # the opening hours refer to unit directly
+            resource_id = unit_id
+
+        resource = self.resource_cache.get(resource_id, None)
         # resource may be missing if e.g. the unit has just been created or
         # deleted, or is not public at the moment. Therefore, resource may be empty.
-        # TODO: in case we are importing hours in non-opening hours connection, add them
-        # to the original connection instead, not the unit!
-        resource = self.resource_cache.get(unit_id, None)
         if not resource:
             self.logger.info(
-                "Error in data, resource with given unit_id not found! {0}".format(
-                    unit_id
+                "Error in data, resource with given id not found! {0}".format(
+                    resource_id
                 )
             )
             return []
@@ -781,6 +926,7 @@ class TPRekImporter(Importer):
             self.logger.info(
                 "Error parsing data, Finnish opening hours not found! {0}".format(data)
             )
+            return []
         periods = self.parse_period_string(period_string)
 
         data = []
@@ -990,6 +1136,7 @@ class TPRekImporter(Importer):
         self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         obj_dict = {}
         extra_subsections = []
+        extra_periods = {}
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss read" % (idx, object_type))
@@ -1025,6 +1172,12 @@ class TPRekImporter(Importer):
                         )
                         obj_dict[object_data_id]["parents"].extend(parents)
                         obj_dict[object_data_id]["origins"].extend(origins)
+                # Some resources have their opening periods (or subsection opening
+                # periods) in resource string itself
+                if datum.get("periods", None):
+                    extra_periods[object_data_id] = datum["periods"]
+                if datum.get("subsections", None):
+                    extra_subsections.extend(datum["subsections"])
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss saved" % (idx, object_type))
@@ -1032,18 +1185,48 @@ class TPRekImporter(Importer):
 
             syncher.mark(obj)
 
-        self.save_extra_subsections(syncher, extra_subsections)
+        self.save_extra_periods(extra_periods, object_type)
+        self.save_extra_subsections(syncher, extra_subsections, object_type)
         syncher.finish(force=self.options["force"])
 
         self.reconnect_receivers()
 
+    def save_extra_periods(self, extra_periods: dict, object_type: str):
+        """
+        Saves extra date periods that were found in resource strings.
+        """
+        if not extra_periods:
+            return
+        queryset = self.data_to_match[object_type + "_opening_hours"]
+        period_syncher = ModelSyncher(
+            queryset,
+            delete_func=self.mark_deleted,
+            check_deleted_func=self.check_deleted,
+        )
+        for period_list in extra_periods.values():
+            for datum in period_list:
+                # get rid of resource name that is in the resource already
+                # if "aukiolo" not in datum["name"]["fi"].lower():
+                #     datum["name"]["fi"] = "Perusaukiolo"
+                # # del datum["name"]
+                # # del datum["description"]
+                print("saving extra period")
+                print(datum)
+                period = self.save_dateperiod(datum)
+                period_syncher.mark(period)
+        period_syncher.finish(force=self.options["force"])
+        self.logger.info("Extra opening hours found in imported strings saved")
+
     def save_extra_subsections(
-        self, period_syncher: ModelSyncher, extra_subsections: list
+        self, period_syncher: ModelSyncher, extra_subsections: list, object_type: str
     ):
         """
-        Saves given date periods as subsections, along with their opening hours.
+        Saves extra date periods that were found in opening hours strings
+        as subsections, along with their opening hours.
         """
-        queryset = self.data_to_match["extra_subsections"]
+        if not extra_subsections:
+            return
+        queryset = self.data_to_match[object_type + "_subsections"]
         subsection_syncher = ModelSyncher(
             queryset,
             delete_func=self.mark_deleted,
@@ -1056,11 +1239,17 @@ class TPRekImporter(Importer):
             # Use a different type so generated subsections won't be mixed
             # with other ones.
 
+            name = datum["name"]
             subsection_data = {
                 "origins": datum["origins"],
                 "resource_type": ResourceType.SERVICE_AT_UNIT,
-                "name": datum["name"]
-                if "aukiolo" not in datum["name"]["fi"].lower()
+                "name": name
+                if not (
+                    name == "aukioloajat"
+                    or name == "aukiolojakso"
+                    or name == "perusaukiolo"
+                    or name == "poikkeusaukiolo"
+                )
                 else {"fi": "Alikohde"},
                 "description": datum["description"],
                 "parents": [datum["resource"]],
@@ -1089,6 +1278,7 @@ class TPRekImporter(Importer):
             period = self.save_dateperiod(datum)
             period_syncher.mark(period)
         subsection_syncher.finish(force=self.options["force"])
+        self.logger.info("Extra subsections and opening hours found in strings saved")
 
     @db.transaction.atomic
     def import_units(self):

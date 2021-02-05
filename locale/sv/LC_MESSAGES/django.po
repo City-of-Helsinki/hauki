@@ -100,17 +100,17 @@ msgstr ""
 #: hours/enums.py:18 hours/management/commands/joo.py:33
 msgctxt "State"
 msgid "Open"
-msgstr "Öppen"
+msgstr "Öppet"
 
 #: hours/enums.py:19
 msgctxt "State"
 msgid "Closed"
-msgstr "Stängd"
+msgstr "Stängt"
 
 #: hours/enums.py:20
 msgctxt "State"
 msgid "Undefined"
-msgstr "Odefinierad"
+msgstr "Odefinierat"
 
 #: hours/enums.py:21
 msgctxt "State"

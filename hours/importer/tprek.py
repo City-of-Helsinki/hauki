@@ -881,11 +881,9 @@ class TPRekImporter(Importer):
             # stripped of opening hours data instead.
             if "aukiolo" in opening_hours[0]["name"]["fi"].lower():
                 # String refers to period, no resource name found
-                print("we have aukiolo")
                 name["fi"] = "Alikohde"
             else:
                 # String refers to resource, no period name found
-                print("taking name from hours")
                 name["fi"] = self.clean_parsed_subsection_name(
                     opening_hours[0]["name"]["fi"]
                 )
@@ -1244,13 +1242,6 @@ class TPRekImporter(Importer):
         )
         for period_list in extra_periods.values():
             for datum in period_list:
-                # get rid of resource name that is in the resource already
-                # if "aukiolo" not in datum["name"]["fi"].lower():
-                #     datum["name"]["fi"] = "Perusaukiolo"
-                # # del datum["name"]
-                # # del datum["description"]
-                print("saving extra period")
-                print(datum)
                 period = self.save_dateperiod(datum)
                 period_syncher.mark(period)
         period_syncher.finish(force=self.options["force"])

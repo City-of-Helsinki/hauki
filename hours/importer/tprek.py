@@ -491,9 +491,11 @@ class TPRekImporter(Importer):
         # 1) standardize formatting to get single whitespaces everywhere
         # 2) standardize dashes
         # 3) get rid of common typos:
-        #   - "klo.", "klo:" -> "klo "
+        #   - "klo.", "klo:", "kl." -> "klo "
         string = " " + " ".join(string.split()).replace("−", "-")
-        string = string.replace("klo.", "klo").replace("klo:", "klo")
+        string = (
+            string.replace("klo.", "klo").replace("klo:", "klo").replace("kl.", "klo")
+        )
 
         matches = list(pattern.finditer(string))
 

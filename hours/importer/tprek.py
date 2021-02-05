@@ -13,7 +13,7 @@ from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
 from model_utils.models import SoftDeletableModel
 
-from ..enums import ResourceType, State
+from ..enums import ResourceType, State, Weekday
 from ..models import DataSource, DatePeriod, Resource
 from ..signals import resource_children_changed, resource_children_cleared
 from .base import Importer, register_importer
@@ -451,7 +451,7 @@ class TPRekImporter(Importer):
         time_span_lists = [[]]
         # match to single datum, e.g. "ma-pe 8-16:30" or "suljettu pe" or
         # "joka päivä 07-" or "ma, ke, su klo 8-12, 16-20" or "8.12.2020 klo 8-16"
-        # https://regex101.com/r/UkhZ4e/25
+        # https://regex101.com/r/UkhZ4e/26
         pattern = re.compile(
             r"(\s(suljettu|kiinni|avoinna|auki)(\spoikkeuksellisesti)?|huoltotauko|\sja)?\s?("  # noqa
             + date_or_span_regex
@@ -459,7 +459,7 @@ class TPRekImporter(Importer):
             + multiple_weekday_spans_regex
             + r"|(\s"
             + date_or_span_regex
-            + r")|joka päivä|päivittäin|avoinna|päivystys)(\s"
+            + r")|joka päivä|päivittäin|arkisin|viikonloppuisin|avoinna|päivystys)(\s"
             + date_optional_month_regex
             + r")?(\s|\.|$)(ke?ll?o\s)*(suljettu|ympäri vuorokauden|24\s?h|"
             + multiple_time_spans_regex
@@ -525,7 +525,12 @@ class TPRekImporter(Importer):
                     else:
                         weekdays.extend([start_weekday])
             if not weekdays:
-                weekdays = None
+                if "arkisin" in match.group(24):
+                    weekdays = Weekday.business_days()
+                elif "viikonloppuisin" in match.group(24):
+                    weekdays = Weekday.weekend()
+                else:
+                    weekdays = None
 
             # 2) Try to find start or end times
             if weekdays and (

@@ -1270,15 +1270,16 @@ class TPRekImporter(Importer):
             # with other ones.
 
             name = datum["name"]
+            name["fi"] = self.clean_parsed_subsection_name(name["fi"])
             subsection_data = {
                 "origins": datum["origins"],
                 "resource_type": ResourceType.SERVICE_AT_UNIT,
-                "name": self.clean_parsed_subsection_name(name)
+                "name": name
                 if not (
-                    name == "aukioloajat"
-                    or name == "aukiolojakso"
-                    or name == "perusaukiolo"
-                    or name == "poikkeusaukiolo"
+                    name["fi"] == "Aukioloajat"
+                    or name["fi"] == "Aukiolojakso"
+                    or name["fi"] == "Perusaukiolo"
+                    or name["fi"] == "Poikkeusaukiolo"
                 )
                 else {"fi": "Alikohde"},
                 "description": datum["description"],

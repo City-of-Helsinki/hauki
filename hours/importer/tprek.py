@@ -803,7 +803,7 @@ class TPRekImporter(Importer):
                         periods.extend(hours)
                     else:
                         # The hours are for a new subsection
-                        hours[0]["name"]["fi"] = self.clean_parsed_subsection_name(name)
+                        hours[0]["name"]["fi"] = name
                         subsections.extend(hours)
                 else:
                     # Concatenate sentences with no opening hours
@@ -1273,7 +1273,7 @@ class TPRekImporter(Importer):
             subsection_data = {
                 "origins": datum["origins"],
                 "resource_type": ResourceType.SERVICE_AT_UNIT,
-                "name": name
+                "name": self.clean_parsed_subsection_name(name)
                 if not (
                     name == "aukioloajat"
                     or name == "aukiolojakso"

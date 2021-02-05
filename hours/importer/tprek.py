@@ -599,15 +599,23 @@ class TPRekImporter(Importer):
                 resource_state = State.OPEN
                 full_day = True
 
-            # 3) No times found. We must have weekdays *or* päivittäin
+            # 3) No times found.
+            # We must have "avoinna" + weekdays *or* "avoinna" + "päivittäin".
             else:
-                if not weekdays and not (
-                    "joka päivä" in match.group(24) or "päivittäin" in match.group(24)
+                if not (
+                    (match.group(2) and "avoinna" in match.group(2))
+                    or (match.group(24) and "avoinna" in match.group(24))
+                ) or (
+                    not weekdays
+                    and not (
+                        "joka päivä" in match.group(24)
+                        or "päivittäin" in match.group(24)
+                    )
                 ):
-                    # We might have dates, but we have no times or weekdays.
+                    # No status or no days specified.
                     # Skip time spans and let the whole period status suffice.
                     continue
-                # mark given weekdays open with no exact times
+                # mark given or all weekdays open with no exact times
                 start_time = None
                 end_time = None
                 resource_state = State.OPEN

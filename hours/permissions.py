@@ -176,11 +176,11 @@ class IsMemberOrAdminOfOrganization(BasePermission):
         )
 
         if (
-            resource_organization in users_organizations
-            and not resource_ancestry_organization
+            not resource_ancestry_organization
+            and resource_organization in users_organizations
         ) or (
             resource_ancestry_organization
-            and set(resource_ancestry_organization).intersection(
+            and not set(resource_ancestry_organization).difference(
                 [uo.id for uo in users_organizations]
             )
         ):

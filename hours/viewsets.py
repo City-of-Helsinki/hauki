@@ -52,20 +52,34 @@ class OnCreateOrgMembershipCheck:
 
         if not request.user.is_superuser:
             organization = serializer.validated_data.get("organization")
+            ancestry_organizations = set()
+            resource = None
 
-            if not organization:
-                if "resource" in serializer.validated_data.keys():
-                    resource = serializer.validated_data.get("resource")
-                    if resource:
-                        organization = resource.organization
+            if "resource" in serializer.validated_data.keys():
+                resource = serializer.validated_data.get("resource")
+            elif isinstance(
+                serializer, (RuleCreateSerializer, TimeSpanCreateSerializer)
+            ):
+                time_span_group = serializer.validated_data.get("group")
+                resource = time_span_group.period.resource
+            if resource:
+                # We are creating object related to resource.
+                if not organization:
+                    organization = resource.organization
+                if resource.ancestry_organization:
+                    ancestry_organizations = set(resource.ancestry_organization)
+            else:
+                # We are creating a new resource.
+                if not organization:
+                    organization = None
+                parents = serializer.validated_data.get("parents")
+                if parents:
+                    for parent in parents:
+                        ancestry_organizations.add(parent.organization.id)
+                        if parent.ancestry_organization:
+                            ancestry_organizations.update(parent.ancestry_organization)
 
-                if isinstance(
-                    serializer, (RuleCreateSerializer, TimeSpanCreateSerializer)
-                ):
-                    time_span_group = serializer.validated_data.get("group")
-                    organization = time_span_group.period.resource.organization
-
-            if not organization:
+            if not organization and not ancestry_organizations:
                 raise ValidationError(
                     detail=_(
                         "Cannot create or edit resources that "
@@ -74,7 +88,15 @@ class OnCreateOrgMembershipCheck:
                 )
             else:
                 users_organizations = request.user.get_all_organizations()
-                if organization not in users_organizations:
+                if (
+                    not ancestry_organizations
+                    and organization not in users_organizations
+                ) or (
+                    ancestry_organizations
+                    and set(ancestry_organizations).difference(
+                        [uo.id for uo in users_organizations]
+                    )
+                ):
                     raise PermissionDenied(
                         detail=_(
                             "Cannot add data to organizations the user "

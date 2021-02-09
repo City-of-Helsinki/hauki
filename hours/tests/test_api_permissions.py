@@ -357,7 +357,7 @@ def test_create_child_resource_authenticated(
 
 @pytest.mark.django_db
 def test_create_child_resource_authenticated_parent_has_different_org(
-    resource, organization_factory, data_source, user, api_client
+    resource, resource_factory, organization_factory, data_source, user, api_client
 ):
     organization1 = organization_factory(
         origin_id=12345,
@@ -372,7 +372,7 @@ def test_create_child_resource_authenticated_parent_has_different_org(
         data_source=data_source,
         name="Test organization 2",
     )
-
+    resource2 = resource_factory(name="Test resource", organization=organization2)
     organization2.regular_users.add(user)
     api_client.force_authenticate(user=user)
 
@@ -381,7 +381,7 @@ def test_create_child_resource_authenticated_parent_has_different_org(
     data = {
         "name": "Test name",
         "organization": organization2.id,
-        "parents": [resource.id],
+        "parents": [resource.id, resource2.id],
     }
 
     response = api_client.post(
@@ -390,7 +390,7 @@ def test_create_child_resource_authenticated_parent_has_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
+    assert response.status_code == 403, "{} {}".format(
         response.status_code, response.data
     )
 
@@ -530,6 +530,44 @@ def test_update_resource_authenticated_has_parent_org_permission(
 
 
 @pytest.mark.django_db
+def test_update_child_resource_authenticated(
+    resource, resource_factory, organization_factory, data_source, user, api_client
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    sub_resource = resource_factory(name="Test resource", organization=organization)
+    sub_resource.parents.add(resource)
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": sub_resource.id})
+
+    data = {
+        "parents": [],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    sub_resource = Resource.objects.get(pk=sub_resource.id)
+
+    assert sub_resource.parents.count() == 0
+
+
+@pytest.mark.django_db
 def test_update_child_resource_authenticated_parent_has_different_org(
     resource, resource_factory, organization_factory, data_source, user, api_client
 ):
@@ -546,8 +584,10 @@ def test_update_child_resource_authenticated_parent_has_different_org(
         data_source=data_source,
         name="Test organization 2",
     )
+    resource2 = resource_factory(name="Test resource", organization=organization2)
     sub_resource = resource_factory(name="Test resource", organization=organization2)
     sub_resource.parents.add(resource)
+    sub_resource.parents.add(resource2)
 
     organization2.regular_users.add(user)
     api_client.force_authenticate(user=user)
@@ -1344,6 +1384,85 @@ def test_create_date_period_authenticated_has_org_permission(
 
 
 @pytest.mark.django_db
+def test_create_date_period_authenticated_has_parent_resource_org_permission(
+    api_client, organization_factory, resource_factory, data_source, resource, user
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    organization.regular_users.add(user)
+
+    resource.organization = organization
+    resource.save()
+    child_resource = resource_factory(name="Test name")
+    child_resource.parents.add(resource)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+
+    data = {
+        "name": "Date period name",
+        "resource": child_resource.id,
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_create_date_period_authenticated_parent_resource_has_different_org(
+    api_client, organization_factory, resource_factory, data_source, resource, user
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization1
+    resource.save()
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(name="Test resource", organization=organization2)
+    organization2.regular_users.add(user)
+
+    child_resource = resource_factory(name="Test name")
+    child_resource.parents.add(resource)
+    child_resource.parents.add(resource2)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+
+    data = {
+        "name": "Date period name",
+        "resource": child_resource.id,
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
 def test_update_date_period_anonymous(resource, date_period_factory, api_client):
     date_period = date_period_factory(resource=resource)
 
@@ -1439,6 +1558,104 @@ def test_update_date_period_authenticated_has_org_permission(
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
     )
+
+
+@pytest.mark.django_db
+def test_update_date_period_authenticated_has_parent_resource_org_permission(
+    resource,
+    data_source,
+    resource_factory,
+    organization_factory,
+    date_period_factory,
+    user,
+    api_client,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    organization.regular_users.add(user)
+
+    resource.organization = organization
+    resource.save()
+    child_resource = resource_factory(name="Test name")
+    child_resource.parents.add(resource)
+
+    api_client.force_authenticate(user=user)
+
+    date_period = date_period_factory(resource=child_resource)
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.id})
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    date_period = DatePeriod.objects.get(id=date_period.id)
+
+    assert date_period.name == "New name"
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_update_date_period_authenticated_parent_resource_has_different_org(
+    resource,
+    data_source,
+    organization_factory,
+    resource_factory,
+    date_period_factory,
+    user,
+    api_client,
+):
+    organization1 = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization1
+    resource.save()
+    organization2 = organization_factory(
+        origin_id=23456,
+        data_source=data_source,
+        name="Test organization 2",
+    )
+    resource2 = resource_factory(name="Test resource", organization=organization2)
+    organization2.regular_users.add(user)
+
+    child_resource = resource_factory(name="Test name")
+    child_resource.parents.add(resource)
+    child_resource.parents.add(resource2)
+
+    api_client.force_authenticate(user=user)
+
+    date_period = date_period_factory(resource=child_resource)
+    original_name = date_period.name
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.id})
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    date_period = DatePeriod.objects.get(id=date_period.id)
+
+    assert response.status_code == 403, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert date_period.name == original_name
 
 
 #

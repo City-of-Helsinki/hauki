@@ -51,6 +51,7 @@ env = environ.Env(
     SYSTEM_DATA_SOURCE_ID=(str, "hauki"),
     LANGUAGES=(list, ["fi", "sv", "en"]),
     DATABASE_URL=(str, "postgres:///hauki"),
+    TEST_DATABASE_URL=(str, ""),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ""),
     TOKEN_AUTH_SHARED_SECRET=(str, ""),
     SECRET_KEY=(str, ""),
@@ -95,6 +96,9 @@ INTERNAL_IPS = env("INTERNAL_IPS", default=(["127.0.0.1"] if DEBUG else []))
 DATABASES = {"default": env.db()}
 
 DATABASES["default"]["CONN_MAX_AGE"] = env("CONN_MAX_AGE")
+
+if env.db("TEST_DATABASE_URL"):
+    DATABASES["default"]["TEST"] = env.db("TEST_DATABASE_URL")
 
 AUTH_USER_MODEL = "users.User"
 

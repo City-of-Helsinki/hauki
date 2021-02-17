@@ -159,8 +159,30 @@ class IsMemberOrAdminOfOrganization(BasePermission):
         # A special case for users signed in using the HaukiSignedAuthentication
         if request.auth and isinstance(request.auth, HaukiSignedAuthData):
             resource_ancestors = resource.get_ancestors()
-            if request.auth.resource in {resource} | resource_ancestors:
-                return True
+            authorized_resource = request.auth.resource
+            if authorized_resource:
+                #             authorized_resource
+                #                      |
+                #                      |
+                #                      |
+                #    parent A       parent B
+                # not authorized   authorized
+                #        |             |
+                #        +------+------+
+                #               |
+                #           resource
+                authorized_ancestors = authorized_resource.get_ancestors()
+                authorized_descendants = authorized_resource.get_descendants()
+                if (resource in {authorized_resource} | authorized_descendants) and (
+                    not resource_ancestors.difference(
+                        authorized_ancestors
+                        | {authorized_resource}
+                        | authorized_descendants
+                    )
+                ):
+                    # Resource authorization allowed only if no extra parents found
+                    # in the ancestor chain
+                    return True
 
             if not request.auth.has_organization_rights:
                 return False

@@ -457,3 +457,77 @@ def test_get_ancestors_two_grandparents_two_branches(resource_factory):
 #     resource3.parents.add(resource)
 #
 #     assert resource.get_ancestors() == {resource, resource2, resource3}
+
+#
+# Resource.get_descendants
+#
+@pytest.mark.django_db
+def test_get_descendants_empty(resource_factory):
+    resource = resource_factory(name="resource1")
+
+    assert resource.get_descendants() == set()
+
+
+@pytest.mark.django_db
+def test_get_descendants_one_child(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+
+    resource.children.add(resource2)
+
+    assert resource.get_descendants() == {resource2}
+
+
+@pytest.mark.django_db
+def test_get_descendants_children(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+
+    resource.children.add(resource2)
+    resource.children.add(resource3)
+
+    assert resource.get_descendants() == {resource2, resource3}
+
+
+@pytest.mark.django_db
+def test_get_descendants_one_grandchild(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+
+    resource.children.add(resource2)
+    resource2.children.add(resource3)
+
+    assert resource.get_descendants() == {resource2, resource3}
+
+
+@pytest.mark.django_db
+def test_get_descendants_two_grandchildren(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+    resource4 = resource_factory(name="resource4")
+
+    resource.children.add(resource2)
+    resource2.children.add(resource3)
+    resource2.children.add(resource4)
+
+    assert resource.get_descendants() == {resource2, resource3, resource4}
+
+
+@pytest.mark.django_db
+def test_get_descendants_two_grandchildren_two_branches(resource_factory):
+    resource = resource_factory(name="resource1")
+    resource2 = resource_factory(name="resource2")
+    resource3 = resource_factory(name="resource3")
+    resource4 = resource_factory(name="resource4")
+    resource5 = resource_factory(name="resource5")
+
+    resource.children.add(resource2)
+    resource.children.add(resource3)
+
+    resource2.children.add(resource4)
+    resource3.children.add(resource5)
+
+    assert resource.get_descendants() == {resource2, resource3, resource4, resource5}

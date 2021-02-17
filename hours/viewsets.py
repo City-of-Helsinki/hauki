@@ -22,6 +22,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .authentication import HaukiSignedAuthData
 from .enums import State
 from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
 from .models import DatePeriod, Resource, Rule, TimeElement, TimeSpan
@@ -74,6 +75,8 @@ class OnCreateOrgMembershipCheck:
                     organization = None
                 parents = serializer.validated_data.get("parents")
                 if parents:
+                    resource = parents[0]
+                    organization = resource.organization
                     for parent in parents:
                         ancestry_organizations.add(parent.organization.id)
                         if parent.ancestry_organization:
@@ -88,7 +91,16 @@ class OnCreateOrgMembershipCheck:
                 )
             else:
                 users_organizations = request.user.get_all_organizations()
+                auth = request.auth
                 if (
+                    isinstance(auth, HaukiSignedAuthData)
+                    and auth.resource
+                    and auth.resource == resource
+                ):
+                    # A special case for users signed in using the
+                    # HaukiSignedAuthentication
+                    pass
+                elif (
                     not ancestry_organizations
                     and organization not in users_organizations
                 ) or (

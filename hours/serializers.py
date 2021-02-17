@@ -10,6 +10,7 @@ from timezone_field.rest_framework import TimeZoneSerializerField
 
 from users.serializers import UserSerializer
 
+from .authentication import HaukiSignedAuthData
 from .enums import State
 from .fields import TimezoneRetainingDateTimeField
 from .models import (
@@ -160,7 +161,7 @@ class ResourceSerializer(
         extra_kwargs = {"parents": {"required": False}}
 
     def validate(self, attrs):
-        """Validate that the user is a member or admin of at least one of the
+        """Validate that the user is a member or admin of all of the
         immediate parent resources organizations"""
         result = super().validate(attrs)
 
@@ -168,14 +169,48 @@ class ResourceSerializer(
             return result
 
         user = self.context["request"].user
+        auth = self.context["request"].auth
+        parents = result.get("parents")
 
-        if not user.is_superuser and result.get("parents"):
+        if not user.is_superuser and parents:
+            if isinstance(auth, HaukiSignedAuthData):
+                # A special case for users signed in using the HaukiSignedAuthentication
+                authorized_resource = auth.resource
+                if authorized_resource:
+                    resource_ancestors = set(parents)
+                    for parent in parents:
+                        resource_ancestors.update(parent.get_ancestors())
+                    #             authorized_resource
+                    #                      |
+                    #                      |
+                    #                      |
+                    #    parent A       parent B
+                    # not authorized   authorized
+                    #        |             |
+                    #        +------+------+
+                    #               |
+                    #           resource
+                    authorized_ancestors = authorized_resource.get_ancestors()
+                    authorized_descendants = authorized_resource.get_descendants()
+                    if not resource_ancestors.difference(
+                        authorized_ancestors
+                        | {authorized_resource}
+                        | authorized_descendants
+                    ):
+                        # Parents allowed only if no extra parents found
+                        # in the ancestor chain
+                        return result
+                if not auth.has_organization_rights:
+                    raise ValidationError(
+                        detail=_(
+                            "Cannot create or edit sub resources of a resource "
+                            "in an organisation the user is not part of "
+                        )
+                    )
+
             users_organizations = user.get_all_organizations()
-            if not any(
-                [
-                    parent.organization in users_organizations
-                    for parent in result.get("parents")
-                ]
+            if not all(
+                [parent.organization in users_organizations for parent in parents]
             ):
                 raise ValidationError(
                     detail=_(

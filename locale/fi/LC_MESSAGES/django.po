@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-12-10 13:21+0200\n"
+"POT-Creation-Date: 2021-02-11 11:53+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,19 +38,19 @@ msgstr ""
 msgid "Period name"
 msgstr "Jakson nimi"
 
-#: hours/admin.py:128 hours/models.py:244
+#: hours/admin.py:128 hours/models.py:321
 msgid "Resource"
 msgstr "Resurssi"
 
-#: hours/admin.py:133 hours/models.py:382
+#: hours/admin.py:133 hours/models.py:499
 msgid "Start date"
 msgstr "Alkupäivämäärä"
 
-#: hours/admin.py:138 hours/models.py:385
+#: hours/admin.py:138 hours/models.py:502
 msgid "End date"
 msgstr "Loppupäivämäärä"
 
-#: hours/admin.py:143 hours/models.py:389 hours/models.py:540
+#: hours/admin.py:143 hours/models.py:506 hours/models.py:663
 msgid "Resource state"
 msgstr "Resurssin tila"
 
@@ -58,469 +58,482 @@ msgstr "Resurssin tila"
 msgid "Data source name"
 msgstr "Lähdejärjestelmän nimi"
 
-#: hours/authentication.py:43
+#: hours/authentication.py:46
 msgid "Invalid Authorization header. No credentials provided."
 msgstr ""
 
-#: hours/authentication.py:47
+#: hours/authentication.py:50
 msgid ""
 "Invalid Authorization header. Credentials string should not contain spaces."
 msgstr ""
 
-#: hours/authentication.py:57
+#: hours/authentication.py:60
 msgid "Invalid unicode"
 msgstr ""
 
-#: hours/authentication.py:123
+#: hours/authentication.py:126
 msgid "Invalid source"
 msgstr ""
 
-#: hours/authentication.py:130 hours/views.py:34
+#: hours/authentication.py:133 hours/views.py:29
 msgid "Invalid hsa_signature"
 msgstr ""
 
-#: hours/authentication.py:136 hours/authentication.py:138
-#: hours/authentication.py:140
+#: hours/authentication.py:139 hours/authentication.py:141
+#: hours/authentication.py:143
 msgid "Invalid hsa_created_at"
 msgstr ""
 
-#: hours/authentication.py:146 hours/authentication.py:148
-#: hours/authentication.py:150
+#: hours/authentication.py:149 hours/authentication.py:151
+#: hours/authentication.py:153
 msgid "Invalid hsa_valid_until"
 msgstr ""
 
-#: hours/authentication.py:170
+#: hours/authentication.py:183
 msgid "Signature has been invalidated"
 msgstr ""
 
-#: hours/authentication.py:184
+#: hours/authentication.py:194
+msgid "User not from the same data source"
+msgstr ""
+
+#: hours/authentication.py:205
 msgid "User inactive or deleted."
 msgstr ""
 
-#: hours/enums.py:18 hours/management/commands/joo.py:33
+#: hours/enums.py:19
 msgctxt "State"
 msgid "Open"
 msgstr "Auki"
 
-#: hours/enums.py:19
+#: hours/enums.py:20
 msgctxt "State"
 msgid "Closed"
 msgstr "Suljettu"
 
-#: hours/enums.py:20
+#: hours/enums.py:21
 msgctxt "State"
 msgid "Undefined"
 msgstr "Määrittelemätön"
 
-#: hours/enums.py:21
+#: hours/enums.py:22
 msgctxt "State"
 msgid "Self service"
 msgstr "Itsepalvelu"
 
-#: hours/enums.py:22
+#: hours/enums.py:23
 msgctxt "State"
 msgid "With key"
 msgstr "Avaimella"
 
-#: hours/enums.py:23
+#: hours/enums.py:24
 msgctxt "State"
 msgid "With reservation"
 msgstr "Varauksella"
 
-#: hours/enums.py:24
+#: hours/enums.py:25
+msgctxt "State"
+msgid "Open and reservable"
+msgstr "Auki ja varattavissa"
+
+#: hours/enums.py:26
 msgctxt "State"
 msgid "With key and reservation"
 msgstr "Avaimella ja varauksella"
 
-#: hours/enums.py:25
+#: hours/enums.py:27
 msgctxt "State"
 msgid "Enter only"
 msgstr "Vain sisäänkäynti"
 
-#: hours/enums.py:26
+#: hours/enums.py:28
 msgctxt "State"
 msgid "Exit only"
 msgstr "Vain uloskäynti"
 
-#: hours/enums.py:27
+#: hours/enums.py:29
 msgctxt "State"
 msgid "Weather permitting"
 msgstr "Sään salliessa"
 
-#: hours/enums.py:45
+#: hours/enums.py:58
 msgctxt "ResourceType"
 msgid "Unit"
 msgstr ""
 
-#: hours/enums.py:46
+#: hours/enums.py:59
 msgctxt "ResourceType"
 msgid "Section"
 msgstr ""
 
-#: hours/enums.py:47
+#: hours/enums.py:60
 msgctxt "ResourceType"
 msgid "Special group"
 msgstr ""
 
-#: hours/enums.py:48
+#: hours/enums.py:61
 msgctxt "ResourceType"
 msgid "Contact email or phone number"
 msgstr ""
 
-#: hours/enums.py:49
+#: hours/enums.py:62
 msgctxt "ResourceType"
 msgid "Online service"
 msgstr ""
 
-#: hours/enums.py:50
+#: hours/enums.py:63
 msgctxt "ResourceType"
 msgid "Service"
 msgstr ""
 
-#: hours/enums.py:51
+#: hours/enums.py:64
 msgctxt "ResourceType"
 msgid "Service channel"
 msgstr ""
 
-#: hours/enums.py:52
+#: hours/enums.py:65
 msgctxt "ResourceType"
 msgid "Service at unit"
 msgstr ""
 
-#: hours/enums.py:53
+#: hours/enums.py:66
 msgctxt "ResourceType"
 msgid "Reservable resource"
 msgstr ""
 
-#: hours/enums.py:54
+#: hours/enums.py:67
 msgctxt "ResourceType"
 msgid "Building"
 msgstr ""
 
-#: hours/enums.py:55
+#: hours/enums.py:68
 msgctxt "ResourceType"
 msgid "Area"
 msgstr ""
 
-#: hours/enums.py:56
+#: hours/enums.py:69
 msgctxt "ResourceType"
 msgid "Entrance or exit"
 msgstr ""
 
-#: hours/enums.py:69
+#: hours/enums.py:82
 msgctxt "Weekday"
 msgid "Monday"
 msgstr "Maanantai"
 
-#: hours/enums.py:70
+#: hours/enums.py:83
 msgctxt "Weekday"
 msgid "Tuesday"
 msgstr "Tiistai"
 
-#: hours/enums.py:71
+#: hours/enums.py:84
 msgctxt "Weekday"
 msgid "Wednesday"
 msgstr "Keskiviikko"
 
-#: hours/enums.py:72
+#: hours/enums.py:85
 msgctxt "Weekday"
 msgid "Thursday"
 msgstr "Torstai"
 
-#: hours/enums.py:73
+#: hours/enums.py:86
 msgctxt "Weekday"
 msgid "Friday"
 msgstr "Perjantai"
 
-#: hours/enums.py:74
+#: hours/enums.py:87
 msgctxt "Weekday"
 msgid "Saturday"
 msgstr "Lauantai"
 
-#: hours/enums.py:75
+#: hours/enums.py:88
 msgctxt "Weekday"
 msgid "Sunday"
 msgstr "Sunnuntai"
 
-#: hours/enums.py:99
+#: hours/enums.py:112
 msgctxt "RuleContext"
 msgid "Period"
 msgstr "Jakso"
 
-#: hours/enums.py:100
+#: hours/enums.py:113
 msgctxt "RuleContext"
 msgid "Year"
 msgstr "Vuosi"
 
-#: hours/enums.py:101
+#: hours/enums.py:114
 msgctxt "RuleContext"
 msgid "Month"
 msgstr "Kuukausi"
 
-#: hours/enums.py:118
+#: hours/enums.py:131
 msgctxt "RuleSubject"
 msgid "Day"
 msgstr "Päivä"
 
-#: hours/enums.py:119
+#: hours/enums.py:132
 msgctxt "RuleSubject"
 msgid "Week"
 msgstr "Viikko"
 
-#: hours/enums.py:120
+#: hours/enums.py:133
 msgctxt "RuleSubject"
 msgid "Month"
 msgstr "Kuukausi"
 
-#: hours/enums.py:121
+#: hours/enums.py:134
 msgctxt "RuleSubject"
 msgid "Monday"
 msgstr "Maanantai"
 
-#: hours/enums.py:122
+#: hours/enums.py:135
 msgctxt "RuleSubject"
 msgid "Tuesday"
 msgstr "Tiistai"
 
-#: hours/enums.py:123
+#: hours/enums.py:136
 msgctxt "RuleSubject"
 msgid "Wednesday"
 msgstr "Keskiviikko"
 
-#: hours/enums.py:124
+#: hours/enums.py:137
 msgctxt "RuleSubject"
 msgid "Thursday"
 msgstr "Torstai"
 
-#: hours/enums.py:125
+#: hours/enums.py:138
 msgctxt "RuleSubject"
 msgid "Friday"
 msgstr "Perjantai"
 
-#: hours/enums.py:126
+#: hours/enums.py:139
 msgctxt "RuleSubject"
 msgid "Saturday"
 msgstr "Lauantai"
 
-#: hours/enums.py:127
+#: hours/enums.py:140
 msgctxt "RuleSubject"
 msgid "Sunday"
 msgstr "Sunnuntai"
 
-#: hours/enums.py:171
+#: hours/enums.py:184
 msgctxt "FrequencyModifier"
 msgid "Even"
 msgstr "Parillinen"
 
-#: hours/enums.py:172
+#: hours/enums.py:185
 msgctxt "FrequencyModifier"
 msgid "Odd"
 msgstr "Pariton"
 
-#: hours/models.py:169 hours/models.py:193 hours/models.py:378
-#: hours/models.py:519 hours/models.py:563
+#: hours/models.py:246 hours/models.py:270 hours/models.py:495
+#: hours/models.py:639 hours/models.py:693
 msgid "Name"
 msgstr "Nimi"
 
-#: hours/models.py:170 hours/models.py:195 hours/models.py:380
-#: hours/models.py:521 hours/models.py:565
+#: hours/models.py:247 hours/models.py:272 hours/models.py:497
+#: hours/models.py:641 hours/models.py:695
 msgid "Description"
 msgstr "Kuvaus"
 
-#: hours/models.py:172
+#: hours/models.py:249
 msgid "Objects may be edited by users"
 msgstr ""
 
-#: hours/models.py:176
+#: hours/models.py:253
 msgid "Data source"
 msgstr "Lähdejärjestelmä"
 
-#: hours/models.py:177
+#: hours/models.py:254
 msgid "Data sources"
 msgstr "Lähdejärjestelmät"
 
-#: hours/models.py:196
+#: hours/models.py:273
 msgid "Street address"
 msgstr "Katuosoite"
 
-#: hours/models.py:199
+#: hours/models.py:276
 msgid "Resource type"
 msgstr "Resurssin tyyppi"
 
-#: hours/models.py:205
+#: hours/models.py:282
 msgid "Sub resources"
 msgstr "Aliresurssit"
 
-#: hours/models.py:225
+#: hours/models.py:302
 msgid "Extra data"
 msgstr "Lisätiedot"
 
-#: hours/models.py:245
+#: hours/models.py:322
 msgid "Resources"
 msgstr "Resurssit"
 
-#: hours/models.py:356 hours/models.py:488
+#: hours/models.py:473 hours/models.py:608 users/models.py:38
 msgid "Origin ID"
 msgstr "Tunniste lähdejärjestelmässä"
 
-#: hours/models.py:360
+#: hours/models.py:477
 msgid "Resource origin"
 msgstr "Resurssin lähde"
 
-#: hours/models.py:361
+#: hours/models.py:478
 msgid "Resource origins"
 msgstr "Resurssin lähteet"
 
-#: hours/models.py:394
+#: hours/models.py:511
 msgid "Override"
 msgstr "Yliajo"
 
-#: hours/models.py:400
+#: hours/models.py:517
 msgid "Period"
 msgstr "Jakso"
 
-#: hours/models.py:401
+#: hours/models.py:518
 msgid "Periods"
 msgstr "Jaksot"
 
-#: hours/models.py:492
+#: hours/models.py:612
 msgid "Period origin"
-msgstr "Jason lähde"
+msgstr "Jakson lähde"
 
-#: hours/models.py:493
+#: hours/models.py:613
 msgid "Period origins"
 msgstr "Jakson lähteet"
 
-#: hours/models.py:523
+#: hours/models.py:643
 msgid "Start time"
 msgstr "Alkuaika"
 
-#: hours/models.py:526
+#: hours/models.py:646
 msgid "End time"
 msgstr "Loppuaika"
 
-#: hours/models.py:528
+#: hours/models.py:649
+msgid "Is end time on the next day"
+msgstr ""
+
+#: hours/models.py:651
 msgid "24 hours"
 msgstr "24 tuntia"
 
-#: hours/models.py:532
+#: hours/models.py:655
 msgid "Weekday"
 msgstr "Viikonpäivä"
 
-#: hours/models.py:546
+#: hours/models.py:669
 msgid "Time span"
 msgstr "Aikaväli"
 
-#: hours/models.py:547
+#: hours/models.py:670
 msgid "Time spans"
 msgstr "Aikavälit"
 
-#: hours/models.py:568
+#: hours/models.py:698
 msgid "Context"
 msgstr "Konteksti"
 
-#: hours/models.py:573
+#: hours/models.py:703
 msgid "Subject"
 msgstr "Kohde"
 
-#: hours/models.py:576
+#: hours/models.py:706
 msgid "Start"
 msgstr "Alku"
 
-#: hours/models.py:578
+#: hours/models.py:708
 msgid "Frequency (ordinal)"
 msgstr "Toistuvuus (järjestysnumero)"
 
-#: hours/models.py:582
+#: hours/models.py:712
 msgid "Frequency (modifier)"
 msgstr "Toistuvuus (määre)"
 
-#: hours/models.py:589
+#: hours/models.py:719
 msgid "Rule"
 msgstr "Sääntö"
 
-#: hours/models.py:590
+#: hours/models.py:720
 msgid "Rules"
 msgstr "Säännöt"
 
-#: hours/models.py:836
+#: hours/models.py:966
 msgid "Signature"
 msgstr "Allekirjoitus"
 
-#: hours/models.py:837
+#: hours/models.py:967
 msgid "Signature created at"
 msgstr "Allekirjoituksen luontiaika"
 
-#: hours/models.py:838
+#: hours/models.py:968
 msgid "Signature valid until"
 msgstr "Allekirjoituksen vanhenemisaika"
 
-#: hours/models.py:840
+#: hours/models.py:970
 msgid "Invalidated time"
 msgstr "Mitätöintiaika"
 
-#: hours/models.py:844
+#: hours/models.py:974
 msgid "Signed auth entry"
 msgstr ""
 
-#: hours/models.py:845
+#: hours/models.py:975
 msgid "Signed auth entries"
 msgstr ""
 
-#: hours/models.py:850
+#: hours/models.py:980
 msgid "Signing key"
 msgstr "Allekirjoitusavain"
 
-#: hours/models.py:851
+#: hours/models.py:981
 msgid "Key valid after"
 msgstr "Avaimen voimassaoloaika alkaa"
 
-#: hours/models.py:853
+#: hours/models.py:983
 msgid "Key valid until"
 msgstr "Avaimen voimassaoloaika loppuu"
 
-#: hours/models.py:857
+#: hours/models.py:987
 msgid "Signed auth key"
 msgstr ""
 
-#: hours/models.py:858
+#: hours/models.py:988
 msgid "Signed auth keys"
 msgstr ""
 
-#: hours/serializers.py:164
+#: hours/serializers.py:182
 msgid ""
 "Cannot create or edit sub resources of a resource in an organisation the "
 "user is not part of "
 msgstr ""
 
-#: hours/views.py:69
-msgid "No signing key for selected data source"
-msgstr ""
-
-#: hours/views.py:137
-msgid "No signing key for the selected data_source"
-msgstr ""
-
-#: hours/viewsets.py:64
+#: hours/viewsets.py:85
 msgid "Cannot create or edit resources that are not part of an organization "
 msgstr ""
 
-#: hours/viewsets.py:73
+#: hours/viewsets.py:102
 msgid "Cannot add data to organizations the user is not a member of"
 msgstr ""
 
-#: users/admin.py:19
+#: users/admin.py:24
 msgid "Personal info"
 msgstr ""
 
-#: users/admin.py:20
+#: users/admin.py:25
 msgid "Helusers"
 msgstr ""
 
-#: users/admin.py:22
+#: users/admin.py:27
 msgid "Permissions"
 msgstr ""
 
-#: users/admin.py:33
+#: users/admin.py:38
 msgid "Important dates"
 msgstr ""
+
+#: users/models.py:42
+msgid "User origin"
+msgstr "Käyttäjän lähde"
+
+#: users/models.py:43
+msgid "User origins"
+msgstr "Käyttäjän lähteet"

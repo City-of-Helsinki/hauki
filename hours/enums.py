@@ -9,6 +9,7 @@ class State(Enum):
     SELF_SERVICE = "self_service"
     WITH_KEY = "with_key"
     WITH_RESERVATION = "with_reservation"
+    OPEN_AND_RESERVABLE = "open_and_reservable"
     WITH_KEY_AND_RESERVATION = "with_key_and_reservation"
     ENTER_ONLY = "enter_only"
     EXIT_ONLY = "exit_only"
@@ -21,6 +22,7 @@ class State(Enum):
         SELF_SERVICE = pgettext_lazy("State", "Self service")
         WITH_KEY = pgettext_lazy("State", "With key")
         WITH_RESERVATION = pgettext_lazy("State", "With reservation")
+        OPEN_AND_RESERVABLE = pgettext_lazy("State", "Open and reservable")
         WITH_KEY_AND_RESERVATION = pgettext_lazy("State", "With key and reservation")
         ENTER_ONLY = pgettext_lazy("State", "Enter only")
         EXIT_ONLY = pgettext_lazy("State", "Exit only")

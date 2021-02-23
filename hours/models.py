@@ -105,29 +105,30 @@ def expand_range(start_date, end_date):
 
 def _get_times_for_sort(item: TimeElement) -> tuple:
     return (
-        item.start_time if item.start_time else datetime.time(hour=0, minute=0),
+        item.start_time if item.start_time else datetime.time.min,
         item.end_time_on_next_day,
-        item.end_time if item.end_time else datetime.time(hour=0, minute=0),
+        item.end_time if item.end_time else datetime.time.max,
     )
 
 
-def combine_element_time_spans(elements):
+def combine_element_time_spans(elements, override=False):
     """Combines overlapping time elements
 
-    Combines overlapping time spans to one time span if they are of the same state.
-    Ignores time elements that have override as True."""
-    result = [el for el in elements if el.override is True]
+    Combines overlapping time spans to one time span if they are of the same resource
+    state and same override status. By default, only returns spans with override=False.
 
-    states = {el.resource_state for el in elements}
+    If one of the elements has unknown (empty) start or end, the corresponding time
+    will be empty in the combined time element.
+    """
+    result = []
+
+    states = {el.resource_state for el in elements if el.override == override}
 
     for state in states:
-        state_elements = [
-            el for el in elements if el.resource_state == state and el.override is False
-        ]
+        state_elements = [el for el in elements if el.resource_state == state]
 
-        if not state_elements:
-            continue
-
+        # This will return those with start_time None first.
+        # Other fields being equal, this will return those with end_time None last.
         sorted_elements = sorted(state_elements, key=_get_times_for_sort)
 
         new_range_start = None
@@ -136,42 +137,48 @@ def combine_element_time_spans(elements):
         periods = set()
 
         for element in sorted_elements:
-            if element.full_day:
-                # Full day element found, no need to go through the others
-                new_range_start = element.start_time
-                new_range_end = element.end_time
+            if not element.start_time and not element.end_time:
+                # Unknown range element found, no need to go through the others
+                new_range_start = None
+                new_range_end = None
                 periods = element.periods if element.periods else []
                 break
 
-            if new_range_start is None:
-                new_range_start = element.start_time
-                new_range_end = element.end_time
-                new_range_end_is_next_day = element.end_time_on_next_day
-                if element.periods:
-                    periods.update(element.periods)
-
             # Compare using tuple (is_next_day, time_of_day) so that the next
             # day times are bigger even if the time_of_day is smaller.
-            elif (new_range_end_is_next_day, new_range_end) >= (
-                False,
-                element.start_time,
-            ):
-                latest_time = max(
-                    (element.end_time_on_next_day, element.end_time),
-                    (new_range_end_is_next_day, new_range_end),
+            if (
+                element.start_time
+                and new_range_end
+                and (new_range_end_is_next_day, new_range_end)
+                >= (
+                    False,
+                    element.start_time,
                 )
-                new_range_end = latest_time[1]
-                new_range_end_is_next_day = latest_time[0]
-
-            else:
+            ):
+                # Ranges overlap! Previous end > this start
+                if element.end_time:
+                    # Element has specified end
+                    latest_time = max(
+                        (element.end_time_on_next_day, element.end_time),
+                        (new_range_end_is_next_day, new_range_end),
+                    )
+                    new_range_end = latest_time[1]
+                    new_range_end_is_next_day = latest_time[0]
+                else:
+                    # We don't know the end time
+                    new_range_end = None
+                    # what does this even mean? ends at end of next day?
+                    new_range_end_is_next_day = element.end_time_on_next_day
+            elif new_range_start or new_range_end:
+                # Previous range ended before this starts!
                 result.append(
                     TimeElement(
                         start_time=new_range_start,
                         end_time=new_range_end,
                         end_time_on_next_day=new_range_end_is_next_day,
-                        resource_state=element.resource_state,
-                        override=element.override,
-                        full_day=element.full_day,
+                        resource_state=state,
+                        override=override,
+                        full_day=False,
                         periods=list(periods),
                     )
                 )
@@ -179,17 +186,23 @@ def combine_element_time_spans(elements):
                 new_range_end = element.end_time
                 new_range_end_is_next_day = element.end_time_on_next_day
                 periods = set()
-                if element.periods:
-                    periods.update(element.periods)
+            else:
+                # start and end are empty, we are on first round
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                new_range_end_is_next_day = element.end_time_on_next_day
+            if element.periods:
+                periods.update(element.periods)
 
+        # appending last element
         result.append(
             TimeElement(
                 start_time=new_range_start,
                 end_time=new_range_end,
                 end_time_on_next_day=new_range_end_is_next_day,
                 resource_state=state,
-                override=False,
-                full_day=False if new_range_start and new_range_end else True,
+                override=override,
+                full_day=element.full_day,
                 periods=list(periods),
             )
         )
@@ -214,8 +227,9 @@ def combine_and_apply_override(elements):
         time_element = sorted(overriding_elements, key=_time_element_period_length)[0]
         periods = time_element.periods
 
-        return [el for el in overriding_elements if el.periods == periods]
-
+        return combine_element_time_spans(
+            [el for el in overriding_elements if el.periods == periods], override=True
+        )
     return combine_element_time_spans(elements)
 
 

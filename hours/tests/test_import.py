@@ -277,6 +277,24 @@ def mock_library_data(mock_tprek_data, requests_mock, request):
     }
 
 
+@pytest.fixture
+def mock_hauki_data(mock_tprek_data, requests_mock, request):
+    periods_file_name = "test_import_hauki_periods.json"
+    periods_file_path = os.path.join(
+        os.path.dirname(__file__), "fixtures", periods_file_name
+    )
+    with open(periods_file_path) as periods_file:
+        periods = json.load(periods_file)
+    requests_mock.get(
+        "https://hauki-test.oc.hel.ninja/v1/date_period/?resource=1",
+        text=json.dumps(periods),
+    )
+    call_command("hours_import", "hauki", openings=True)
+    return {
+        "periods": periods,
+    }
+
+
 tprek_parameters = []
 for merge in [False, True]:
     for change in [None, "edit", "remove", "add"]:
@@ -309,9 +327,9 @@ def test_import_tprek(mock_tprek_data):
             Resource.objects.filter(is_public=True).count()
             == expected_n_merged_resources
         )
-    assert DataSource.objects.count() == 3
+    assert DataSource.objects.count() == 4
     assert Organization.objects.count() == 1
-    external_origins = 4
+    external_origins = 5
     if change == "remove" and not merge:
         # if a resource is soft deleted, its origin will remain.
         # if it was merged, extra origin will be deleted.
@@ -688,3 +706,19 @@ def test_import_kirjastot_complex(mock_library_data, mock_tprek_data):
     assert first_week_thu.rules.all()[0].frequency_ordinal == 2
     assert second_week_thu.rules.all()[0].start == 2
     assert second_week_thu.rules.all()[0].frequency_ordinal == 2
+
+
+@pytest.mark.django_db
+def test_import_hauki(mock_hauki_data):
+    kallio_tprek_id = 8215
+    kallio = Resource.objects.get(
+        origins__data_source="tprek", origins__origin_id=kallio_tprek_id
+    )
+    # Check created objects
+    assert DatePeriod.objects.count() == 1
+    assert kallio.date_periods.count() == 1
+    expected_n_time_spans = 5
+    assert TimeSpan.objects.count() == expected_n_time_spans
+    assert TimeSpanGroup.objects.count() == 1
+    # Simple data should have pattern repeating weekly
+    assert Rule.objects.count() == 0

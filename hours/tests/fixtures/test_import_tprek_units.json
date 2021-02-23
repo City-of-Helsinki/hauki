@@ -37,6 +37,10 @@
             {
                 "source": "internal",
                 "id": "3266"
+            },
+            {
+                "source": "hauki",
+                "id": "1"
             }
         ],
         "latitude": 60.18372,

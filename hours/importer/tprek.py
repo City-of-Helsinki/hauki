@@ -951,7 +951,7 @@ class TPRekImporter(Importer):
         # deleted, or is not public at the moment. Therefore, resource may be empty.
         if not resource:
             self.logger.info(
-                "Error in data, resource with given id not found! {0}".format(
+                "Cannot import hours yet, resource with given id not found! {0}".format(
                     resource_id
                 )
             )

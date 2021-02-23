@@ -433,7 +433,53 @@ class ResourceViewSet(
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Date Periods"),
+    list=extend_schema(
+        summary="List Date Periods",
+        parameters=[
+            OpenApiParameter(
+                "resource",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
+            ),
+            OpenApiParameter(
+                "end_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by exact period end date",
+            ),
+            OpenApiParameter(
+                "end_date_gte",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by end date greater than given date (or null)",
+            ),
+            OpenApiParameter(
+                "end_date_lte",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by end date less than given date",
+            ),
+            OpenApiParameter(
+                "start_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by exact period start date",
+            ),
+            OpenApiParameter(
+                "start_date_gte",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by start date greater than given date",
+            ),
+            OpenApiParameter(
+                "start_date_gte",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Filter by start date less than given date (or null",
+            ),
+        ],
+    ),
     create=extend_schema(summary="Create a Date Period"),
     retrieve=extend_schema(summary="Find Date Period by ID"),
     update=extend_schema(summary="Update existing Date Period"),

@@ -145,12 +145,17 @@ class DatePeriodFilter(filters.FilterSet):
         if name != "resource":
             return queryset
 
+        filters = map(get_resource_pk_filter, value.split(","))
+        q_objects = [Q(**filter) for filter in filters]
+        query_q = Q()
+        for q in q_objects:
+            query_q |= q
         try:
-            resource = Resource.objects.get(**get_resource_pk_filter(value))
+            resources = Resource.objects.filter(query_q)
         except (ValueError, Resource.DoesNotExist):
             return queryset
 
-        return queryset.filter(resource=resource)
+        return queryset.filter(resource__in=resources)
 
 
 class TimeSpanFilter(filters.FilterSet):
@@ -164,9 +169,14 @@ class TimeSpanFilter(filters.FilterSet):
         if name != "resource":
             return queryset
 
+        filters = map(get_resource_pk_filter, value.split(","))
+        q_objects = [Q(**filter) for filter in filters]
+        query_q = Q()
+        for q in q_objects:
+            query_q |= q
         try:
-            resource = Resource.objects.get(**get_resource_pk_filter(value))
+            resources = Resource.objects.filter(query_q)
         except (ValueError, Resource.DoesNotExist):
             return queryset
 
-        return queryset.filter(group__period__resource=resource)
+        return queryset.filter(group__period__resource__in=resources)

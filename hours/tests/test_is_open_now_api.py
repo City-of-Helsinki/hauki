@@ -60,6 +60,118 @@ def test_is_open_one_match(
 
 
 @pytest.mark.django_db
+def test_is_open_full_day_match(
+    admin_client,
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2021, month=1, day=1),
+        end_date=datetime.date(year=2021, month=1, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=None,
+        end_time=None,
+        resource_state=State.OPEN,
+        full_day=True,
+    )
+
+    url = reverse("resource-is-open-now", kwargs={"pk": resource.id})
+
+    with freeze_time("2021-01-11 12:00:00+02:00"):
+        response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["is_open"] is True
+    assert len(response.data["matching_opening_hours"]) == 1
+
+
+@pytest.mark.django_db
+def test_is_open_unknown_start_match(
+    admin_client,
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2021, month=1, day=1),
+        end_date=datetime.date(year=2021, month=1, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=None,
+        end_time=datetime.time(hour=16, minute=0),
+        resource_state=State.OPEN,
+    )
+
+    url = reverse("resource-is-open-now", kwargs={"pk": resource.id})
+
+    with freeze_time("2021-01-11 12:00:00+02:00"):
+        response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["is_open"] is True
+    assert len(response.data["matching_opening_hours"]) == 1
+
+
+@pytest.mark.django_db
+def test_is_open_unknown_end_match(
+    admin_client,
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2021, month=1, day=1),
+        end_date=datetime.date(year=2021, month=1, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=None,
+        resource_state=State.OPEN,
+    )
+
+    url = reverse("resource-is-open-now", kwargs={"pk": resource.id})
+
+    with freeze_time("2021-01-11 12:00:00+02:00"):
+        response = admin_client.get(url)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["is_open"] is True
+    assert len(response.data["matching_opening_hours"]) == 1
+
+
+@pytest.mark.django_db
 def test_is_open_one_non_open(
     admin_client,
     resource,

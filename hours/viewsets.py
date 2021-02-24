@@ -360,15 +360,23 @@ class ResourceViewSet(
             end_date = resource_time_now.date()
             if opening_hour.end_time_on_next_day:
                 end_date = resource_time_now.date() + relativedelta(days=1)
+            start_time = (
+                opening_hour.start_time
+                if opening_hour.start_time
+                else datetime.time.min
+            )
+            end_time = (
+                opening_hour.end_time if opening_hour.end_time else datetime.time.max
+            )
 
             start_datetime = tz.localize(
                 datetime.datetime(
                     year=start_date.year,
                     month=start_date.month,
                     day=start_date.day,
-                    hour=opening_hour.start_time.hour,
-                    minute=opening_hour.start_time.minute,
-                    second=opening_hour.start_time.second,
+                    hour=start_time.hour,
+                    minute=start_time.minute,
+                    second=start_time.second,
                 )
             )
 
@@ -377,9 +385,9 @@ class ResourceViewSet(
                     year=end_date.year,
                     month=end_date.month,
                     day=end_date.day,
-                    hour=opening_hour.end_time.hour,
-                    minute=opening_hour.end_time.minute,
-                    second=opening_hour.end_time.second,
+                    hour=end_time.hour,
+                    minute=end_time.minute,
+                    second=end_time.second,
                 )
             )
 

@@ -29,7 +29,6 @@ resources:
   # Azure DevOps repository
   - repository: hauki-pipelines
     type: git
-    ref: refs/heads/feature/ADK-154
     # project/repository
     name: hauki/hauki-pipelines
 

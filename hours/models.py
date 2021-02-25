@@ -10,6 +10,7 @@ from typing import List, Optional, Set, Union
 from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -738,6 +739,46 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 f"{self.context}, starting from {self.start}"
             )
 
+    def save(self, *args, **kwargs):
+        # Note that save is not called if rules are created in the database with bulk
+        # or update operations, so the database may still contain non-functional rules.
+        # Cleaning here is just a precaution that tells the user not to create
+        # useless/vague rules, since they most likely want to be informed if their
+        # fancy new rule doesn't do anything.
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        if not self.group.period.start_date and self.context == RuleContext.PERIOD:
+            raise ValidationError(
+                _(
+                    "We cannot start counting from period start in an infinite"
+                    " period. Please select shorter context for your rule."
+                )
+            )
+        if self.frequency_modifier and self.frequency_ordinal:
+            raise ValidationError(
+                _(
+                    "You cannot add a rule with both even/odd and another frequency"
+                    " at the same time."
+                )
+            )
+        if self.start and self.start <= 0:
+            raise ValidationError(
+                _("Rule must start counting from a positive integer.")
+            )
+        if self.start and self.frequency_modifier:
+            raise ValidationError(
+                _(
+                    "Even/odd subjects are not counted starting from a specific time."
+                    " If you wish to have an alternating rule starting from a specific"
+                    " time, please use frequency_ordinal=2 with start=1 or start=2."
+                )
+            )
+        if self.frequency_ordinal and not self.start:
+            self.start = 1
+        return super().clean()
+
     def get_ordinal_for_item(
         self, item: Union[List[datetime.date], datetime.date]
     ) -> Union[None, int]:
@@ -771,7 +812,12 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
         if self.frequency_ordinal:
             if self.start is None:
-                # TODO: Should we default to start=1?
+                # Start should be set to 1 as default. If rule was created by
+                # unorthodox means and start is empty, just do nothing
+                return context_set
+
+            if self.context == RuleContext.PERIOD and not self.group.period.start_date:
+                # Again, this rule doesn't do anything, but better let it slip thru.
                 return context_set
 
             # TODO: When the context is YEAR and the subject is WEEK we should probably
@@ -785,6 +831,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             except IndexError:
                 return []
         elif self.frequency_modifier:
+            if self.context == RuleContext.PERIOD and not self.group.period.start_date:
+                # Again, this rule doesn't do anything, but better let it slip thru.
+                return context_set
+
             result = []
             for item in context_set:
                 num = self.get_ordinal_for_item(item)
@@ -799,13 +849,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         self, max_start_date: datetime.date, min_end_date: datetime.date
     ) -> List:
         """Get context sets defined by the Rules context and subject"""
-        # if period is bounded, start and end dates are already bounded by period
-        period_start_date = self.group.period.start_date
 
         if self.context == RuleContext.PERIOD:
+            # if period is bounded, start and end dates are already bounded by period
+            period_start_date = self.group.period.start_date
             if not period_start_date:
-                raise Exception("Period rule not applicable to period without start.")
-
+                # Just return the queried set. Frequency modifiers won't do anything
+                # in this case, as we cannot count from the start.
+                period_start_date = max_start_date
             if self.subject == RuleSubject.DAY:
                 return [expand_range(max_start_date, min_end_date)]
 

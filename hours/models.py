@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from calendar import Calendar
+from calendar import Calendar, monthrange
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
@@ -756,6 +756,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     " period. Please select shorter context for your rule."
                 )
             )
+        if self.context == RuleContext.MONTH and self.subject == RuleSubject.MONTH:
+            raise ValidationError(_("Subject must be a shorter timespan than context."))
         if self.frequency_modifier and self.frequency_ordinal:
             raise ValidationError(
                 _(
@@ -763,9 +765,18 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     " at the same time."
                 )
             )
-        if self.start and self.start <= 0:
+        if self.start and self.start < 0:
             raise ValidationError(
                 _("Rule must start counting from a positive integer.")
+            )
+        if self.start == 0 and not (
+            self.subject == RuleSubject.WEEK and self.context == RuleContext.YEAR
+        ):
+            raise ValidationError(
+                _(
+                    "Rule can only start from zero if starting from zeroth ISO week"
+                    " of the year. All other rules start counting from 1."
+                )
             )
         if self.start and self.frequency_modifier:
             raise ValidationError(
@@ -802,11 +813,16 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         if not self.frequency_modifier and not self.frequency_ordinal:
             if self.start is None:
                 return context_set
-
-            # TODO: When the context is YEAR and the subject is WEEK we should probably
-            #       use the iso week number here
             try:
-                return [context_set[self.start if self.start < 0 else self.start - 1]]
+                if (
+                    self.subject == RuleSubject.WEEK
+                    and self.context == RuleContext.YEAR
+                    and context_set[0][6].day < 4
+                ):
+                    # iso week 1 is the week with Thu. If the first week doesn't
+                    # contain Thu, count starts from zeroth week.
+                    return [context_set[self.start]]
+                return [context_set[self.start - 1]]
             except IndexError:
                 return []
 
@@ -815,26 +831,25 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 # Start should be set to 1 as default. If rule was created by
                 # unorthodox means and start is empty, just do nothing
                 return context_set
-
             if self.context == RuleContext.PERIOD and not self.group.period.start_date:
                 # Again, this rule doesn't do anything, but better let it slip thru.
                 return context_set
-
-            # TODO: When the context is YEAR and the subject is WEEK we should probably
-            #       use the iso week number here
             try:
-                return context_set[
-                    self.start
-                    if self.start < 0
-                    else self.start - 1 :: self.frequency_ordinal
-                ]
+                if (
+                    self.subject == RuleSubject.WEEK
+                    and self.context == RuleContext.YEAR
+                    and context_set[0][6].day < 4
+                ):
+                    # iso week 1 is the week with Thu. If the first week doesn't
+                    # contain Thu, count starts from zeroth week.
+                    return context_set[self.start :: self.frequency_ordinal]
+                return context_set[self.start - 1 :: self.frequency_ordinal]
             except IndexError:
                 return []
         elif self.frequency_modifier:
             if self.context == RuleContext.PERIOD and not self.group.period.start_date:
                 # Again, this rule doesn't do anything, but better let it slip thru.
                 return context_set
-
             result = []
             for item in context_set:
                 num = self.get_ordinal_for_item(item)
@@ -842,7 +857,6 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     result.append(item)
                 if self.frequency_modifier == FrequencyModifier.ODD and num % 2 == 1:
                     result.append(item)
-
             return result
 
     def get_context_sets(
@@ -956,7 +970,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             first_day = datetime.date(
                 year=max_start_date.year, month=max_start_date.month, day=1
             )
-            last_day_of_month = first_day + relativedelta(day=31)
+            first_day_weekday, month_length = monthrange(
+                first_day.year, first_day.month
+            )
+            last_day_of_month = first_day + relativedelta(day=month_length)
 
             result = []
             while last_day_of_month <= min_end_date + relativedelta(day=31):
@@ -983,7 +1000,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     result.append(dates)
 
                 first_day += relativedelta(months=1)
-                last_day_of_month = first_day + relativedelta(day=31)
+                first_day_weekday, month_length = monthrange(
+                    first_day.year, first_day.month
+                )
+                last_day_of_month = first_day + relativedelta(day=month_length)
             return result
 
     def apply_to_date_range(

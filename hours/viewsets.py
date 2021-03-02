@@ -612,12 +612,23 @@ class AuthRequiredTestView(viewsets.ViewSet):
 class OpeningHoursFilterBackend(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
         data_source = request.query_params.get("data_source", None)
+        resource = request.query_params.get("resource", None)
 
         if data_source is not None:
             queryset = queryset.filter(
                 Q(origins__data_source=data_source)
                 | Q(ancestry_data_source__contains=[data_source])
             )
+        if resource is not None:
+            filters = map(get_resource_pk_filter, resource.split(","))
+            q_objects = [Q(**filter) for filter in filters]
+            query_q = Q()
+            for q in q_objects:
+                query_q |= q
+            try:
+                queryset = queryset.filter(query_q)
+            except (ValueError, Resource.DoesNotExist):
+                pass
 
         return queryset
 

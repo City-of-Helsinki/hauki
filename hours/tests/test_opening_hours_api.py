@@ -378,3 +378,70 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
     assert resource_names == {resource.name_fi, resource2.name_fi}
+
+
+@pytest.mark.django_db
+def test_opening_hours_resource_filter_two_resources(
+    admin_client,
+    resource_factory,
+    date_period_factory,
+):
+
+    resource = resource_factory()
+    resource2 = resource_factory()
+
+    date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    date_period_factory(
+        resource=resource2,
+        name="Testperiod2",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    url = reverse("opening_hours-list")
+
+    data = {
+        "start_date": "2020-11-01",
+        "end_date": "2020-11-30",
+        "resource": resource.id,
+    }
+
+    response = admin_client.get(
+        url,
+        data=data,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
+
+    assert resource_names == {resource.name_fi}
+
+    data = {
+        "start_date": "2020-11-01",
+        "end_date": "2020-11-30",
+        "resource": f"{resource.id},{resource2.id}",
+    }
+
+    response = admin_client.get(
+        url,
+        data=data,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
+
+    assert resource_names == {resource.name_fi, resource2.name_fi}

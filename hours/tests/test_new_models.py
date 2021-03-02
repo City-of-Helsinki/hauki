@@ -898,7 +898,7 @@ def test_rule_filter_dates4_2(
     # period has no start date, so context cannot be period
     rule1 = rule_factory(
         group=time_span_group,
-        context=RuleContext.MONTH,
+        context=RuleContext.YEAR,
         subject=RuleSubject.WEEK,
         frequency_modifier=FrequencyModifier.EVEN,
     )
@@ -984,7 +984,7 @@ def test_rule_filter_dates5_2(
     # period has no start date, so context cannot be period
     rule1 = rule_factory(
         group=time_span_group,
-        context=RuleContext.MONTH,
+        context=RuleContext.YEAR,
         subject=RuleSubject.WEEK,
         frequency_modifier=FrequencyModifier.ODD,
     )
@@ -1270,6 +1270,41 @@ def test_rule_filter_dates9(
         datetime.date(year=2020, month=1, day=17),
         datetime.date(year=2020, month=1, day=18),
         datetime.date(year=2020, month=1, day=19),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates9_1(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # we should get 1st ISO week, not 0th/53rd
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        start=1,
+    )
+
+    start_date = datetime.date(year=2021, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2021, month=1, day=4),
+        datetime.date(year=2021, month=1, day=5),
+        datetime.date(year=2021, month=1, day=6),
+        datetime.date(year=2021, month=1, day=7),
+        datetime.date(year=2021, month=1, day=8),
+        datetime.date(year=2021, month=1, day=9),
+        datetime.date(year=2021, month=1, day=10),
     }
 
 

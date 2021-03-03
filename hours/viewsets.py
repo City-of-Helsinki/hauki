@@ -12,10 +12,16 @@ from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.fields import BooleanField, CharField, ListField
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -125,13 +131,21 @@ class OnCreateOrgMembershipCheck:
 
 
 class PermissionCheckAction:
+    @extend_schema(
+        summary="Check method permission for object",
+        request=inline_serializer("", {}),
+        responses=inline_serializer(
+            "permission_check", {"has_permission": BooleanField()}
+        ),
+    )
     @action(
         detail=True,
         methods=["get", "post", "put", "patch", "delete"],
         permission_classes=[],
     )
     def permission_check(self, request, pk=None):
-        """Runs check_object_permission for the object and returns the result"""
+        """Runs check_object_permission for the object with the used method and returns
+        the result"""
         obj = self.get_object()
 
         # This action should be callable without any permissions, but the
@@ -257,6 +271,27 @@ class ResourceFilterBackend(BaseFilterBackend):
     update=extend_schema(summary="Update existing Resource"),
     partial_update=extend_schema(summary="Update existing Resource partially"),
     destroy=extend_schema(summary="Delete existing Resource"),
+    opening_hours=extend_schema(
+        summary="Get opening hours for Resource",
+        parameters=[
+            OpenApiParameter(
+                "start_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="First date to return hours for",
+            ),
+            OpenApiParameter(
+                "end_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Last date to return hours for",
+            ),
+        ],
+        responses=DailyOpeningHoursSerializer,
+    ),
+    is_open_now=extend_schema(
+        summary="Is Resource open now?", responses=IsOpenNowSerializer
+    ),
 )
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
@@ -598,6 +633,14 @@ class AuthRequiredTestView(viewsets.ViewSet):
         summary="Authentication test",
         description="Can be used to see if the current request is authenticated. "
         "Handy for testing HaukiSignedAuth links.",
+        responses=inline_serializer(
+            "auth_required_test",
+            {
+                "message": CharField(),
+                "username": CharField(),
+                "organization_ids": ListField(),
+            },
+        ),
     )
     def list(self, request, *args, **kwargs):
         organization_ids = set()
@@ -641,6 +684,37 @@ class OpeningHoursFilterBackend(BaseFilterBackend):
         return queryset
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List opening hours",
+        parameters=[
+            OpenApiParameter(
+                "data_source",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by resource data source",
+            ),
+            OpenApiParameter(
+                "resource",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
+            ),
+            OpenApiParameter(
+                "start_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="First date to return hours for",
+            ),
+            OpenApiParameter(
+                "end_date",
+                OpenApiTypes.DATE,
+                OpenApiParameter.QUERY,
+                description="Last date to return hours for",
+            ),
+        ],
+    ),
+)
 class OpeningHoursViewSet(viewsets.GenericViewSet):
     filter_backends = (DjangoFilterBackend, OpeningHoursFilterBackend)
     serializer_class = ResourceDailyOpeningHoursSerializer

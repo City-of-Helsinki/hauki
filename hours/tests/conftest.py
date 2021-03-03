@@ -74,28 +74,33 @@ class ResourceOriginFactory(factory.django.DjangoModelFactory):
 @register
 class DatePeriodFactory(factory.django.DjangoModelFactory):
     name = factory.LazyAttribute(lambda x: "DP-" + faker.pystr())
+    start_date = factory.LazyAttribute(lambda x: faker.date())
 
     class Meta:
         model = DatePeriod
 
 
 @register
+class TimeSpanGroupFactory(factory.django.DjangoModelFactory):
+    period = factory.SubFactory(DatePeriodFactory)
+
+    class Meta:
+        model = TimeSpanGroup
+
+
+@register
 class TimeSpanFactory(factory.django.DjangoModelFactory):
     name = factory.LazyAttribute(lambda x: "TS-" + faker.pystr())
+    group = factory.SubFactory(TimeSpanGroupFactory)
 
     class Meta:
         model = TimeSpan
 
 
 @register
-class TimeSpanGroupFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = TimeSpanGroup
-
-
-@register
 class RuleFactory(factory.django.DjangoModelFactory):
     name = factory.LazyAttribute(lambda x: "RULE-" + faker.pystr())
+    group = factory.SubFactory(TimeSpanGroupFactory)
 
     class Meta:
         model = Rule

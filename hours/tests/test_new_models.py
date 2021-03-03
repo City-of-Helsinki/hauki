@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from django.core.exceptions import ValidationError
 
 from hours.enums import FrequencyModifier, RuleContext, RuleSubject, State, Weekday
 from hours.models import TimeElement
@@ -279,6 +280,114 @@ def test_get_period_for_date_with_rule(
 
 
 @pytest.mark.django_db
+def test_get_infinite_period_for_date_with_rule(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    time_span_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=None,
+        end_date=None,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=18, minute=0),
+        weekdays=Weekday.business_days(),
+    )
+
+    time_span_factory(
+        group=time_span_group,
+        start_time=datetime.time(hour=12, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        weekdays=Weekday.weekend(),
+    )
+
+    # period has no start date, so context cannot be period
+    rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.THURSDAY,
+        frequency_modifier=FrequencyModifier.ODD,
+    )
+
+    # Monday or Sunday not matching because rule limits the days only to thursdays
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=5),
+            datetime.date(year=2020, month=10, day=5),
+        )
+        == {}
+    )
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=18),
+            datetime.date(year=2020, month=10, day=18),
+        )
+        == {}
+    )
+
+    # Odd Thursday
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=15),
+        datetime.date(year=2020, month=10, day=15),
+    ) == {
+        datetime.date(year=2020, month=10, day=15): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
+    # Even Thursday
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=22),
+            datetime.date(year=2020, month=10, day=22),
+        )
+        == {}
+    )
+
+    # Odd week
+    assert date_period.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    ) == {
+        datetime.date(year=2020, month=10, day=15): [
+            TimeElement(
+                start_time=datetime.time(hour=10, minute=0),
+                end_time=datetime.time(hour=18, minute=0),
+                end_time_on_next_day=False,
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ]
+    }
+
+    # Even week
+    assert (
+        date_period.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=19),
+            datetime.date(year=2020, month=10, day=25),
+        )
+        == {}
+    )
+
+
+@pytest.mark.django_db
 def test_get_period_for_dates_with_two_rules(
     resource,
     date_period_factory,
@@ -443,6 +552,113 @@ def test_get_period_for_dates_with_two_time_span_groups(
 
 
 @pytest.mark.django_db
+def test_rule_fail_infinite_period_context(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=None,
+        end_date=None,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # period has no start date, so context cannot be period
+    with pytest.raises(ValidationError):
+        rule_factory(
+            group=time_span_group,
+            context=RuleContext.PERIOD,
+            subject=RuleSubject.THURSDAY,
+            frequency_modifier=FrequencyModifier.ODD,
+        )
+
+
+@pytest.mark.django_db
+def test_rule_fail_both_ordinal_and_modifier(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # rule cannot have both frequency ordinal and modifier
+    with pytest.raises(ValidationError):
+        rule_factory(
+            group=time_span_group,
+            context=RuleContext.PERIOD,
+            subject=RuleSubject.THURSDAY,
+            frequency_modifier=FrequencyModifier.ODD,
+            frequency_ordinal=3,
+        )
+
+
+@pytest.mark.django_db
+def test_rule_fail_negative_start(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # rule cannot start from a negative index
+    with pytest.raises(ValidationError):
+        rule_factory(
+            group=time_span_group,
+            context=RuleContext.PERIOD,
+            subject=RuleSubject.THURSDAY,
+            frequency_ordinal=3,
+            start=-1,
+        )
+
+
+@pytest.mark.django_db
+def test_rule_fail_both_start_and_modifier(
+    resource,
+    date_period_factory,
+    time_span_group_factory,
+    rule_factory,
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # rule cannot have both start and frequency modifier
+    with pytest.raises(ValidationError):
+        rule_factory(
+            group=time_span_group,
+            context=RuleContext.PERIOD,
+            subject=RuleSubject.THURSDAY,
+            frequency_modifier=FrequencyModifier.ODD,
+            start=3,
+        )
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates1(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -528,6 +744,37 @@ def test_rule_filter_dates1_3(
     assert rule.apply_to_date_range(start_date, end_date) == {
         datetime.date(year=2020, month=10, day=8),
         datetime.date(year=2020, month=10, day=29),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates1_4(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # start is missing from rule with ordinal, should default to 1
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.THURSDAY,
+        frequency_ordinal=3,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule.start == 1
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=1),
+        datetime.date(year=2020, month=10, day=22),
     }
 
 
@@ -636,6 +883,51 @@ def test_rule_filter_dates4(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates4_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=None,
+        end_date=None,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # period has no start date, so context cannot be period
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        frequency_modifier=FrequencyModifier.EVEN,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=1),
+        datetime.date(year=2020, month=10, day=2),
+        datetime.date(year=2020, month=10, day=3),
+        datetime.date(year=2020, month=10, day=4),
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=13),
+        datetime.date(year=2020, month=10, day=14),
+        datetime.date(year=2020, month=10, day=15),
+        datetime.date(year=2020, month=10, day=16),
+        datetime.date(year=2020, month=10, day=17),
+        datetime.date(year=2020, month=10, day=18),
+        datetime.date(year=2020, month=10, day=26),
+        datetime.date(year=2020, month=10, day=27),
+        datetime.date(year=2020, month=10, day=28),
+        datetime.date(year=2020, month=10, day=29),
+        datetime.date(year=2020, month=10, day=30),
+        datetime.date(year=2020, month=10, day=31),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates5(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -651,6 +943,48 @@ def test_rule_filter_dates5(
     rule1 = rule_factory(
         group=time_span_group,
         context=RuleContext.PERIOD,
+        subject=RuleSubject.WEEK,
+        frequency_modifier=FrequencyModifier.ODD,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=5),
+        datetime.date(year=2020, month=10, day=6),
+        datetime.date(year=2020, month=10, day=7),
+        datetime.date(year=2020, month=10, day=8),
+        datetime.date(year=2020, month=10, day=9),
+        datetime.date(year=2020, month=10, day=10),
+        datetime.date(year=2020, month=10, day=11),
+        datetime.date(year=2020, month=10, day=19),
+        datetime.date(year=2020, month=10, day=20),
+        datetime.date(year=2020, month=10, day=21),
+        datetime.date(year=2020, month=10, day=22),
+        datetime.date(year=2020, month=10, day=23),
+        datetime.date(year=2020, month=10, day=24),
+        datetime.date(year=2020, month=10, day=25),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates5_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=None,
+        end_date=None,
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # period has no start date, so context cannot be period
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
         subject=RuleSubject.WEEK,
         frequency_modifier=FrequencyModifier.ODD,
     )
@@ -940,6 +1274,41 @@ def test_rule_filter_dates9(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates9_1(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # we should get 1st ISO week, not 0th/53rd
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        start=1,
+    )
+
+    start_date = datetime.date(year=2021, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2021, month=1, day=4),
+        datetime.date(year=2021, month=1, day=5),
+        datetime.date(year=2021, month=1, day=6),
+        datetime.date(year=2021, month=1, day=7),
+        datetime.date(year=2021, month=1, day=8),
+        datetime.date(year=2021, month=1, day=9),
+        datetime.date(year=2021, month=1, day=10),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates10(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -956,7 +1325,6 @@ def test_rule_filter_dates10(
         group=time_span_group,
         context=RuleContext.YEAR,
         subject=RuleSubject.WEEK,
-        start=1,
         frequency_modifier=FrequencyModifier.EVEN,
     )
 
@@ -999,7 +1367,6 @@ def test_rule_filter_dates10_1(
         group=time_span_group,
         context=RuleContext.YEAR,
         subject=RuleSubject.WEEK,
-        start=1,
         frequency_modifier=FrequencyModifier.EVEN,
     )
 

@@ -35,8 +35,10 @@ class State(Enum):
             cls.SELF_SERVICE,
             cls.WITH_KEY,
             cls.WITH_RESERVATION,
+            cls.OPEN_AND_RESERVABLE,
             cls.WITH_KEY_AND_RESERVATION,
             cls.ENTER_ONLY,
+            cls.WEATHER_PERMITTING,
         ]
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from calendar import Calendar
+from calendar import Calendar, monthrange
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
@@ -10,6 +10,7 @@ from typing import List, Optional, Set, Union
 from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -105,29 +106,30 @@ def expand_range(start_date, end_date):
 
 def _get_times_for_sort(item: TimeElement) -> tuple:
     return (
-        item.start_time if item.start_time else datetime.time(hour=0, minute=0),
+        item.start_time if item.start_time else datetime.time.min,
         item.end_time_on_next_day,
-        item.end_time if item.end_time else datetime.time(hour=0, minute=0),
+        item.end_time if item.end_time else datetime.time.max,
     )
 
 
-def combine_element_time_spans(elements):
+def combine_element_time_spans(elements, override=False):
     """Combines overlapping time elements
 
-    Combines overlapping time spans to one time span if they are of the same state.
-    Ignores time elements that have override as True."""
-    result = [el for el in elements if el.override is True]
+    Combines overlapping time spans to one time span if they are of the same resource
+    state and same override status. By default, only returns spans with override=False.
 
-    states = {el.resource_state for el in elements}
+    If one of the elements has unknown (empty) start or end, the corresponding time
+    will be empty in the combined time element.
+    """
+    result = []
+
+    states = {el.resource_state for el in elements if el.override == override}
 
     for state in states:
-        state_elements = [
-            el for el in elements if el.resource_state == state and el.override is False
-        ]
+        state_elements = [el for el in elements if el.resource_state == state]
 
-        if not state_elements:
-            continue
-
+        # This will return those with start_time None first.
+        # Other fields being equal, this will return those with end_time None last.
         sorted_elements = sorted(state_elements, key=_get_times_for_sort)
 
         new_range_start = None
@@ -136,42 +138,48 @@ def combine_element_time_spans(elements):
         periods = set()
 
         for element in sorted_elements:
-            if element.full_day:
-                # Full day element found, no need to go through the others
-                new_range_start = element.start_time
-                new_range_end = element.end_time
+            if not element.start_time and not element.end_time:
+                # Unknown range element found, no need to go through the others
+                new_range_start = None
+                new_range_end = None
                 periods = element.periods if element.periods else []
                 break
 
-            if new_range_start is None:
-                new_range_start = element.start_time
-                new_range_end = element.end_time
-                new_range_end_is_next_day = element.end_time_on_next_day
-                if element.periods:
-                    periods.update(element.periods)
-
             # Compare using tuple (is_next_day, time_of_day) so that the next
             # day times are bigger even if the time_of_day is smaller.
-            elif (new_range_end_is_next_day, new_range_end) >= (
-                False,
-                element.start_time,
-            ):
-                latest_time = max(
-                    (element.end_time_on_next_day, element.end_time),
-                    (new_range_end_is_next_day, new_range_end),
+            if (
+                element.start_time
+                and new_range_end
+                and (new_range_end_is_next_day, new_range_end)
+                >= (
+                    False,
+                    element.start_time,
                 )
-                new_range_end = latest_time[1]
-                new_range_end_is_next_day = latest_time[0]
-
-            else:
+            ):
+                # Ranges overlap! Previous end > this start
+                if element.end_time:
+                    # Element has specified end
+                    latest_time = max(
+                        (element.end_time_on_next_day, element.end_time),
+                        (new_range_end_is_next_day, new_range_end),
+                    )
+                    new_range_end = latest_time[1]
+                    new_range_end_is_next_day = latest_time[0]
+                else:
+                    # We don't know the end time
+                    new_range_end = None
+                    # what does this even mean? ends at end of next day?
+                    new_range_end_is_next_day = element.end_time_on_next_day
+            elif new_range_start or new_range_end:
+                # Previous range ended before this starts!
                 result.append(
                     TimeElement(
                         start_time=new_range_start,
                         end_time=new_range_end,
                         end_time_on_next_day=new_range_end_is_next_day,
-                        resource_state=element.resource_state,
-                        override=element.override,
-                        full_day=element.full_day,
+                        resource_state=state,
+                        override=override,
+                        full_day=False,
                         periods=list(periods),
                     )
                 )
@@ -179,17 +187,23 @@ def combine_element_time_spans(elements):
                 new_range_end = element.end_time
                 new_range_end_is_next_day = element.end_time_on_next_day
                 periods = set()
-                if element.periods:
-                    periods.update(element.periods)
+            else:
+                # start and end are empty, we are on first round
+                new_range_start = element.start_time
+                new_range_end = element.end_time
+                new_range_end_is_next_day = element.end_time_on_next_day
+            if element.periods:
+                periods.update(element.periods)
 
+        # appending last element
         result.append(
             TimeElement(
                 start_time=new_range_start,
                 end_time=new_range_end,
                 end_time_on_next_day=new_range_end_is_next_day,
                 resource_state=state,
-                override=False,
-                full_day=False if new_range_start and new_range_end else True,
+                override=override,
+                full_day=element.full_day,
                 periods=list(periods),
             )
         )
@@ -214,8 +228,9 @@ def combine_and_apply_override(elements):
         time_element = sorted(overriding_elements, key=_time_element_period_length)[0]
         periods = time_element.periods
 
-        return [el for el in overriding_elements if el.periods == periods]
-
+        return combine_element_time_spans(
+            [el for el in overriding_elements if el.periods == periods], override=True
+        )
     return combine_element_time_spans(elements)
 
 
@@ -724,6 +739,57 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 f"{self.context}, starting from {self.start}"
             )
 
+    def save(self, *args, **kwargs):
+        # Note that save is not called if rules are created in the database with bulk
+        # or update operations, so the database may still contain non-functional rules.
+        # Cleaning here is just a precaution that tells the user not to create
+        # useless/vague rules, since they most likely want to be informed if their
+        # fancy new rule doesn't do anything.
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        if not self.group.period.start_date and self.context == RuleContext.PERIOD:
+            raise ValidationError(
+                _(
+                    "We cannot start counting from period start in an infinite"
+                    " period. Please select shorter context for your rule."
+                )
+            )
+        if self.context == RuleContext.MONTH and self.subject == RuleSubject.MONTH:
+            raise ValidationError(_("Subject must be a shorter timespan than context."))
+        if self.frequency_modifier and self.frequency_ordinal:
+            raise ValidationError(
+                _(
+                    "You cannot add a rule with both even/odd and another frequency"
+                    " at the same time."
+                )
+            )
+        if self.start and self.start < 0:
+            raise ValidationError(
+                _("Rule must start counting from a positive integer.")
+            )
+        if self.start == 0 and not (
+            self.subject == RuleSubject.WEEK and self.context == RuleContext.YEAR
+        ):
+            raise ValidationError(
+                _(
+                    "Rule can only start from zero if starting from zeroth ISO week"
+                    " of the year. All other rules start counting from 1."
+                )
+            )
+        if self.start and self.frequency_modifier:
+            raise ValidationError(
+                _(
+                    "Even/odd subjects are not counted starting from a specific time."
+                    " If you wish to have an alternating rule starting from a specific"
+                    " time, please use frequency_ordinal=2 with start=1 or start=2."
+                )
+            )
+        if self.frequency_ordinal and not self.start:
+            self.start = 1
+        return super().clean()
+
     def get_ordinal_for_item(
         self, item: Union[List[datetime.date], datetime.date]
     ) -> Union[None, int]:
@@ -747,30 +813,43 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         if not self.frequency_modifier and not self.frequency_ordinal:
             if self.start is None:
                 return context_set
-
-            # TODO: When the context is YEAR and the subject is WEEK we should probably
-            #       use the iso week number here
             try:
-                return [context_set[self.start if self.start < 0 else self.start - 1]]
+                if (
+                    self.subject == RuleSubject.WEEK
+                    and self.context == RuleContext.YEAR
+                    and context_set[0][6].day < 4
+                ):
+                    # iso week 1 is the week with Thu. If the first week doesn't
+                    # contain Thu, count starts from zeroth week.
+                    return [context_set[self.start]]
+                return [context_set[self.start - 1]]
             except IndexError:
                 return []
 
         if self.frequency_ordinal:
             if self.start is None:
-                # TODO: Should we default to start=1?
+                # Start should be set to 1 as default. If rule was created by
+                # unorthodox means and start is empty, just do nothing
                 return context_set
-
-            # TODO: When the context is YEAR and the subject is WEEK we should probably
-            #       use the iso week number here
+            if self.context == RuleContext.PERIOD and not self.group.period.start_date:
+                # Again, this rule doesn't do anything, but better let it slip thru.
+                return context_set
             try:
-                return context_set[
-                    self.start
-                    if self.start < 0
-                    else self.start - 1 :: self.frequency_ordinal
-                ]
+                if (
+                    self.subject == RuleSubject.WEEK
+                    and self.context == RuleContext.YEAR
+                    and context_set[0][6].day < 4
+                ):
+                    # iso week 1 is the week with Thu. If the first week doesn't
+                    # contain Thu, count starts from zeroth week.
+                    return context_set[self.start :: self.frequency_ordinal]
+                return context_set[self.start - 1 :: self.frequency_ordinal]
             except IndexError:
                 return []
         elif self.frequency_modifier:
+            if self.context == RuleContext.PERIOD and not self.group.period.start_date:
+                # Again, this rule doesn't do anything, but better let it slip thru.
+                return context_set
             result = []
             for item in context_set:
                 num = self.get_ordinal_for_item(item)
@@ -778,20 +857,20 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     result.append(item)
                 if self.frequency_modifier == FrequencyModifier.ODD and num % 2 == 1:
                     result.append(item)
-
             return result
 
     def get_context_sets(
         self, max_start_date: datetime.date, min_end_date: datetime.date
     ) -> List:
         """Get context sets defined by the Rules context and subject"""
-        # if period is bounded, start and end dates are already bounded by period
-        period_start_date = self.group.period.start_date
 
         if self.context == RuleContext.PERIOD:
+            # if period is bounded, start and end dates are already bounded by period
+            period_start_date = self.group.period.start_date
             if not period_start_date:
-                raise Exception("Period rule not applicable to period without start.")
-
+                # Just return the queried set. Frequency modifiers won't do anything
+                # in this case, as we cannot count from the start.
+                period_start_date = max_start_date
             if self.subject == RuleSubject.DAY:
                 return [expand_range(max_start_date, min_end_date)]
 
@@ -891,7 +970,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             first_day = datetime.date(
                 year=max_start_date.year, month=max_start_date.month, day=1
             )
-            last_day_of_month = first_day + relativedelta(day=31)
+            first_day_weekday, month_length = monthrange(
+                first_day.year, first_day.month
+            )
+            last_day_of_month = first_day + relativedelta(day=month_length)
 
             result = []
             while last_day_of_month <= min_end_date + relativedelta(day=31):
@@ -918,7 +1000,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     result.append(dates)
 
                 first_day += relativedelta(months=1)
-                last_day_of_month = first_day + relativedelta(day=31)
+                first_day_weekday, month_length = monthrange(
+                    first_day.year, first_day.month
+                )
+                last_day_of_month = first_day + relativedelta(day=month_length)
             return result
 
     def apply_to_date_range(

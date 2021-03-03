@@ -505,6 +505,7 @@ class KirjastotImporter(Importer):
 
         for schedule in schedules:
             time_elements = []
+            override = True if schedule.get("period") in override_periods else False
 
             if schedule.get("closed") is True:
                 time_elements.append(
@@ -513,9 +514,7 @@ class KirjastotImporter(Importer):
                         end_time=None,
                         end_time_on_next_day=False,
                         resource_state=State.CLOSED,
-                        override=True
-                        if schedule.get("period") in override_periods
-                        else False,
+                        override=override,
                         full_day=True,
                     )
                 )
@@ -544,9 +543,7 @@ class KirjastotImporter(Importer):
                             end_time=end_time,
                             end_time_on_next_day=end_time_on_next_day,
                             resource_state=KIRKANTA_STATUS_MAP[schedule_time["status"]],
-                            override=True
-                            if schedule.get("period") in override_periods
-                            else False,
+                            override=override,
                             full_day=False,
                         )
                     )
@@ -555,13 +552,16 @@ class KirjastotImporter(Importer):
             if not isinstance(schedule_date, date):
                 schedule_date = parse(schedule.get("date")).date()
 
-            time_elements = combine_element_time_spans(time_elements)
+            time_elements = combine_element_time_spans(time_elements, override=override)
 
             time_elements.sort(key=self._get_times_for_sort)
             opening_hours[schedule_date].sort(key=self._get_times_for_sort)
 
             if not time_elements == opening_hours[schedule_date]:
-                raise AssertionError()
+                raise AssertionError(
+                    f"Library data import failed for date {schedule_date}: "
+                    + f"{opening_hours[schedule_date]} vs. {time_elements}"
+                )
 
     @db.transaction.atomic
     def import_openings(self):

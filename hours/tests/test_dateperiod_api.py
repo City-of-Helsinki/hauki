@@ -483,7 +483,7 @@ def test_update_date_period_add_one_time_span(
 
 @pytest.mark.django_db
 def test_create_time_span_no_group(admin_client):
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "full_day": True,
@@ -517,7 +517,7 @@ def test_create_time_span_with_group(
 
     time_span_group = time_span_group_factory(period=date_period)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "group": time_span_group.id,

@@ -25,7 +25,7 @@ def test_create_time_span_direct(
 
     time_span_group = time_span_group_factory(period=date_period)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "group": time_span_group.id,
@@ -206,7 +206,7 @@ def test_create_time_span_same_day_end_time(
 
     time_span_group = time_span_group_factory(period=date_period)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "group": time_span_group.id,

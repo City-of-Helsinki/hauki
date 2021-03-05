@@ -2277,7 +2277,7 @@ def test_update_rule_authenticated_has_org_permission(
 #
 @pytest.mark.django_db
 def test_create_time_span_anonymous(api_client):
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {"name": "Time span name"}
 
@@ -2301,7 +2301,7 @@ def test_create_time_span_authenticated_no_org_in_resource(
 
     api_client.force_authenticate(user=user)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "name": "Time span name",
@@ -2342,7 +2342,7 @@ def test_create_time_span_authenticated_no_org_permission(
 
     api_client.force_authenticate(user=user)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "name": "Time span name",
@@ -2384,7 +2384,7 @@ def test_create_time_span_authenticated_has_org_permission(
     organization.regular_users.add(user)
     api_client.force_authenticate(user=user)
 
-    url = reverse("time_spans-list")
+    url = reverse("time_span-list")
 
     data = {
         "name": "Time span name",
@@ -2414,7 +2414,7 @@ def test_update_time_span_anonymous(
     time_span_group = time_span_group_factory(period=date_period)
     time_span = time_span_factory(name="Time span name", group=time_span_group)
 
-    url = reverse("time_spans-detail", kwargs={"pk": time_span.id})
+    url = reverse("time_span-detail", kwargs={"pk": time_span.id})
 
     data = {
         "name": "New name",
@@ -2456,7 +2456,7 @@ def test_update_time_span_authenticated_no_org_permission(
 
     api_client.force_authenticate(user=user)
 
-    url = reverse("time_spans-detail", kwargs={"pk": time_span.id})
+    url = reverse("time_span-detail", kwargs={"pk": time_span.id})
 
     data = {
         "name": "New name",
@@ -2499,7 +2499,7 @@ def test_update_time_span_authenticated_has_org_permission(
     organization.regular_users.add(user)
     api_client.force_authenticate(user=user)
 
-    url = reverse("time_spans-detail", kwargs={"pk": time_span.id})
+    url = reverse("time_span-detail", kwargs={"pk": time_span.id})
 
     data = {
         "name": "New name",

@@ -1494,7 +1494,9 @@ def test_list_date_periods_public(
 
     url = reverse("date_period-list")
 
-    response = api_client.get(url, content_type="application/json")
+    response = api_client.get(
+        url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
+    )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
@@ -1529,7 +1531,9 @@ def test_list_date_periods_one_non_public_unauthenticated(
 
     url = reverse("date_period-list")
 
-    response = api_client.get(url, content_type="application/json")
+    response = api_client.get(
+        url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
+    )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
@@ -1571,7 +1575,9 @@ def test_list_date_periods_one_non_public_authenticated_user_not_in_org(
 
     url = reverse("date_period-list")
 
-    response = api_client.get(url, content_type="application/json")
+    response = api_client.get(
+        url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
+    )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
@@ -1614,7 +1620,9 @@ def test_list_date_periods_one_non_public_authenticated_user_in_org(
 
     url = reverse("date_period-list")
 
-    response = api_client.get(url, content_type="application/json")
+    response = api_client.get(
+        url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
+    )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data

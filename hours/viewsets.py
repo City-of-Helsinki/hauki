@@ -175,24 +175,26 @@ def get_start_and_end_from_params(request) -> Tuple[datetime.date, datetime.date
     if not request.query_params.get("start_date") or not request.query_params.get(
         "end_date"
     ):
-        raise APIException("start_date and end_date GET parameters are required")
+        raise ValidationError(
+            detail=_("start_date and end_date GET parameters are required")
+        )
 
     try:
         start_date = parse_maybe_relative_date_string(
             request.query_params.get("start_date", "")
         )
     except ValueError:
-        raise APIException("Invalid start_date")
+        raise ValidationError(detail=_("Invalid start_date"))
 
     try:
         end_date = parse_maybe_relative_date_string(
             request.query_params.get("end_date", ""), end_date=True
         )
     except ValueError:
-        raise APIException("Invalid end_date")
+        raise ValidationError(detail=_("Invalid end_date"))
 
     if start_date > end_date:
-        raise APIException("start_date must be before end_date")
+        raise ValidationError(detail=_("start_date must be before end_date"))
 
     return start_date, end_date
 
@@ -516,7 +518,7 @@ class ResourceViewSet(
                 description="Filter by start date greater than given date",
             ),
             OpenApiParameter(
-                "start_date_gte",
+                "start_date_lte",
                 OpenApiTypes.DATE,
                 OpenApiParameter.QUERY,
                 description="Filter by start date less than given date (or null",
@@ -549,6 +551,25 @@ class DatePeriodViewSet(
         queryset = filter_queryset_by_permission(self.request.user, queryset)
 
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        if (
+            not request.query_params.get("resource")
+            and not request.query_params.get("start_date")
+            and not request.query_params.get("start_date_lte")
+            and not request.query_params.get("start_date_gte")
+            and not request.query_params.get("end_date")
+            and not request.query_params.get("end_date")
+            and not request.query_params.get("end_date_lte")
+            and not request.query_params.get("end_date_gte")
+        ):
+            raise ValidationError(
+                detail=_(
+                    "resource, start_date or end_date GET parameter is required to"
+                    "list date periods"
+                )
+            )
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -583,6 +604,15 @@ class RuleViewSet(
 
         return RuleSerializer
 
+    def list(self, request, *args, **kwargs):
+        if not request.query_params.get("resource"):
+            raise ValidationError(
+                detail=_(
+                    "resource GET parameter is required to list rules of resources"
+                )
+            )
+        return super().list(request, *args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List Time Spans"),
@@ -612,6 +642,15 @@ class TimeSpanViewSet(
             return TimeSpanCreateSerializer
 
         return TimeSpanSerializer
+
+    def list(self, request, *args, **kwargs):
+        if not request.query_params.get("resource"):
+            raise ValidationError(
+                detail=_(
+                    "resource GET parameter is required to list time spans of resources"
+                )
+            )
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(

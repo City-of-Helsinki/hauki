@@ -13,7 +13,7 @@ from hours.models import DatePeriod
 def test_list_date_periods_empty(admin_client):
     url = reverse("date_period-list")
 
-    response = admin_client.get(url)
+    response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
@@ -34,7 +34,7 @@ def test_list_date_periods_one_date_period(admin_client, resource, date_period_f
 
     url = reverse("date_period-list")
 
-    response = admin_client.get(url)
+    response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
@@ -63,7 +63,7 @@ def test_list_date_periods_multiple_date_periods(
 
     url = reverse("date_period-list")
 
-    response = admin_client.get(url)
+    response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data

@@ -10,7 +10,7 @@ from django.utils import timezone
 from django_filters import Filter, constants
 from django_filters import rest_framework as filters
 
-from .models import DatePeriod, Resource, TimeSpan
+from .models import DatePeriod, Resource, Rule, TimeSpan
 from .utils import get_resource_pk_filter
 
 
@@ -180,3 +180,9 @@ class TimeSpanFilter(filters.FilterSet):
             return queryset
 
         return queryset.filter(group__period__resource__in=resources)
+
+
+class RuleFilter(TimeSpanFilter):
+    class Meta:
+        model = Rule
+        fields = ["resource"]

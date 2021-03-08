@@ -1,3 +1,4 @@
+from dateutil.parser import parse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema
@@ -30,8 +31,8 @@ def invalidate_hauki_auth_signature(request):
 
     SignedAuthEntry.objects.create(
         signature=params["hsa_signature"],
-        created_at=params["hsa_created_at"],
-        valid_until=params["hsa_valid_until"],
+        created_at=parse(params["hsa_created_at"]),
+        valid_until=parse(params["hsa_valid_until"]),
         invalidated_at=timezone.now(),
     )
 

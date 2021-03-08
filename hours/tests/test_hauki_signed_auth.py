@@ -75,6 +75,37 @@ def test_get_auth_required_header_invalid_created_at(
 
 
 @pytest.mark.django_db
+def test_get_auth_required_header_timezone_missing_created_at(
+    api_client, data_source, signed_auth_key_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat()
+        + "-04:00",
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+    assert str(response.data["detail"]) == "Invalid hsa_created_at"
+
+
+@pytest.mark.django_db
 def test_get_auth_required_header_invalid_valid_until(
     api_client, data_source, signed_auth_key_factory
 ):
@@ -100,6 +131,66 @@ def test_get_auth_required_header_invalid_valid_until(
 
     assert response.status_code == 403
     assert str(response.data["detail"]) == "Invalid hsa_valid_until"
+
+
+@pytest.mark.django_db
+def test_get_auth_required_header_timezone_missing_valid_until(
+    api_client, data_source, signed_auth_key_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat() + "Z",
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+    assert str(response.data["detail"]) == "Invalid hsa_valid_until"
+
+
+@pytest.mark.django_db
+def test_get_auth_required_header_timezone_missing_created_at_and_valid_until(
+    api_client, data_source, signed_auth_key_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    url = reverse("auth_required_test-list")
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+
+    source_string = join_params(data)
+    signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+    assert str(response.data["detail"]) == "Invalid hsa_created_at"
 
 
 @pytest.mark.django_db
@@ -500,6 +591,35 @@ def test_invalidate_signature_invalid_params(
     response = api_client.post(invalidate_url, HTTP_AUTHORIZATION=authz_string)
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_invalidate_signature_missing_timezone(
+    api_client, data_source, signed_auth_key_factory
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    now = datetime.datetime.utcnow()
+
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    # Invalidate the signature
+    invalidate_url = reverse("invalidate_hauki_auth_signature")
+    response = api_client.post(invalidate_url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+    assert str(response.data["detail"]) == "Invalid hsa_created_at"
 
 
 @pytest.mark.django_db

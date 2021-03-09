@@ -605,33 +605,6 @@ def test_rule_fail_both_ordinal_and_modifier(
 
 
 @pytest.mark.django_db
-def test_rule_fail_negative_start(
-    resource,
-    date_period_factory,
-    time_span_group_factory,
-    rule_factory,
-):
-    date_period = date_period_factory(
-        resource=resource,
-        resource_state=State.OPEN,
-        start_date=datetime.date(year=2020, month=1, day=1),
-        end_date=datetime.date(year=2020, month=12, day=31),
-    )
-
-    time_span_group = time_span_group_factory(period=date_period)
-
-    # rule cannot start from a negative index
-    with pytest.raises(ValidationError):
-        rule_factory(
-            group=time_span_group,
-            context=RuleContext.PERIOD,
-            subject=RuleSubject.THURSDAY,
-            frequency_ordinal=3,
-            start=-1,
-        )
-
-
-@pytest.mark.django_db
 def test_rule_fail_both_start_and_modifier(
     resource,
     date_period_factory,
@@ -779,6 +752,35 @@ def test_rule_filter_dates1_4(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates1_5(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.THURSDAY,
+        start=-1,
+        frequency_ordinal=3,
+    )
+
+    start_date = datetime.date(year=2020, month=1, day=1)
+    end_date = datetime.date(year=2020, month=12, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=12, day=31),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates2(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -809,6 +811,96 @@ def test_rule_filter_dates2(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates2_1(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.DAY,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=9, day=1)
+    end_date = datetime.date(year=2020, month=11, day=30)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=9, day=30),
+        datetime.date(year=2020, month=10, day=31),
+        datetime.date(year=2020, month=11, day=30),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates2_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.DAY,
+        start=1,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    every_two_days_in_october = {
+        datetime.date(year=2020, month=10, day=d) for d in range(1, 32, 2)
+    }  # noqa
+
+    assert rule.apply_to_date_range(start_date, end_date) == every_two_days_in_october
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates2_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.DAY,
+        start=-1,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=31),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates3(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -835,6 +927,95 @@ def test_rule_filter_dates3(
         datetime.date(year=2020, month=9, day=2),
         datetime.date(year=2020, month=10, day=7),
         datetime.date(year=2020, month=11, day=4),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates3_1(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.WEDNESDAY,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=9, day=1)
+    end_date = datetime.date(year=2020, month=11, day=30)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=9, day=30),
+        datetime.date(year=2020, month=10, day=28),
+        datetime.date(year=2020, month=11, day=25),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates3_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.WEDNESDAY,
+        start=1,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=7),
+        datetime.date(year=2020, month=10, day=21),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates3_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.WEDNESDAY,
+        start=-1,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=28),
     }
 
 
@@ -1101,6 +1282,167 @@ def test_rule_filter_dates6_2(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates6_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.DAY,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=12, day=1)
+    end_date = datetime.date(year=2020, month=12, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=12, day=31),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates6_4(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.WEEK,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=12, day=1)
+    end_date = datetime.date(year=2020, month=12, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=12, day=28),
+        datetime.date(year=2020, month=12, day=29),
+        datetime.date(year=2020, month=12, day=30),
+        datetime.date(year=2020, month=12, day=31),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates6_5(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.MONTH,
+        start=-2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=12, day=31)
+
+    days_in_november = {datetime.date(year=2020, month=11, day=d) for d in range(1, 31)}
+
+    assert rule.apply_to_date_range(start_date, end_date) == days_in_november
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates6_6(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=9, day=1),
+        end_date=datetime.date(year=2020, month=11, day=30),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.WEEK,
+        start=8,
+        frequency_ordinal=4,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=11, day=30)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=19),
+        datetime.date(year=2020, month=10, day=20),
+        datetime.date(year=2020, month=10, day=21),
+        datetime.date(year=2020, month=10, day=22),
+        datetime.date(year=2020, month=10, day=23),
+        datetime.date(year=2020, month=10, day=24),
+        datetime.date(year=2020, month=10, day=25),
+        datetime.date(year=2020, month=11, day=16),
+        datetime.date(year=2020, month=11, day=17),
+        datetime.date(year=2020, month=11, day=18),
+        datetime.date(year=2020, month=11, day=19),
+        datetime.date(year=2020, month=11, day=20),
+        datetime.date(year=2020, month=11, day=21),
+        datetime.date(year=2020, month=11, day=22),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates6_7(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=1, day=1),
+        end_date=datetime.date(year=2020, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.PERIOD,
+        subject=RuleSubject.MONTH,
+        start=3,
+        frequency_ordinal=3,
+    )
+
+    start_date = datetime.date(year=2020, month=2, day=15)
+    end_date = datetime.date(year=2020, month=7, day=15)
+
+    days_in_march = {datetime.date(year=2020, month=3, day=d) for d in range(1, 32)}
+    days_in_june = {datetime.date(year=2020, month=6, day=d) for d in range(1, 31)}
+
+    assert (
+        rule.apply_to_date_range(start_date, end_date) == days_in_march | days_in_june
+    )
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates7(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -1182,6 +1524,90 @@ def test_rule_filter_dates7_1(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates7_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=9, day=1),
+        end_date=datetime.date(year=2020, month=11, day=30),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.WEEK,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=9, day=1)
+    end_date = datetime.date(year=2020, month=11, day=30)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=9, day=28),
+        datetime.date(year=2020, month=9, day=29),
+        datetime.date(year=2020, month=9, day=30),
+        datetime.date(year=2020, month=10, day=1),
+        datetime.date(year=2020, month=10, day=2),
+        datetime.date(year=2020, month=10, day=3),
+        datetime.date(year=2020, month=10, day=4),
+        datetime.date(year=2020, month=10, day=26),
+        datetime.date(year=2020, month=10, day=27),
+        datetime.date(year=2020, month=10, day=28),
+        datetime.date(year=2020, month=10, day=29),
+        datetime.date(year=2020, month=10, day=30),
+        datetime.date(year=2020, month=10, day=31),
+        datetime.date(year=2020, month=11, day=1),
+        datetime.date(year=2020, month=11, day=30),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates7_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2020, month=9, day=1),
+        end_date=datetime.date(year=2020, month=11, day=30),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.MONTH,
+        subject=RuleSubject.WEEK,
+        start=2,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=10, day=1)
+    end_date = datetime.date(year=2020, month=10, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=10, day=5),
+        datetime.date(year=2020, month=10, day=6),
+        datetime.date(year=2020, month=10, day=7),
+        datetime.date(year=2020, month=10, day=8),
+        datetime.date(year=2020, month=10, day=9),
+        datetime.date(year=2020, month=10, day=10),
+        datetime.date(year=2020, month=10, day=11),
+        datetime.date(year=2020, month=10, day=19),
+        datetime.date(year=2020, month=10, day=20),
+        datetime.date(year=2020, month=10, day=21),
+        datetime.date(year=2020, month=10, day=22),
+        datetime.date(year=2020, month=10, day=23),
+        datetime.date(year=2020, month=10, day=24),
+        datetime.date(year=2020, month=10, day=25),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates8(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -1240,6 +1666,67 @@ def test_rule_filter_dates8_1(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates8_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.DAY,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2019, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2019, month=12, day=31),
+        datetime.date(year=2020, month=12, day=31),
+        datetime.date(year=2021, month=12, day=31),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates8_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.DAY,
+        start=3,
+        frequency_ordinal=10,
+    )
+
+    start_date = datetime.date(year=2020, month=1, day=1)
+    end_date = datetime.date(year=2020, month=1, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=1, day=3),
+        datetime.date(year=2020, month=1, day=13),
+        datetime.date(year=2020, month=1, day=23),
+    }
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates9(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -1286,7 +1773,7 @@ def test_rule_filter_dates9_1(
 
     time_span_group = time_span_group_factory(period=date_period)
 
-    # we should get 1st ISO week, not 0th/53rd
+    # we should get 1st ISO week, not 0th of 2021/53rd of 2020
     rule1 = rule_factory(
         group=time_span_group,
         context=RuleContext.YEAR,
@@ -1305,6 +1792,118 @@ def test_rule_filter_dates9_1(
         datetime.date(year=2021, month=1, day=8),
         datetime.date(year=2021, month=1, day=9),
         datetime.date(year=2021, month=1, day=10),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates9_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # we should get 52nd ISO week of 2021/0th of 2022
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2021, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2021, month=12, day=27),
+        datetime.date(year=2021, month=12, day=28),
+        datetime.date(year=2021, month=12, day=29),
+        datetime.date(year=2021, month=12, day=30),
+        datetime.date(year=2021, month=12, day=31),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates9_3(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    # we should get 0th ISO week of 2021/53rd of 2020
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        start=0,
+    )
+
+    start_date = datetime.date(year=2021, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2021, month=1, day=1),
+        datetime.date(year=2021, month=1, day=2),
+        datetime.date(year=2021, month=1, day=3),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates9_4(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule1 = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        start=3,
+        frequency_ordinal=3,
+    )
+
+    start_date = datetime.date(year=2020, month=1, day=1)
+    end_date = datetime.date(year=2020, month=2, day=29)
+
+    assert rule1.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=1, day=13),
+        datetime.date(year=2020, month=1, day=14),
+        datetime.date(year=2020, month=1, day=15),
+        datetime.date(year=2020, month=1, day=16),
+        datetime.date(year=2020, month=1, day=17),
+        datetime.date(year=2020, month=1, day=18),
+        datetime.date(year=2020, month=1, day=19),
+        datetime.date(year=2020, month=2, day=3),
+        datetime.date(year=2020, month=2, day=4),
+        datetime.date(year=2020, month=2, day=5),
+        datetime.date(year=2020, month=2, day=6),
+        datetime.date(year=2020, month=2, day=7),
+        datetime.date(year=2020, month=2, day=8),
+        datetime.date(year=2020, month=2, day=9),
+        datetime.date(year=2020, month=2, day=24),
+        datetime.date(year=2020, month=2, day=25),
+        datetime.date(year=2020, month=2, day=26),
+        datetime.date(year=2020, month=2, day=27),
+        datetime.date(year=2020, month=2, day=28),
+        datetime.date(year=2020, month=2, day=29),
     }
 
 
@@ -1546,6 +2145,66 @@ def test_rule_filter_dates11_4(
 
 
 @pytest.mark.django_db
+def test_rule_filter_dates11_5(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.MONTH,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2020, month=1, day=11)
+    end_date = datetime.date(year=2020, month=12, day=31)
+
+    days_in_december = {datetime.date(year=2020, month=12, day=d) for d in range(1, 32)}
+
+    assert rule.apply_to_date_range(start_date, end_date) == days_in_december
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates11_6(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.MONTH,
+        start=3,
+        frequency_ordinal=3,
+    )
+
+    start_date = datetime.date(year=2020, month=2, day=15)
+    end_date = datetime.date(year=2020, month=7, day=15)
+
+    days_in_march = {datetime.date(year=2020, month=3, day=d) for d in range(1, 32)}
+    days_in_june = {datetime.date(year=2020, month=6, day=d) for d in range(1, 31)}
+
+    assert (
+        rule.apply_to_date_range(start_date, end_date) == days_in_march | days_in_june
+    )
+
+
+@pytest.mark.django_db
 def test_rule_filter_dates12(
     resource, date_period_factory, time_span_group_factory, rule_factory
 ):
@@ -1572,6 +2231,68 @@ def test_rule_filter_dates12(
         datetime.date(year=2019, month=1, day=11),
         datetime.date(year=2020, month=1, day=10),
         datetime.date(year=2021, month=1, day=8),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates12_1(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.FRIDAY,
+        start=2,
+        frequency_ordinal=2,
+    )
+
+    start_date = datetime.date(year=2020, month=1, day=1)
+    end_date = datetime.date(year=2020, month=2, day=29)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2020, month=1, day=10),
+        datetime.date(year=2020, month=1, day=24),
+        datetime.date(year=2020, month=2, day=7),
+        datetime.date(year=2020, month=2, day=21),
+    }
+
+
+@pytest.mark.django_db
+def test_rule_filter_dates12_2(
+    resource, date_period_factory, time_span_group_factory, rule_factory
+):
+    date_period = date_period_factory(
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2019, month=1, day=1),
+        end_date=datetime.date(year=2021, month=12, day=31),
+    )
+
+    time_span_group = time_span_group_factory(period=date_period)
+
+    rule = rule_factory(
+        group=time_span_group,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.FRIDAY,
+        start=-1,
+    )
+
+    start_date = datetime.date(year=2019, month=1, day=1)
+    end_date = datetime.date(year=2021, month=12, day=31)
+
+    assert rule.apply_to_date_range(start_date, end_date) == {
+        datetime.date(year=2019, month=12, day=27),
+        datetime.date(year=2020, month=12, day=25),
+        datetime.date(year=2021, month=12, day=31),
     }
 
 

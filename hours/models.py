@@ -765,17 +765,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     " at the same time."
                 )
             )
-        if self.start and self.start < 0:
-            raise ValidationError(
-                _("Rule must start counting from a positive integer.")
-            )
         if self.start == 0 and not (
             self.subject == RuleSubject.WEEK and self.context == RuleContext.YEAR
         ):
             raise ValidationError(
                 _(
                     "Rule can only start from zero if starting from zeroth ISO week"
-                    " of the year. All other rules start counting from 1."
+                    " of the year. All other rules start counting from 1. Use negative"
+                    " numbers to count from the end of the context."
                 )
             )
         if self.start and self.frequency_modifier:
@@ -822,7 +819,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     # iso week 1 is the week with Thu. If the first week doesn't
                     # contain Thu, count starts from zeroth week.
                     return [context_set[self.start]]
-                return [context_set[self.start - 1]]
+                return [context_set[self.start if self.start < 0 else self.start - 1]]
             except IndexError:
                 return []
 
@@ -843,7 +840,11 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     # iso week 1 is the week with Thu. If the first week doesn't
                     # contain Thu, count starts from zeroth week.
                     return context_set[self.start :: self.frequency_ordinal]
-                return context_set[self.start - 1 :: self.frequency_ordinal]
+                return context_set[
+                    self.start
+                    if self.start < 0
+                    else self.start - 1 :: self.frequency_ordinal
+                ]
             except IndexError:
                 return []
         elif self.frequency_modifier:

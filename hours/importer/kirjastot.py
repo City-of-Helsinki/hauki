@@ -586,11 +586,13 @@ class KirjastotImporter(Importer):
                 origins__data_source=self.data_source, resource__in=libraries
             )
             .filter(Q(end_date=None) | Q(end_date__gte=import_start_date))
-            .prefetch_related("time_span_groups__time_spans")
+            .distinct()
+            .prefetch_related("origins", "time_span_groups__time_spans")
         )
 
         syncher = ModelSyncher(
             queryset,
+            data_source=self.data_source,
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )

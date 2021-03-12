@@ -55,6 +55,7 @@ class HaukiImporter(Importer):
         )
         syncher = ModelSyncher(
             queryset,
+            data_source=self.data_source,
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )

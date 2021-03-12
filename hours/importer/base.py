@@ -204,6 +204,8 @@ class Importer(object):
             obj = klass()
             obj._created = True
             # save the new object in the cache so related objects will find it
+            # concurrent runs will both create their own objects during the transaction.
+            # This is why the importer is not thread-safe.
             setattr(
                 self,
                 "%s_cache" % klass_str,
@@ -228,6 +230,8 @@ class Importer(object):
             if created:
                 self.logger.debug("Created missing data source %s" % data_source)
         object_origins = set(obj.origins.all())
+        # TODO: get_or_create makes the importer not thread-safe,
+        # one importer will create an object and another will re-use it
         data_origins = set(
             [
                 klass.origins.field.model.objects.get_or_create(
@@ -240,6 +244,8 @@ class Importer(object):
         )
         # Any existing origins referring to other objects must be updated
         for origin in data_origins:
+            # concurrent runs will move the origin to point to another object
+            # This is why the importer is not thread-safe.
             setattr(origin, klass.origins.field.name, obj)
         for origin in data_origins.difference(object_origins):
             origin.save()

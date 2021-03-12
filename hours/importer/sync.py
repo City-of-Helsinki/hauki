@@ -8,11 +8,13 @@ class ModelSyncher(object):
     def __init__(
         self,
         queryset,
+        data_source=None,
         delete_func=None,
         check_deleted_func=None,
         allow_deleting_func=None,
     ):
         d = {}
+        self.data_source = data_source
         self.delete_func = delete_func
         self.check_deleted_func = check_deleted_func
         self.allow_deleting_func = allow_deleting_func
@@ -50,6 +52,30 @@ class ModelSyncher(object):
                 # objects.
                 obj._found = False
                 obj._changed = False
+                klass = type(obj)
+                if getattr(obj, "_created", False) and hasattr(klass, "origins"):
+                    # double-check that created object origins are still in db at
+                    # the end of import!
+                    origin_field = klass.origins.field
+                    origin_query = {
+                        "data_source": self.data_source,
+                        origin_field.name: obj,
+                    }
+                    try:
+                        origin_field.model.objects.get(**origin_query)
+                    except origin_field.model.DoesNotExist:
+                        raise AssertionError(
+                            f"Somebody has changed the origin of {obj} to"
+                            " point to another object while it was being"
+                            " created. This most likely means multiple"
+                            " imports are being run at the same time. Please"
+                            " don't do that. It may result in imported"
+                            " data being duplicated. Aborting import and"
+                            " rolling back transaction."
+                        )
+                    except origin_field.model.MultipleObjectsReturned:
+                        pass
+
                 continue
             if self.check_deleted_func is not None and self.check_deleted_func(obj):
                 continue

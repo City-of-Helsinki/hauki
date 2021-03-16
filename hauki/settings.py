@@ -162,6 +162,7 @@ INSTALLED_APPS = [
     "django_filters",
     "django_orghierarchy",
     "timezone_field",
+    "mptt",
     # Apps within this repository
     "users",
     "hours",

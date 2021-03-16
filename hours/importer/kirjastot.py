@@ -306,22 +306,28 @@ class KirjastotImporter(Importer):
                     )
                     for opening_time, opening_times in grouped_times:
                         full_day = False
-                        if not opening_time[0] and not opening_time[1]:
+                        end_time_on_next_day = False
+                        start_time = (
+                            datetime.strptime(opening_time[0], "%H:%M").time()
+                            if opening_time[0]
+                            else None
+                        )
+                        end_time = (
+                            datetime.strptime(opening_time[1], "%H:%M").time()
+                            if opening_time[1]
+                            else None
+                        )
+                        if not start_time and not end_time:
                             full_day = True
+                        if start_time and end_time and end_time <= start_time:
+                            end_time_on_next_day = True
 
                         time_spans.append(
                             {
                                 "group": None,
-                                "start_time": datetime.strptime(
-                                    opening_time[0], "%H:%M"
-                                ).time()
-                                if opening_time[0]
-                                else None,
-                                "end_time": datetime.strptime(
-                                    opening_time[1], "%H:%M"
-                                ).time()
-                                if opening_time[1]
-                                else None,
+                                "start_time": start_time,
+                                "end_time": end_time,
+                                "end_time_on_next_day": end_time_on_next_day,
                                 "weekdays": [
                                     Weekday.from_iso_weekday(i["weekday"])
                                     for i in opening_times

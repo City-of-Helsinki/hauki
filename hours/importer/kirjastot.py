@@ -397,17 +397,32 @@ class KirjastotImporter(Importer):
 
             time_spans = []
             for opening_time in day["times"]:
+                full_day = False
+                end_time_on_next_day = False
+                start_time = (
+                    datetime.strptime(opening_time["from"], "%H:%M").time()
+                    if opening_time["from"]
+                    else None
+                )
+                end_time = (
+                    datetime.strptime(opening_time["to"], "%H:%M").time()
+                    if opening_time["to"]
+                    else None
+                )
+                if not start_time and not end_time:
+                    full_day = True
+                if start_time and end_time and end_time <= start_time:
+                    end_time_on_next_day = True
+
                 time_spans.append(
                     {
                         "group": None,
-                        "start_time": datetime.strptime(
-                            opening_time["from"], "%H:%M"
-                        ).time(),
-                        "end_time": datetime.strptime(
-                            opening_time["to"], "%H:%M"
-                        ).time(),
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "end_time_on_next_day": end_time_on_next_day,
                         "resource_state": KIRKANTA_STATUS_MAP[opening_time["status"]],
                         "name": {"fi": day.get("info")},
+                        "full_day": full_day,
                     }
                 )
             sub_period["time_span_groups"] = [

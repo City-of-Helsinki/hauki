@@ -1035,7 +1035,10 @@ class TPRekImporter(Importer):
                     or "tilaukse" in period["string"]
                     or "vuokrau" in period["string"]
                     or "ennalta" in period["string"]
-                    or ("varau" in period["string"] and "ilman" not in period["string"])
+                    or "ennakkoon" in period["string"]
+                    or "varauksella" in period["string"]
+                    or "varauksesta" in period["string"]
+                    or "varausten" in period["string"]
                 ):
                     for time_span in time_spans:
                         if time_span["resource_state"] == State.OPEN:

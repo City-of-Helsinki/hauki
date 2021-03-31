@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from drf_writable_nested import WritableNestedModelSerializer
@@ -6,6 +9,7 @@ from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import SkipField, get_error_detail
 from timezone_field.rest_framework import TimeZoneSerializerField
 
 from users.serializers import UserSerializer
@@ -68,6 +72,7 @@ class TranslationSerializerMixin:
                         translation_field_name
                     )
 
+        errors = OrderedDict()
         for field_name in translation_options.fields.keys():
             if field_name not in data.keys():
                 continue
@@ -76,18 +81,38 @@ class TranslationSerializerMixin:
                 continue
 
             field_values = data.get(field_name, {})
-
+            validate_method = getattr(self, "validate_" + field_name, None)
+            field = self.fields[field_name]
             for lang in mt_settings.AVAILABLE_LANGUAGES:
+                try:
+                    primitive_value = field_values[lang]
+                except KeyError:
+                    # allow omitting some languages to patch
+                    continue
+                try:
+                    validated_value = field.run_validation(primitive_value)
+                    if validate_method is not None:
+                        validated_value = validate_method(validated_value)
+                except ValidationError as exc:
+                    errors[field_name] = exc.detail
+                except DjangoValidationError as exc:
+                    errors[field_name] = get_error_detail(exc)
+                except SkipField:
+                    pass
+                else:
+                    # set_value(translated_values, field.source_attrs, validated_value)
+                    translated_values[f"{field_name}_{lang}"] = validated_value
                 if lang not in field_values:
                     continue
 
-                translated_values[f"{field_name}_{lang}"] = field_values[lang]
                 # Set the fields also in the initial_data, because the serializer
                 # save uses the initial data and not the validated_data when saving
                 data[f"{field_name}_{lang}"] = field_values[lang]
 
             del data[field_name]
 
+        if errors:
+            raise ValidationError(errors)
         other_values = super().to_internal_value(data)
         other_values.update(**translated_values)
 

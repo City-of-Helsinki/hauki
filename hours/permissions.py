@@ -156,6 +156,13 @@ class IsMemberOrAdminOfOrganization(BasePermission):
         else:
             resource = deep_getattr(obj, path_to_resource.rstrip("_"))
 
+        # Data from some data sources is read-only
+        if any(
+            not origin.data_source.user_editable_resources
+            for origin in resource.origins.all()
+        ):
+            return False
+
         # A special case for users signed in using the HaukiSignedAuthentication
         if request.auth and isinstance(request.auth, HaukiSignedAuthData):
             resource_ancestors = resource.get_ancestors()

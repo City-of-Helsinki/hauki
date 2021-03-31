@@ -3,7 +3,7 @@ from collections import OrderedDict
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
-from drf_writable_nested import WritableNestedModelSerializer
+from drf_writable_nested import UniqueFieldsMixin, WritableNestedModelSerializer
 from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
@@ -141,13 +141,43 @@ class OrganizationSerializer(serializers.ModelSerializer):
         ]
 
 
-class DataSourceSerializer(TranslationSerializerMixin, serializers.ModelSerializer):
+class DataSourceSerializer(
+    UniqueFieldsMixin, TranslationSerializerMixin, serializers.ModelSerializer
+):
+    name = serializers.CharField(read_only=True)
+
+    def validate(self, attrs):
+        """Validate that the data_source exists and corresponds to the user
+        data source"""
+        result = super().validate(attrs)
+
+        try:
+            self.instance = self.Meta.model.objects.get(id=result["id"])
+        except self.Meta.model.DoesNotExist:
+            raise ValidationError(
+                detail=_(f"Data source {result['id']} does not exist.")
+            )
+
+        user = self.context["request"].user
+        if self.instance not in [origin.data_source for origin in user.origins.all()]:
+            raise ValidationError(
+                detail=_("Cannot add origin_ids for a different data source.")
+            )
+
+        # Data from some data sources is read-only
+        if not (self.instance.user_editable_resources):
+            raise ValidationError(
+                detail=_(f"All data from data source {self.instance.id} is read-only.")
+            )
+
+        return result
+
     class Meta:
         model = DataSource
         fields = ["id", "name"]
 
 
-class ResourceOriginSerializer(serializers.ModelSerializer):
+class ResourceOriginSerializer(WritableNestedModelSerializer):
     data_source = DataSourceSerializer()
 
     class Meta:

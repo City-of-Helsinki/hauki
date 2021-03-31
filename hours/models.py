@@ -238,8 +238,11 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=255)
     description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
-    user_editable = models.BooleanField(
-        default=False, verbose_name=_("Objects may be edited by users")
+    user_editable_organizations = models.BooleanField(
+        default=False, verbose_name=_("Organizations may be edited by users")
+    )
+    user_editable_resources = models.BooleanField(
+        default=True, verbose_name=_("Resources may be edited by users")
     )
 
     class Meta:

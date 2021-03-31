@@ -243,6 +243,174 @@ def test_create_resource_authenticated_has_org(
 
 
 @pytest.mark.django_db
+def test_create_resource_authenticated_non_editable_data_source(
+    organization_factory, data_source, user, user_origin_factory, api_client
+):
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data_source.user_editable_resources = False
+    data_source.save()
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_create_resource_authenticated_editable_data_source(
+    organization_factory, data_source, user, user_origin_factory, api_client
+):
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_create_resource_authenticated_wrong_data_source(
+    organization_factory,
+    data_source,
+    data_source_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    another_data_source = data_source_factory()
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {
+                    "id": another_data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_create_resource_authenticated_unknown_data_source(
+    organization_factory, data_source, user, user_origin_factory, api_client
+):
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {
+                    "id": "unknown_id",
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
 def test_create_resource_authenticated_parent_org(
     organization_factory, data_source, user, api_client
 ):
@@ -486,6 +654,292 @@ def test_update_resource_authenticated_has_org_permission(
     )
 
     assert resource.name == "New name"
+
+
+@pytest.mark.django_db
+def test_update_resource_authenticated_non_editable_data_source(
+    resource,
+    data_source,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data_source.user_editable_resources = False
+    data_source.save()
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_update_resource_data_source_authenticated_non_editable_data_source(
+    resource,
+    data_source,
+    data_source_factory,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    another_data_source = data_source_factory()
+    data_source.user_editable_resources = False
+    data_source.save()
+
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": another_data_source.id,
+                },
+                "origin_id": "2",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_update_resource_authenticated_editable_data_source(
+    resource,
+    data_source,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {"name": "New name"}
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert resource.name == "New name"
+
+
+@pytest.mark.django_db
+def test_update_resource_data_source_authenticated_editable_data_source(
+    resource,
+    data_source,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "2",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert resource.origins.all()[0].origin_id == "2"
+
+
+@pytest.mark.django_db
+def test_update_resource_authenticated_wrong_data_source(
+    resource,
+    data_source,
+    data_source_factory,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    another_data_source = data_source_factory()
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": another_data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_update_resource_authenticated_unknown_data_source(
+    resource,
+    data_source,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": "unknown_id",
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
 
 
 @pytest.mark.django_db

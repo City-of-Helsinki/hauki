@@ -4,6 +4,7 @@ import re
 from collections.abc import Sized
 from itertools import zip_longest
 
+import bleach
 import requests
 from django import db
 from django.core.exceptions import MultipleObjectsReturned
@@ -108,6 +109,8 @@ class Importer(object):
 
     @staticmethod
     def clean_text(text: str, strip_newlines: bool = False) -> str:
+        # remove HTML tags and scripts
+        text = bleach.clean(text)
         # remove non-breaking spaces and separators
         text = text.replace("\xa0", " ").replace("\x1f", "")
         # remove nil bytes

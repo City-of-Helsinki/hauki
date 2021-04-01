@@ -1,3 +1,4 @@
+bleach
 Django
 django-cors-headers
 django-enumfields

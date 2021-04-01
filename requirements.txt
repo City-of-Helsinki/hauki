@@ -6,6 +6,7 @@
 #
 asgiref==3.3.1            # via django
 attrs==20.3.0             # via jsonschema
+bleach==3.3.0             # via -r requirements.in
 cachetools==4.2.1         # via django-helusers
 certifi==2020.12.5        # via requests, sentry-sdk
 chardet==4.0.0            # via requests
@@ -36,7 +37,7 @@ importlib-metadata==3.7.0  # via jsonschema
 inflection==0.5.1         # via drf-spectacular
 jsonschema==3.2.0         # via drf-spectacular
 korean-lunar-calendar==0.2.1  # via holidays
-packaging==20.9           # via deprecation
+packaging==20.9           # via bleach, deprecation
 psycopg2==2.8.6           # via -r requirements.in
 pyasn1==0.4.8             # via python-jose, rsa
 pymeeus==0.4.3            # via convertdate
@@ -50,12 +51,13 @@ requests-cache==0.5.2     # via -r requirements.in
 requests==2.25.1          # via django-helusers, django-orghierarchy, requests-cache
 rsa==4.7.2                # via python-jose
 sentry-sdk==0.20.3        # via -r requirements.in
-six==1.15.0               # via django-modeltranslation, django-simple-history, ecdsa, holidays, jsonschema, python-dateutil, python-jose
+six==1.15.0               # via bleach, django-modeltranslation, django-simple-history, ecdsa, holidays, jsonschema, python-dateutil, python-jose
 sqlparse==0.4.1           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
 typing-extensions==3.7.4.3  # via importlib-metadata
 uritemplate==3.0.1        # via drf-spectacular
 urllib3==1.26.3           # via requests, sentry-sdk
+webencodings==0.5.1       # via bleach
 whitenoise==5.2.0         # via -r requirements.in
 zipp==3.4.0               # via importlib-metadata
 

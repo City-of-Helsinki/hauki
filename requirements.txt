@@ -25,7 +25,7 @@ django-mptt==0.11.0       # via django-orghierarchy
 django-orghierarchy==0.1.29  # via -r requirements.in
 django-simple-history==2.12.0  # via -r requirements.in
 django-timezone-field==4.1.1  # via -r requirements.in
-django==3.1.7             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, django-timezone-field, djangorestframework, drf-spectacular
+django==3.1.8             # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, django-timezone-field, djangorestframework, drf-spectacular
 djangorestframework==3.12.2  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-spectacular
 drf-spectacular==0.13.2   # via -r requirements.in
 drf-writable-nested==0.6.2  # via -r requirements.in

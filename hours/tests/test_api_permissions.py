@@ -325,6 +325,58 @@ def test_create_resource_authenticated_editable_data_source(
 
 
 @pytest.mark.django_db
+def test_create_resource_authenticated_previously_used_id(
+    resource,
+    resource_origin_factory,
+    organization_factory,
+    data_source,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    resource_origin_factory(resource=resource, data_source=data_source, origin_id="1")
+
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    new_resource = Resource.objects.get(pk=response.data["id"])
+
+    assert new_resource.origins.all()[0].origin_id == "1"
+
+
+@pytest.mark.django_db
 def test_create_resource_authenticated_wrong_data_source(
     organization_factory,
     data_source,
@@ -793,6 +845,56 @@ def test_update_resource_authenticated_editable_data_source(
 
 
 @pytest.mark.django_db
+def test_update_resource_with_data_source_authenticated_editable_data_source(
+    resource,
+    data_source,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource, origin_id="1")
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert resource.origins.all()[0].origin_id == "1"
+
+
+@pytest.mark.django_db
 def test_update_resource_data_source_authenticated_editable_data_source(
     resource,
     data_source,
@@ -803,7 +905,7 @@ def test_update_resource_data_source_authenticated_editable_data_source(
     api_client,
 ):
     user_origin_factory(data_source=data_source, user=user)
-    resource_origin_factory(data_source=data_source, resource=resource)
+    resource_origin_factory(data_source=data_source, resource=resource, origin_id="1")
     organization = organization_factory(
         origin_id=12345,
         data_source=data_source,
@@ -839,7 +941,122 @@ def test_update_resource_data_source_authenticated_editable_data_source(
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data
     )
+    assert resource.origins.count() == 1
     assert resource.origins.all()[0].origin_id == "2"
+
+
+@pytest.mark.django_db
+def test_update_resource_change_data_source_authenticated_editable_data_source(
+    resource,
+    data_source,
+    data_source_factory,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    another_data_source = data_source_factory()
+    user_origin_factory(data_source=another_data_source, user=user)
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": another_data_source.id,
+                },
+                "origin_id": "2",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert resource.origins.count() == 1
+    assert resource.origins.all()[0].data_source.id == another_data_source.id
+    assert resource.origins.all()[0].origin_id == "2"
+
+
+@pytest.mark.django_db
+def test_update_resource_add_data_source_authenticated_editable_data_source(
+    resource,
+    data_source,
+    data_source_factory,
+    resource_origin_factory,
+    organization_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    user_origin_factory(data_source=data_source, user=user)
+    resource_origin_factory(data_source=data_source, resource=resource, origin_id="1")
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+
+    organization.regular_users.add(user)
+
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    another_data_source = data_source_factory()
+    user_origin_factory(data_source=another_data_source, user=user)
+    data = {
+        "origins": [
+            {
+                "data_source": {
+                    "id": another_data_source.id,
+                },
+                "origin_id": "2",
+            },
+            {
+                "data_source": {
+                    "id": data_source.id,
+                },
+                "origin_id": "1",
+            },
+        ]
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+    resource = Resource.objects.get(id=resource.id)
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert resource.origins.count() == 2
 
 
 @pytest.mark.django_db

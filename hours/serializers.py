@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -213,7 +214,89 @@ class ResourceSerializer(
         ]
 
         read_only_fields = ["last_modified_by"]
-        extra_kwargs = {"parents": {"required": False}}
+        extra_kwargs = {"parents": {"required": False}, "origins": {"required": False}}
+
+    def _prefetch_related_instances(self, field, related_data):
+        """
+        Override WritableNestedModelSerializer behavior (tries to create new related
+        instances) in the case of resource origins. This allows us to re-use origins
+        from existing objects, in case origins are moved to a new resource.
+
+        Returns an iterable of same length as related_data, containing
+        corresponding instances or None if instance was not found.
+        """
+        related_origins = []
+        for datum in related_data:
+            try:
+                origin = ResourceOrigin.objects.get(
+                    data_source=datum["data_source"]["id"], origin_id=datum["origin_id"]
+                )
+            except ResourceOrigin.DoesNotExist:
+                origin = None
+            related_origins.append(origin)
+        return related_origins
+
+    def update_or_create_reverse_relations(self, instance, reverse_relations):
+        """
+        Override WritableNestedModelSerializer behavior (tries to create new related
+        instances) in the case of resource origins. This allows us to re-use origins
+        from existing objects, in case origins are moved to a new resource.
+
+        Currently, resources have no other reverse relations, but this method is here
+        for future-proofing and WritableNestedModelSerializer compatibility.
+        """
+        # Update or create reverse relations:
+        # many-to-one, many-to-many, reversed one-to-one
+        for field_name, (
+            related_field,
+            field,
+            field_source,
+        ) in reverse_relations.items():
+
+            # Skip processing for empty data or not-specified field.
+            # The field can be defined in validated_data but isn't defined
+            # in initial_data (for example, if multipart form data used)
+            related_data = self.get_initial().get(field_name, None)
+            if related_data is None:
+                continue
+
+            instances = self._prefetch_related_instances(field, related_data)
+
+            save_kwargs = self._get_save_kwargs(field_name)
+            if isinstance(related_field, GenericRelation):
+                save_kwargs.update(
+                    self._get_generic_lookup(instance, related_field),
+                )
+            elif not related_field.many_to_many:
+                save_kwargs[related_field.name] = instance
+
+            new_related_instances = []
+            errors = []
+            for obj, data in zip(instances, related_data):
+                serializer = self._get_serializer_for_field(
+                    field,
+                    instance=obj,
+                    data=data,
+                )
+                try:
+                    serializer.is_valid(raise_exception=True)
+                    related_instance = serializer.save(**save_kwargs)
+                    data["pk"] = related_instance.pk
+                    new_related_instances.append(related_instance)
+                    errors.append({})
+                except ValidationError as exc:
+                    errors.append(exc.detail)
+
+            if any(errors):
+                if related_field.one_to_one:
+                    raise ValidationError({field_name: errors[0]})
+                else:
+                    raise ValidationError({field_name: errors})
+
+            if related_field.many_to_many:
+                # Add m2m instances to through model via add
+                m2m_manager = getattr(instance, field_source)
+                m2m_manager.add(*new_related_instances)
 
     def validate(self, attrs):
         """Validate that the user is a member or admin of all of the

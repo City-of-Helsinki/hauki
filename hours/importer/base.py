@@ -7,7 +7,6 @@ from itertools import zip_longest
 import bleach
 import requests
 from django import db
-from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Model
 from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
@@ -28,37 +27,12 @@ class Importer(object):
             .distinct()
             .prefetch_related("origins")
         ):
-            obj_id = self.get_object_id(obj)
-            if obj_id in self.resource_cache:
-                if not self.options["force"]:
-                    raise Exception(
-                        f"Multiple objects with an identical generated id"
-                        f" {self.get_object_id(obj)} found in database."
-                        f" Most likely you are running the importer with the --merge"
-                        f" parameter while having separate non-merged objects in"
-                        f" database already. Merging will add their origin_ids to"
-                        f" the first object and delete duplicates, along with their"
-                        f" opening hours. If you are sure you want to do that,"
-                        f" please run the importer with the parameters --merge"
-                        f" --force."
-                    )
-            self.resource_cache[obj_id] = obj
-
-        self.logger.info("Caching existing date periods from db")
-        self.dateperiod_cache = {
-            self.get_object_id(obj): obj
-            for obj in DatePeriod.objects.filter(
-                origins__data_source=self.data_source
-            ).prefetch_related("origins")
-        }
-
-    def get_object_id(self, obj: Model) -> str:
-        try:
-            return obj.origins.get(data_source=self.data_source).origin_id
-        except MultipleObjectsReturned:
-            if self.options.get("force", None):
-                return obj.origins.filter(data_source=self.data_source)[0].origin_id
-            else:
+            # merged resources may exist in the database. store the same object in
+            # the cache with all its origin ids.
+            obj_ids = self.get_object_ids(obj)
+            if len(obj_ids) > 1 and (
+                not self.options["merge"] and not self.options["force"]
+            ):
                 raise Exception(
                     f"Seems like your database already contains multiple origin_ids"
                     f" for {obj} from data source {self.data_source}. This is the"
@@ -69,21 +43,47 @@ class Importer(object):
                     f" one of the un-merged objects from now on, and others will"
                     f" not have opening data."
                 )
+                # raise Exception(
+                #     f"Multiple objects with an identical generated id"
+                #     f" {self.get_object_id(obj)} found in database."
+                #     f" Most likely you are running the importer with the --merge"
+                #     f" parameter while having separate non-merged objects in"
+                #     f" database already. Merging will add their origin_ids to"
+                #     f" the first object and delete duplicates, along with their"
+                #     f" opening hours. If you are sure you want to do that,"
+                #     f" please run the importer with the parameters --merge"
+                #     f" --force."
+                # )
+            for obj_id in obj_ids:
+                self.resource_cache[obj_id] = obj
+            # merged resources may exist in the database. also store the object under
+            # its merge criterion.
+            # if self.options["merge"] and hasattr(self, "get_mergable_object_id"):
+            #     mergable_obj_id = self.get_mergable_object_id(obj)
+            #     self.resource_cache[mergable_obj_id] = obj
 
-    def get_data_id(self, data: dict) -> str:
-        origin_ids = [
+        self.logger.info("Caching existing date periods from db")
+
+        # do NOT support date periods with multiple ids in single source.
+        self.dateperiod_cache = {
+            self.get_object_ids(obj)[0]: obj
+            for obj in DatePeriod.objects.filter(
+                origins__data_source=self.data_source
+            ).prefetch_related("origins")
+        }
+
+    def get_object_ids(self, obj: Model) -> list:
+        return [
+            origin.origin_id
+            for origin in obj.origins.filter(data_source=self.data_source)
+        ]
+
+    def get_data_ids(self, data: dict) -> str:
+        return [
             str(origin["origin_id"])
             for origin in data["origins"]
             if origin["data_source_id"] == self.data_source.id
         ]
-        if len(origin_ids) > 1:
-            raise Exception(
-                "Seems like your data contains multiple identifiers in the"
-                " same object in importer data source. Please provide"
-                " get_object_id and get_data_id methods to return a single"
-                " hashable identifier to use for identifying objects."
-            )
-        return origin_ids[0]
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:
         url = "%s%s/" % (self.URL_BASE, resource_name)
@@ -197,23 +197,40 @@ class Importer(object):
         object, saves and returns it saved for class-specific processing.
         """
         # look for existing object
+        obj_id = self.get_data_ids(data)[0]
+        # old_mergable_obj_id = None
+        # mergable_obj_id = None
+        obj = None
         klass_str = klass.__name__.lower()
         cache = getattr(self, "%s_cache" % klass_str)
-        obj_id = self.get_data_id(data)
-        obj = cache.get(obj_id, None)
+        # if self.options["merge"] and hasattr(self, "get_mergable_data_id"):
+        #     # checking first if mergable id was used
+        #     mergable_obj_id = self.get_mergable_data_id(data)
+        #     obj = cache.get(mergable_obj_id, None)
+        if not obj:
+            # TODO: if origin_id was found, make a copy of the object and its hours?
+            # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
+            # - puhelinnumeroita yhdistetään => suurimman massan aukiolo
+            obj = cache.get(obj_id, None)
         if obj:
             obj._created = False
         else:
             obj = klass()
             obj._created = True
-            # save the new object in the cache so related objects will find it
-            # concurrent runs will both create their own objects during the transaction.
-            # This is why the importer is not thread-safe.
-            setattr(
-                self,
-                "%s_cache" % klass_str,
-                {**cache, **{obj_id: obj}},
-            )
+
+        # save the new object under all ids so related objects will find it
+        # concurrent runs will both create their own objects during the transaction.
+        # This is why the importer is not thread-safe
+        # if mergable_obj_id:
+        # TODO: make a copy of the old object with the old mergable id in cache?
+        #   if not obj._created:
+        #       old_mergable_obj_id = self.get_mergable_object_id(obj)
+        #       it will be saved if found by this importer, otherwise deleted
+        #       obj_copy = klass()
+        #       obj_copy._created = True
+        #       cache[old_mergable_obj_id] = obj_copy
+        #   cache[mergable_obj_id] = obj
+        cache[obj_id] = obj
         obj._changed = False
         obj._changed_fields = []
 
@@ -232,6 +249,10 @@ class Importer(object):
             data_source, created = DataSource.objects.get_or_create(id=data_source)
             if created:
                 self.logger.debug("Created missing data source %s" % data_source)
+        # we must refetch origins from db since the importer may have deleted some
+        # object_origins = set(
+        #    klass.origins.field.model.objects.filter(**{klass.origins.field.name: obj})
+        # )
         object_origins = set(obj.origins.all())
         # TODO: get_or_create makes the importer not thread-safe,
         # one importer will create an object and another will re-use it
@@ -264,9 +285,22 @@ class Importer(object):
                 )
                 == obj
             ):
+                # remove object under deleted origin id in cache. added origin ids
+                # are already in the cache.
+                # TODO: deleted origin_ids may, however, still refer to objects that
+                # will be imported later, and may have
+                # hours that need to be taken into account.
+                # the line below would save object under old id, preventing splitting
+                # object in two
+                # cache[origin.origin_id] = cache[old_mergable_obj_id]
+                del cache[origin.origin_id]
                 origin.delete()
             obj._changed = True
             obj._changed_fields.append("origins")
+
+            # TODO: AFTER origins have been updated, we should compare changes. i.e.
+            # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
+            # - puhelinnumeroita yhdistetään => suurimman massan aukiolo
         return obj
 
     @db.transaction.atomic
@@ -277,11 +311,6 @@ class Importer(object):
         """
         Takes the serialized resource data, creates and/or updates the corresponding
         Resource object, and returns it.
-
-        get_data_id can be used to match incoming data with existing objects. The
-        default id function is the origin_id of the object in this data source. Object
-        id may be any hashable that can be used to index objects and implements __eq__.
-        Objects must have unique ids.
         """
 
         obj = self._update_or_create_object(Resource, data)

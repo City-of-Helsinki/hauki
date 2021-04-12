@@ -142,13 +142,7 @@ class TPRekImporter(Importer):
                 abbr.lower(): index + 1 for index, abbr in enumerate(list(day_abbr))
             }
 
-        # if we are merging objects, we must override default get_id methods
-        # so that the cache and syncher merge identical connections
-        if self.options.get("merge", None):
-            self.get_object_id = self.merge_connections_get_object_id
-            self.get_data_id = self.merge_connections_get_data_id
-
-    def merge_connections_get_object_id(self, obj: Model) -> Hashable:
+    def get_mergable_object_id(self, obj: Model) -> Hashable:
         if type(obj) == Resource and obj.resource_type in RESOURCE_TYPES_TO_MERGE:
             return frozenset(obj.extra_data.items())
         # If merge conditions (or connection type) have changed, it is possible
@@ -158,7 +152,7 @@ class TPRekImporter(Importer):
         # use remaining origin_ids to create new objects.
         return obj.origins.filter(data_source=self.data_source)[0].origin_id
 
-    def merge_connections_get_data_id(self, data: dict) -> Hashable:
+    def get_mergable_data_id(self, data: dict) -> Hashable:
         if (
             data.get("resource_type", None)
             and data["resource_type"] in RESOURCE_TYPES_TO_MERGE
@@ -786,7 +780,7 @@ class TPRekImporter(Importer):
             ):
                 sentences.append(initial + sentence + delimiter)
 
-            unit_id = self.get_data_id({"origins": origins})
+            unit_id = self.get_data_ids({"origins": origins})[0]
             # construct period ids by referring to the originating field
             opening_hours_by_sentence = [
                 self.get_opening_hours_data(
@@ -948,16 +942,17 @@ class TPRekImporter(Importer):
         if data.get("section_type", None) in CONNECTION_TYPE_MAPPING:
             # In case we are importing hours in non-opening hours connection, add hours
             # to the original connection instead, not the unit directly
-            if (
-                self.options.get("merge", None)
-                and CONNECTION_TYPE_MAPPING[data["section_type"]]
-                in RESOURCE_TYPES_TO_MERGE
-            ):
-                # the connection is in cache with merged id
-                resource_id = frozenset(data.items())
-            else:
-                # the connection is in cache with connection id
-                resource_id = connection_id
+            # if (
+            #     self.options.get("merge", None)
+            #     and CONNECTION_TYPE_MAPPING[data["section_type"]]
+            #     in RESOURCE_TYPES_TO_MERGE
+            # ):
+            #     # the connection is in cache with merged
+            #     # TODO: nope it is not! fix this
+            #     resource_id = frozenset(data.items())
+            # else:
+            # the connection is in cache with connection id
+            resource_id = connection_id
         else:
             # the opening hours refer to unit directly
             resource_id = unit_id
@@ -1151,11 +1146,9 @@ class TPRekImporter(Importer):
         object_type: str,
     ):
         """
-        Imports objects of the given type, using get_object_id and get_data_id
-        to match incoming data with existing objects. The default id function is
-        the origin_id of the object in this data source. Object id may be any
-        hashable that can be used to index objects and implements __eq__. Objects
-        with the same identifier will be merged.
+        Imports objects of the given type. Uses get_data_id to match incoming data with
+        existing objects and get_mergable_data_id to check if objects should be merged
+        into a single object.
         """
         # Base importer knows how to update resource ancestry when saving it.
         # Signal receivers are never needed when importing.
@@ -1203,7 +1196,11 @@ class TPRekImporter(Importer):
                 # multiple objects
                 object_data = [object_data]
             for datum in object_data:
-                object_data_id = self.get_data_id(datum)
+                object_data_id = (
+                    self.get_mergable_data_id(datum)
+                    if self.options["merge"]
+                    else self.get_data_ids(datum)[0]
+                )
                 if object_data_id not in obj_dict:
                     obj_dict[object_data_id] = datum
                 else:
@@ -1220,7 +1217,7 @@ class TPRekImporter(Importer):
                         extra_subsections.append(datum)
                     if object_type == "connection":
                         # Duplicate connection found. Just append its foreign keys
-                        # instead of adding another object.
+                        # to merge connections instead of adding new object.
                         parents = datum["parents"]
                         origins = datum["origins"]
                         self.logger.info(
@@ -1229,8 +1226,12 @@ class TPRekImporter(Importer):
                         )
                         obj_dict[object_data_id]["parents"].extend(parents)
                         obj_dict[object_data_id]["origins"].extend(origins)
-                # Some resources have their opening periods (or subsection opening
-                # periods) in resource string itself
+                # TODO: AFTER origins have been updated, we should compare changes. i.e.
+                # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
+                # - puhelinnumeroita yhdistetään => suurimman massan aukiolo
+
+                # Some resources have their opening periods, or subsections and
+                # their opening periods, in resource string itself
                 if datum.get("periods", None):
                     extra_periods[object_data_id] = datum["periods"]
                 if datum.get("subsections", None):

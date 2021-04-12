@@ -417,7 +417,7 @@ def test_import_tprek(mock_tprek_data):
     if merge:
         if change == "edit":
             # reservations changed in kallio
-            (reservations, directorkallio, directoroodi, reservationskallio) = contacts
+            (reservationskallio, directorkallio, directoroodi, reservations) = contacts
         else:
             (reservations, directorkallio, directoroodi) = contacts
         if change == "remove":

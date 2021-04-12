@@ -545,9 +545,16 @@ class TPRekImporter(Importer):
                         end_weekday = self.weekday_by_abbr[
                             match.group(end_index).lower()
                         ]
-                        weekdays.extend(list(range(start_weekday, end_weekday + 1)))
+                        weekdays.extend(
+                            list(
+                                [
+                                    Weekday.from_iso_weekday(weekday)
+                                    for weekday in range(start_weekday, end_weekday + 1)
+                                ]
+                            )
+                        )
                     else:
-                        weekdays.extend([start_weekday])
+                        weekdays.extend([Weekday.from_iso_weekday(start_weekday)])
             if not weekdays:
                 if "arkisin" in match.group(24):
                     weekdays = Weekday.business_days()

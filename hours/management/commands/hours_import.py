@@ -61,6 +61,18 @@ class Command(BaseCommand):
             dest="merge",
             help="Merge identical objects during import, if supported",
         )
+        parser.add_argument(
+            "--parse-nothing",
+            action="store_true",
+            dest="parse_nothing",
+            help="Do not parse opening hours strings in resource text fields. This will prevent creating any opening hours when importing resources.",  # noqa
+        )
+        parser.add_argument(
+            "--parse-extra",
+            action="store_true",
+            dest="parse_extra",
+            help="Create new resources based on parsed opening hours strings in all text fields. This will create subresources that do not exist in the original data source when extra opening hours are found.",  # noqa
+        )
 
         for imp in self.importer_types:
             parser.add_argument(

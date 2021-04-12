@@ -40,10 +40,10 @@ def mock_tprek_data(requests_mock, request):
         units = json.load(units_file)
         connections = json.load(connections_file)
     requests_mock.get(
-        "http://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
+        "https://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
     )
     requests_mock.get(
-        "http://www.hel.fi/palvelukarttaws/rest/v4/connection/",
+        "https://www.hel.fi/palvelukarttaws/rest/v4/connection/",
         text=json.dumps(connections),
     )
     if merge:
@@ -73,10 +73,10 @@ def mock_tprek_data(requests_mock, request):
         )
     if change:
         requests_mock.get(
-            "http://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
+            "https://www.hel.fi/palvelukarttaws/rest/v4/unit/", text=json.dumps(units)
         )
         requests_mock.get(
-            "http://www.hel.fi/palvelukarttaws/rest/v4/connection/",
+            "https://www.hel.fi/palvelukarttaws/rest/v4/connection/",
             text=json.dumps(connections),
         )
         if merge:

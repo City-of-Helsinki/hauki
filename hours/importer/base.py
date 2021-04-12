@@ -43,24 +43,8 @@ class Importer(object):
                     f" one of the un-merged objects from now on, and others will"
                     f" not have opening data."
                 )
-                # raise Exception(
-                #     f"Multiple objects with an identical generated id"
-                #     f" {self.get_object_id(obj)} found in database."
-                #     f" Most likely you are running the importer with the --merge"
-                #     f" parameter while having separate non-merged objects in"
-                #     f" database already. Merging will add their origin_ids to"
-                #     f" the first object and delete duplicates, along with their"
-                #     f" opening hours. If you are sure you want to do that,"
-                #     f" please run the importer with the parameters --merge"
-                #     f" --force."
-                # )
             for obj_id in obj_ids:
                 self.resource_cache[obj_id] = obj
-            # merged resources may exist in the database. also store the object under
-            # its merge criterion.
-            # if self.options["merge"] and hasattr(self, "get_mergable_object_id"):
-            #     mergable_obj_id = self.get_mergable_object_id(obj)
-            #     self.resource_cache[mergable_obj_id] = obj
 
         self.logger.info("Caching existing date periods from db")
 
@@ -198,15 +182,9 @@ class Importer(object):
         """
         # look for existing object
         obj_id = self.get_data_ids(data)[0]
-        # old_mergable_obj_id = None
-        # mergable_obj_id = None
         obj = None
         klass_str = klass.__name__.lower()
         cache = getattr(self, "%s_cache" % klass_str)
-        # if self.options["merge"] and hasattr(self, "get_mergable_data_id"):
-        #     # checking first if mergable id was used
-        #     mergable_obj_id = self.get_mergable_data_id(data)
-        #     obj = cache.get(mergable_obj_id, None)
         if not obj:
             # TODO: if origin_id was found, make a copy of the object and its hours?
             # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
@@ -218,18 +196,6 @@ class Importer(object):
             obj = klass()
             obj._created = True
 
-        # save the new object under all ids so related objects will find it
-        # concurrent runs will both create their own objects during the transaction.
-        # This is why the importer is not thread-safe
-        # if mergable_obj_id:
-        # TODO: make a copy of the old object with the old mergable id in cache?
-        #   if not obj._created:
-        #       old_mergable_obj_id = self.get_mergable_object_id(obj)
-        #       it will be saved if found by this importer, otherwise deleted
-        #       obj_copy = klass()
-        #       obj_copy._created = True
-        #       cache[old_mergable_obj_id] = obj_copy
-        #   cache[mergable_obj_id] = obj
         cache[obj_id] = obj
         obj._changed = False
         obj._changed_fields = []
@@ -290,9 +256,6 @@ class Importer(object):
                 # TODO: deleted origin_ids may, however, still refer to objects that
                 # will be imported later, and may have
                 # hours that need to be taken into account.
-                # the line below would save object under old id, preventing splitting
-                # object in two
-                # cache[origin.origin_id] = cache[old_mergable_obj_id]
                 del cache[origin.origin_id]
                 origin.delete()
             obj._changed = True

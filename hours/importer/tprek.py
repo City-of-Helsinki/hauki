@@ -8,7 +8,6 @@ from typing import Hashable, Tuple
 import pytz
 from django import db
 from django.conf import settings
-from django.db.models import Model
 from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
 from model_utils.models import SoftDeletableModel
@@ -141,16 +140,6 @@ class TPRekImporter(Importer):
             self.weekday_by_abbr = {
                 abbr.lower(): index + 1 for index, abbr in enumerate(list(day_abbr))
             }
-
-    def get_mergable_object_id(self, obj: Model) -> Hashable:
-        if type(obj) == Resource and obj.resource_type in RESOURCE_TYPES_TO_MERGE:
-            return frozenset(obj.extra_data.items())
-        # If merge conditions (or connection type) have changed, it is possible
-        # that existing objects have several origin_ids even though the objects might
-        # be separate.
-        # In such a case, use the first origin_id for the existing object, and
-        # use remaining origin_ids to create new objects.
-        return obj.origins.filter(data_source=self.data_source)[0].origin_id
 
     def get_mergable_data_id(self, data: dict) -> Hashable:
         if (

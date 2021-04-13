@@ -8,7 +8,7 @@ asgiref==3.3.4            # via django
 attrs==20.3.0             # via jsonschema
 bleach==3.3.0             # via -r requirements.in
 cachetools==4.2.1         # via django-helusers
-certifi==2020.12.5        # via requests, sentry-sdk
+certifi==2020.12.5        # via elastic-apm, requests, sentry-sdk
 chardet==4.0.0            # via requests
 convertdate==2.3.2        # via holidays
 deprecation==2.1.0        # via django-helusers
@@ -30,6 +30,7 @@ djangorestframework==3.12.4  # via -r requirements.in, django-extra-fields, djan
 drf-spectacular==0.15.0   # via -r requirements.in
 drf-writable-nested==0.6.2  # via -r requirements.in
 ecdsa==0.14.1             # via python-jose
+elastic-apm==6.1.1        # via -r requirements.in
 hijri-converter==2.1.1    # via holidays
 holidays==0.11.1          # via -r requirements.in
 idna==2.10                # via requests
@@ -56,7 +57,7 @@ sqlparse==0.4.1           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
 typing-extensions==3.7.4.3  # via asgiref, importlib-metadata
 uritemplate==3.0.1        # via drf-spectacular
-urllib3==1.26.4           # via requests, sentry-sdk
+urllib3==1.26.4           # via elastic-apm, requests, sentry-sdk
 webencodings==0.5.1       # via bleach
 whitenoise==5.2.0         # via -r requirements.in
 zipp==3.4.1               # via importlib-metadata

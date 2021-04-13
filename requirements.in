@@ -19,3 +19,4 @@ psycopg2
 requests-cache
 sentry-sdk
 whitenoise
+elastic-apm

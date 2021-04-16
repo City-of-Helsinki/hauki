@@ -243,21 +243,25 @@ class Importer(object):
             obj._changed_fields.append("origins")
         for origin in object_origins.difference(data_origins):
             # object origins are prefetched, so we must double-check origin
-            # hasn't already moved to another object:
-            if (
-                getattr(
-                    klass.origins.field.model.objects.get(id=origin.id),
-                    klass.origins.field.name,
-                )
-                == obj
-            ):
-                # remove object under deleted origin id in cache. added origin ids
-                # are already in the cache.
-                # TODO: deleted origin_ids may, however, still refer to objects that
-                # will be imported later, and may have
-                # hours that need to be taken into account.
-                del cache[origin.origin_id]
-                origin.delete()
+            # hasn't already moved to another object, or hasn't been deleted:
+            try:
+                if (
+                    getattr(
+                        klass.origins.field.model.objects.get(id=origin.id),
+                        klass.origins.field.name,
+                    )
+                    == obj
+                ):
+                    # remove object under deleted origin id in cache. added origin ids
+                    # are already in the cache.
+                    # TODO: deleted origin_ids may, however, still refer to objects that
+                    # will be imported later, and may have
+                    # hours that need to be taken into account.
+                    del cache[origin.origin_id]
+                    origin.delete()
+            except klass.origins.field.model.DoesNotExist:
+                # another object deleted the origin already
+                pass
             obj._changed = True
             obj._changed_fields.append("origins")
 

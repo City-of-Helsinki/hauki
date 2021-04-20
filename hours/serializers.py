@@ -208,6 +208,8 @@ class ResourceSerializer(
             "organization",
             "origins",
             "last_modified_by",
+            "created",
+            "modified",
             "extra_data",
             "is_public",
             "timezone",

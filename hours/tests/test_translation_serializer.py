@@ -23,7 +23,8 @@ def test_to_representation(resource, settings):
         "timezone": "Europe/Helsinki",
     }
 
-    assert serializer.data == expected_data
+    for key, value in expected_data.items():
+        assert serializer.data[key] == value
 
 
 @pytest.mark.django_db

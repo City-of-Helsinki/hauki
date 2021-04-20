@@ -32,6 +32,8 @@ CONNECTION_TYPE_MAPPING = {
 
 # here we list the tprek connection types that we do *not* want to import as resources
 CONNECTION_TYPES_TO_IGNORE = {"OPENING_HOURS", "SOCIAL_MEDIA_LINK"}
+# here we list the tprek connection types that should *not* be parsed for opening hours
+CONNECTION_TYPES_TO_SKIP_HOURS = {"HIGHLIGHT", "OTHER_INFO", "OTHER_ADDRESS", "TOPICAL"}
 
 # here we list the tprek resource types that always have common hours and may be
 # merged if the strings are identical
@@ -870,7 +872,10 @@ class TPRekImporter(Importer):
         description = self.get_connection_description(data)
         opening_hours = []
 
-        if not self.options.get("parse_nothing", False):
+        if not self.options.get(
+            "parse_nothing",
+            False and data.get("section_type") not in CONNECTION_TYPES_TO_SKIP_HOURS,
+        ):
             # connection may also contain opening hour strings that we want to import
             opening_hours = self.get_opening_hours_data(data)
             if opening_hours:

@@ -70,7 +70,11 @@ def filter_queryset_by_permission(user, queryset, auth=None):
     if auth and isinstance(auth, HaukiSignedAuthData):
         if auth.resource:
             is_resource = Q(
-                **{path_to_resource if path_to_resource else "id": auth.resource.id}
+                **{
+                    path_to_resource + "id"
+                    if path_to_resource
+                    else "id": auth.resource.id
+                }
             ) | Q(
                 # TODO: This supports only parents, not grandparents!
                 **{path_to_resource + "parents": auth.resource.id}

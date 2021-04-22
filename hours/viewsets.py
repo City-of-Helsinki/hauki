@@ -548,7 +548,9 @@ class DatePeriodViewSet(
         ).order_by("start_date", "end_date")
 
         # Filter the queryset according to read permissions
-        queryset = filter_queryset_by_permission(self.request.user, queryset)
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
 
         return queryset
 
@@ -594,7 +596,9 @@ class RuleViewSet(
         )
 
         # Filter the queryset according to read permissions
-        queryset = filter_queryset_by_permission(self.request.user, queryset)
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
 
         return queryset
 
@@ -633,7 +637,9 @@ class TimeSpanViewSet(
         queryset = TimeSpan.objects.all()
 
         # Filter the queryset according to read permissions
-        queryset = filter_queryset_by_permission(self.request.user, queryset)
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
 
         return queryset
 
@@ -778,7 +784,9 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
         )
 
         # Filter the queryset according to read permissions
-        queryset = filter_queryset_by_permission(self.request.user, queryset)
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
 
         return queryset
 

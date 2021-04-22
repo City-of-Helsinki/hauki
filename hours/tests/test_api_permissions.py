@@ -2688,6 +2688,184 @@ def test_update_date_period_authenticated_parent_resource_has_different_org(
     assert date_period.name == original_name
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "set_hsa_organization,set_hsa_resource,has_organization_rights,should_succeed",
+    [
+        (False, False, None, False),
+        (False, False, True, False),
+        (False, False, False, False),
+        (True, False, None, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, None, True),
+        (False, True, True, True),
+        (False, True, False, True),
+        (True, True, None, True),
+        (True, True, True, True),
+        (True, True, False, True),
+    ],
+)
+def test_get_dateperiod_non_public_resource_hsa_authenticated(
+    resource,
+    resource_origin_factory,
+    data_source,
+    organization_factory,
+    user,
+    user_origin_factory,
+    date_period_factory,
+    api_client,
+    hsa_params_factory,
+    set_hsa_organization,
+    set_hsa_resource,
+    has_organization_rights,
+    should_succeed,
+):
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.is_public = False
+    resource.organization = organization
+    resource.save()
+    origin = resource_origin_factory(resource=resource, data_source=data_source)
+    date_period = date_period_factory(resource=resource)
+
+    user_origin_factory(user=user, data_source=data_source)
+    hsa_params = {
+        "user": user,
+        "data_source": data_source,
+    }
+    if set_hsa_organization:
+        hsa_params["organization"] = organization
+    if set_hsa_resource:
+        hsa_params["resource"] = data_source.id + ":" + origin.origin_id
+    if has_organization_rights is not None:
+        hsa_params["has_organization_rights"] = has_organization_rights
+    params = hsa_params_factory(**hsa_params)
+    authz_string = "haukisigned " + urllib.parse.urlencode(params)
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.id})
+
+    response = api_client.get(
+        url,
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
+        response.status_code, response.data
+    )
+
+
+@pytest.mark.django_db
+def test_filter_dateperiod_queryset_by_read_permission(
+    resource_factory, data_source, organization_factory, user, date_period_factory
+):
+    #         resource A
+    #         org 1
+    #         public
+    #             |
+    #      +------+------+
+    #      |             |
+    # resource B     resource C
+    # org 2          org 3
+    # public         non-public
+    #      |             |
+    #      +------+------+
+    #             |
+    #         resource D
+    #         org 4
+    #         non-public
+
+    org1 = organization_factory(
+        origin_id=1,
+        data_source=data_source,
+        name="Org 1",
+    )
+    org2 = organization_factory(
+        origin_id=2,
+        data_source=data_source,
+        name="Org 2",
+    )
+    org3 = organization_factory(
+        origin_id=3,
+        data_source=data_source,
+        name="Org 3",
+    )
+    org4 = organization_factory(
+        origin_id=4,
+        data_source=data_source,
+        name="Org 4",
+    )
+
+    resource_a = resource_factory(name="Resource A", organization=org1)
+    resource_a_period = date_period_factory(resource=resource_a)
+    resource_b = resource_factory(name="Resource B", organization=org2)
+    resource_b.parents.add(resource_a)
+    resource_b_period = date_period_factory(resource=resource_b)
+    resource_c = resource_factory(name="Resource C", organization=org3, is_public=False)
+    resource_c.parents.add(resource_a)
+    resource_c_period = date_period_factory(resource=resource_c)
+    resource_d = resource_factory(name="Resource D", organization=org4, is_public=False)
+    resource_d.parents.add(resource_b)
+    resource_d.parents.add(resource_c)
+    resource_d_period = date_period_factory(resource=resource_d)
+
+    queryset = DatePeriod.objects.all()
+
+    # non-organization user only sees public resources
+    filtered = filter_queryset_by_permission(user, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
+        resource_a_period,
+        resource_b_period,
+    }
+
+    # org4 user doesn't see org4 resource_d, because he doesn't belong
+    # to parent org3 or org2
+    org4.regular_users.add(user)
+    filtered = filter_queryset_by_permission(user, queryset)
+    assert len(filtered) == 2
+    assert set(filtered) == {
+        resource_a_period,
+        resource_b_period,
+    }
+    org4.regular_users.remove(user)
+
+    # org4 resource_d is visible if user belongs to org2 or org3
+    org3.regular_users.add(user)
+    filtered = filter_queryset_by_permission(user, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
+        resource_a_period,
+        resource_b_period,
+        resource_d_period,
+    }
+    org3.regular_users.remove(user)
+    org2.regular_users.add(user)
+    filtered = filter_queryset_by_permission(user, queryset)
+    assert len(filtered) == 3
+    assert set(filtered) == {
+        resource_a_period,
+        resource_b_period,
+        resource_d_period,
+    }
+    org2.regular_users.remove(user)
+
+    # all resources are only visible if user belongs to org1
+    org1.regular_users.add(user)
+    filtered = filter_queryset_by_permission(user, queryset)
+    assert len(filtered) == 4
+    assert set(filtered) == {
+        resource_a_period,
+        resource_b_period,
+        resource_c_period,
+        resource_d_period,
+    }
+
+
 #
 # Rule
 #

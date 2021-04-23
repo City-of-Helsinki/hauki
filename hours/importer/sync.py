@@ -87,7 +87,12 @@ class ModelSyncher(object):
         ):
             raise Exception(
                 f"Attempting to delete {len(delete_list)} out of "
-                f"a total of {len(self.obj_dict)} items"
+                f"a queryset of {len(self.obj_dict)} filtered items of "
+                f"type {type(obj)}. This may indicate that the "
+                f"data in the original source has changed suddenly. "
+                f"If you are sure you want to delete over 20 % of "
+                f"the selected queryset, please run the importer with the "
+                f"--force parameter."
             )
         for obj in delete_list:
             if self.allow_deleting_func:

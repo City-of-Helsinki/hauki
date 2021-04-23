@@ -1,3 +1,4 @@
+import csv
 import re
 from calendar import day_abbr, different_locale, month_name
 from datetime import date
@@ -69,6 +70,14 @@ class TPRekImporter(Importer):
         self.kirjastot_data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
+
+        self.ignore_hours_list = set()
+        with open("hours/importer/tprek_ignore_hours_list.csv") as ignore_file:
+            csv_reader = csv.reader(ignore_file, delimiter=";")
+            # do not read the first line
+            next(csv_reader)
+            for row in csv_reader:
+                self.ignore_hours_list.add(row[0])
 
         # this maps the imported resource names to Hauki objects
         self.data_to_match = {
@@ -754,7 +763,12 @@ class TPRekImporter(Importer):
 
         periods = []
         subsections = []
-        if not self.options.get("parse_nothing", False) and description["fi"]:
+        unit_id = self.get_data_ids({"origins": origins})[0]
+        if (
+            unit_id not in self.ignore_hours_list
+            and not self.options.get("parse_nothing", False)
+            and description["fi"]
+        ):
             # unit description may itself contain opening hour strings to import.
             # however, they are only small parts of the whole string composed
             # of multiple sentences.
@@ -771,7 +785,6 @@ class TPRekImporter(Importer):
             ):
                 sentences.append(initial + sentence + delimiter)
 
-            unit_id = self.get_data_ids({"origins": origins})[0]
             # construct period ids by referring to the originating field
             opening_hours_by_sentence = [
                 self.get_opening_hours_data(
@@ -872,9 +885,11 @@ class TPRekImporter(Importer):
         description = self.get_connection_description(data)
         opening_hours = []
 
-        if not self.options.get(
-            "parse_nothing",
-            False and data.get("section_type") not in CONNECTION_TYPES_TO_SKIP_HOURS,
+        if (
+            unit_id not in self.ignore_hours_list
+            and connection_id not in self.ignore_hours_list
+            and not self.options.get("parse_nothing", False)
+            and data.get("section_type") not in CONNECTION_TYPES_TO_SKIP_HOURS
         ):
             # connection may also contain opening hour strings that we want to import
             opening_hours = self.get_opening_hours_data(data)
@@ -932,6 +947,8 @@ class TPRekImporter(Importer):
             # opening hours do not have id in TPREK API, generate id from unit id
             data["connection_id"] = "opening-" + unit_id
         connection_id = str(data.pop("connection_id"))
+        if unit_id in self.ignore_hours_list or connection_id in self.ignore_hours_list:
+            return []
 
         if data.get("section_type", None) in CONNECTION_TYPE_MAPPING:
             # In case we are importing hours in non-opening hours connection, add hours

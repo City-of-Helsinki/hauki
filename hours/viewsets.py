@@ -22,7 +22,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.fields import BooleanField, CharField, ListField
-from rest_framework.filters import BaseFilterBackend
+from rest_framework.filters import BaseFilterBackend, OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -301,7 +301,7 @@ class ResourceViewSet(
     serializer_class = ResourceSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     pagination_class = PageSizePageNumberPagination
-    filter_backends = (DjangoFilterBackend, ResourceFilterBackend)
+    filter_backends = (DjangoFilterBackend, ResourceFilterBackend, OrderingFilter)
 
     def get_queryset(self):
         queryset = (
@@ -537,6 +537,7 @@ class DatePeriodViewSet(
     serializer_class = DatePeriodSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_queryset(self):
         queryset = DatePeriod.objects.prefetch_related(
@@ -587,6 +588,7 @@ class RuleViewSet(
 ):
     serializer_class = RuleSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_queryset(self):
         queryset = (
@@ -632,6 +634,7 @@ class TimeSpanViewSet(
     serializer_class = TimeSpanSerializer
     filterset_class = TimeSpanFilter
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_queryset(self):
         queryset = TimeSpan.objects.all()
@@ -669,6 +672,7 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = OrganizationSerializer
     filterset_fields = ["parent"]
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
 
 class AuthRequiredTestView(viewsets.ViewSet):
@@ -761,7 +765,7 @@ class OpeningHoursFilterBackend(BaseFilterBackend):
     ),
 )
 class OpeningHoursViewSet(viewsets.GenericViewSet):
-    filter_backends = (DjangoFilterBackend, OpeningHoursFilterBackend)
+    filter_backends = (DjangoFilterBackend, OpeningHoursFilterBackend, OrderingFilter)
     serializer_class = ResourceDailyOpeningHoursSerializer
     pagination_class = PageSizePageNumberPagination
 

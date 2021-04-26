@@ -886,8 +886,7 @@ class TPRekImporter(Importer):
         opening_hours = []
 
         if (
-            unit_id not in self.ignore_hours_list
-            and connection_id not in self.ignore_hours_list
+            connection_id not in self.ignore_hours_list
             and not self.options.get("parse_nothing", False)
             and data.get("section_type") not in CONNECTION_TYPES_TO_SKIP_HOURS
         ):

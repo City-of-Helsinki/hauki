@@ -55,7 +55,9 @@ class Command(BaseCommand):
             )
 
         test_resource, created = Resource.objects.get_or_create(
-            name="E2E Test Resource", organization=test_organization
+            name="E2E Test Resource",
+            organization=test_organization,
+            defaults={"is_public": False},
         )
         if created:
             logger.info(f"Created test resource with id {test_resource.id}")

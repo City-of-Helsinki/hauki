@@ -67,9 +67,9 @@
             "connection_id": 9,
             "unit_id": 8215,
             "section_type": "PHONE_OR_EMAIL",
-            "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset",
-            "name_en": "Sales, reservations and notifications Berth reservations",
-            "name_sv": "Försäljning, reservationer och anmälningsärenden Båtplatsuthyrning",
+            "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset ma - pe 9.00 - 14.00",
+            "name_en": "Sales, reservations and notifications Berth reservations Mon - Fri 9.00 - 14.00",
+            "name_sv": "Försäljning, reservationer och anmälningsärenden Båtplatsuthyrning mån - fre 9.00 - 14.00",
             "phone": "+358 9 310 87900",
             "email": "venepaikkavaraukset@hel.fi"
         },
@@ -77,9 +77,9 @@
             "connection_id": 10,
             "unit_id": 51342,
             "section_type": "PHONE_OR_EMAIL",
-            "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset",
-            "name_en": "Sales, reservations and notifications Berth reservations",
-            "name_sv": "Försäljning, reservationer och anmälningsärenden Båtplatsuthyrning",
+            "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset ma - pe 9.00 - 14.00",
+            "name_en": "Sales, reservations and notifications Berth reservations Mon - Fri 9.00 - 14.00",
+            "name_sv": "Försäljning, reservationer och anmälningsärenden Båtplatsuthyrning mån - fre 9.00 - 14.00",
             "phone": "+358 9 310 87900",
             "email": "venepaikkavaraukset@hel.fi"
         },
@@ -242,5 +242,23 @@
             "www_fi": "http://www.facebook.com/kirjastokallio",
             "www_en": "http://www.facebook.com/kirjastokallio",
             "www_sv": "http://www.facebook.com/kirjastokallio"
+        },
+        {
+            "connection_id": 28,
+            "unit_id": 8215,
+            "section_type": "PHONE_OR_EMAIL",
+            "name_fi": "Yhteinen kirjastovirkailija ma-pe 09-14",
+            "contact_person": "Teppo Testinen",
+            "phone": "+358 40 123 4567",
+            "email": "teppo@hel.fi"
+        },
+        {
+            "connection_id": 29,
+            "unit_id": 51342,
+            "section_type": "PHONE_OR_EMAIL",
+            "name_fi": "Yhteinen kirjastovirkailija ma-pe 09-14",
+            "contact_person": "Teppo Testinen",
+            "phone": "+358 40 123 4567",
+            "email": "teppo@hel.fi"
         }
     ]

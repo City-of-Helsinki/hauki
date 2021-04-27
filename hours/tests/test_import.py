@@ -64,7 +64,7 @@ def mock_tprek_data(requests_mock, request):
         # Single connection should become duplicated.
         connections.append(
             {
-                "connection_id": 28,
+                "connection_id": 100,
                 "unit_id": 8215,
                 "section_type": "ESERVICE_LINK",
                 "name_fi": "Ohjattuun liikuntaan ilmoittautuminen",
@@ -312,15 +312,15 @@ def test_import_tprek(mock_tprek_data):
 
     # Check created objects
     if change == "add":
-        expected_n_resources = 22
+        expected_n_resources = 24
     elif change == "remove":
-        expected_n_resources = 20
+        expected_n_resources = 22
     else:
-        expected_n_resources = 21
+        expected_n_resources = 23
     if change == "edit":
-        expected_n_merged_resources = 21
+        expected_n_merged_resources = 22
     else:
-        expected_n_merged_resources = 20
+        expected_n_merged_resources = 21
     if not merge:
         assert Resource.objects.filter(is_public=True).count() == expected_n_resources
     else:
@@ -418,32 +418,54 @@ def test_import_tprek(mock_tprek_data):
     if merge:
         if change == "edit":
             # reservations changed in kallio
-            (reservationskallio, directorkallio, directoroodi, reservations) = contacts
+            (
+                reservationskallio,
+                directorkallio,
+                directoroodi,
+                librarian,
+                reservations,
+            ) = contacts
         else:
-            (reservations, directorkallio, directoroodi) = contacts
+            (reservations, directorkallio, directoroodi, librarian) = contacts
         if change == "remove":
             # reservations removed in kallio
-            contacts_expected_in_kallio = {directorkallio}
+            contacts_expected_in_kallio = {directorkallio, librarian}
         elif change == "edit":
             # reservations changed in kallio
-            contacts_expected_in_kallio = {directorkallio, reservationskallio}
+            contacts_expected_in_kallio = {
+                directorkallio,
+                reservationskallio,
+                librarian,
+            }
         else:
-            contacts_expected_in_kallio = {reservations, directorkallio}
-        contacts_expected_in_oodi = {reservations, directoroodi}
+            contacts_expected_in_kallio = {reservations, directorkallio, librarian}
+        contacts_expected_in_oodi = {reservations, directoroodi, librarian}
     else:
         if change == "remove":
             # reservations removed in kallio
-            (reservationsoodi, directorkallio, directoroodi) = contacts
-            contacts_expected_in_kallio = {directorkallio}
+            (
+                reservationsoodi,
+                directorkallio,
+                directoroodi,
+                librariankallio,
+                librarianoodi,
+            ) = contacts
+            contacts_expected_in_kallio = {directorkallio, librariankallio}
         else:
             (
                 reservationskallio,
                 reservationsoodi,
                 directorkallio,
                 directoroodi,
+                librariankallio,
+                librarianoodi,
             ) = contacts
-            contacts_expected_in_kallio = {reservationskallio, directorkallio}
-        contacts_expected_in_oodi = {reservationsoodi, directoroodi}
+            contacts_expected_in_kallio = {
+                reservationskallio,
+                directorkallio,
+                librariankallio,
+            }
+        contacts_expected_in_oodi = {reservationsoodi, directoroodi, librarianoodi}
 
     assert contacts_expected_in_kallio == set(
         kallio.children.filter(resource_type=ResourceType.CONTACT, is_public=True)
@@ -486,6 +508,31 @@ def test_import_tprek(mock_tprek_data):
     assert {floorantie} == set(
         oodi.children.filter(resource_type=ResourceType.ENTRANCE)
     )
+
+    # Check that the fields in subsections are imported correctly
+    mock_subsection = next(
+        filter(lambda x: x["connection_id"] == 5, mock_tprek_data["connections"])
+    )
+    mock_contact = next(
+        filter(lambda x: x["connection_id"] == 28, mock_tprek_data["connections"])
+    )
+    mock_online_service = next(
+        filter(lambda x: x["connection_id"] == 21, mock_tprek_data["connections"])
+    )
+    mock_entrance = next(
+        filter(lambda x: x["connection_id"] == 14, mock_tprek_data["connections"])
+    )
+    assert covid1.name_fi == mock_subsection["name_fi"]
+    assert covid1.description_fi == mock_subsection["www_fi"]
+    librarian = librarian if merge else librariankallio
+    assert librarian.name_fi == mock_contact["name_fi"][:-12]
+    assert (
+        librarian.description_fi
+        == f"{mock_contact['contact_person']} {mock_contact['email']} {mock_contact['phone']}"  # noqa
+    )
+    assert hydrobic.name_fi == mock_online_service["name_fi"]
+    assert hydrobic.description_fi == mock_online_service["www_fi"]
+    assert mikkolankuja.name_fi == mock_entrance["name_fi"]
 
 
 kirjastot_parameters = []

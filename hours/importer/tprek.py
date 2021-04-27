@@ -906,7 +906,6 @@ class TPRekImporter(Importer):
                     name["fi"] = self.clean_parsed_subsection_name(
                         opening_hours[0]["name"]["fi"]
                     )
-                    description["fi"] = opening_hours[0]["description"]["fi"]
                     opening_hours[0]["name"]["fi"] = "Perusaukiolo"
                     opening_hours[0]["description"]["fi"] = ""
 

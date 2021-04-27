@@ -316,6 +316,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Resource")
         verbose_name_plural = _("Resources")
+        indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
 
     def __str__(self):
         return str(self.name)
@@ -531,6 +532,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         verbose_name = _("Period")
         verbose_name_plural = _("Periods")
         ordering = ["start_date"]
+        indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
 
     def __str__(self):
         return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"

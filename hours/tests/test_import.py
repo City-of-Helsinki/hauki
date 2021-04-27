@@ -96,20 +96,21 @@ def mock_tprek_data(requests_mock, request):
 
 @pytest.mark.django_db
 @pytest.fixture
-def mock_library_data(mock_tprek_data, requests_mock, request):
+def mock_library_data(requests_mock, request):
     # We should have the same hours whether base period is endless or ends next year
     endless = request.param["endless"]
     # The results should depend on possible changes done to period
     change = request.param["change"]
 
     def _mock_library_data(test_file_name):
-        kallio_tprek_id = 8215
-        kallio = Resource.objects.get(
-            origins__data_source="tprek", origins__origin_id=kallio_tprek_id
+        kirkanta = DataSource.objects.create(id="kirkanta")
+        kallio_kirkanta_id = 84860
+        kallio = Resource.objects.create()
+        ResourceOrigin.objects.create(
+            data_source=kirkanta, origin_id=kallio_kirkanta_id, resource=kallio
         )
         # Call the library importer for Kallio
         date = "2020-06-01"
-        kallio_kirkanta_id = kallio.origins.get(data_source="kirkanta").origin_id
         url_to_mock = (
             "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
             "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
@@ -495,7 +496,7 @@ for endless in [False, True]:
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
-def test_import_kirjastot_simple(mock_library_data, mock_tprek_data):
+def test_import_kirjastot_simple(mock_library_data):
     # The results should depend on possible changes in data between import runs
     change = mock_library_data["made_a_change"]
 
@@ -513,7 +514,7 @@ def test_import_kirjastot_simple(mock_library_data, mock_tprek_data):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
-def test_import_kirjastot_pattern(mock_library_data, mock_tprek_data):
+def test_import_kirjastot_pattern(mock_library_data):
     # The results should depend on possible changes in data between import runs
     change = mock_library_data["made_a_change"]
 
@@ -604,7 +605,7 @@ def test_import_kirjastot_pattern(mock_library_data, mock_tprek_data):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("mock_library_data", kirjastot_parameters, indirect=True)
-def test_import_kirjastot_complex(mock_library_data, mock_tprek_data):
+def test_import_kirjastot_complex(mock_library_data):
     # The results should depend on possible changes in data between import runs
     change = mock_library_data["made_a_change"]
 
@@ -715,10 +716,13 @@ def test_import_hauki(mock_hauki_data):
         origins__data_source="tprek", origins__origin_id=kallio_tprek_id
     )
     # Check created objects
-    assert DatePeriod.objects.count() == 1
+    assert DatePeriod.objects.filter(resource=kallio).count() == 1
     assert kallio.date_periods.count() == 1
     expected_n_time_spans = 5
-    assert TimeSpan.objects.count() == expected_n_time_spans
-    assert TimeSpanGroup.objects.count() == 1
+    assert (
+        TimeSpan.objects.filter(group__period__resource=kallio).count()
+        == expected_n_time_spans
+    )
+    assert TimeSpanGroup.objects.filter(period__resource=kallio).count() == 1
     # Simple data should have pattern repeating weekly
     assert Rule.objects.count() == 0

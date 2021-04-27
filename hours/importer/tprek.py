@@ -792,7 +792,8 @@ class TPRekImporter(Importer):
                         "unit_id": unit_id,
                         "name_fi": sentence,
                         "connection_id": "description-" + unit_id,
-                    }
+                    },
+                    allow_missing_resource=True,
                 )
                 for sentence in sentences
             ]
@@ -891,7 +892,9 @@ class TPRekImporter(Importer):
             and data.get("section_type") not in CONNECTION_TYPES_TO_SKIP_HOURS
         ):
             # connection may also contain opening hour strings that we want to import
-            opening_hours = self.get_opening_hours_data(data)
+            opening_hours = self.get_opening_hours_data(
+                data, allow_missing_resource=True
+            )
             if opening_hours:
                 # connection string contained opening hour strings, use strings
                 # stripped of opening hours data instead.
@@ -936,7 +939,7 @@ class TPRekImporter(Importer):
             if connection["section_type"] not in CONNECTION_TYPES_TO_IGNORE
         ]
 
-    def get_opening_hours_data(self, data: dict) -> list:
+    def get_opening_hours_data(self, data: dict, allow_missing_resource=False) -> list:
         """
         Takes connection data dict in TPREK v4 API format and returns the corresponding
         serialized DatePeriods.
@@ -946,31 +949,21 @@ class TPRekImporter(Importer):
             # opening hours do not have id in TPREK API, generate id from unit id
             data["connection_id"] = "opening-" + unit_id
         connection_id = str(data.pop("connection_id"))
-        if unit_id in self.ignore_hours_list or connection_id in self.ignore_hours_list:
-            return []
 
         if data.get("section_type", None) in CONNECTION_TYPE_MAPPING:
             # In case we are importing hours in non-opening hours connection, add hours
             # to the original connection instead, not the unit directly
-            # if (
-            #     self.options.get("merge", None)
-            #     and CONNECTION_TYPE_MAPPING[data["section_type"]]
-            #     in RESOURCE_TYPES_TO_MERGE
-            # ):
-            #     # the connection is in cache with merged
-            #     # TODO: nope it is not! fix this
-            #     resource_id = frozenset(data.items())
-            # else:
-            # the connection is in cache with connection id
             resource_id = connection_id
         else:
             # the opening hours refer to unit directly
             resource_id = unit_id
+        if resource_id in self.ignore_hours_list:
+            return []
 
         resource = self.resource_cache.get(resource_id, None)
-        # resource may be missing if e.g. the unit has just been created or
-        # deleted, or is not public at the moment. Therefore, resource may be empty.
-        if not resource:
+        # Resource may be missing if the resource is being created by the same importer
+        # or has been recently deleted or added.
+        if not resource and not allow_missing_resource:
             self.logger.info(
                 "Cannot import hours yet, resource with given id not found! {0}".format(
                     resource_id
@@ -1195,7 +1188,7 @@ class TPRekImporter(Importer):
         obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
         self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
         obj_dict = {}
-        extra_subsections = []
+        extra_subsections = {}
         extra_periods = {}
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
@@ -1213,6 +1206,9 @@ class TPRekImporter(Importer):
                 )
                 if object_data_id not in obj_dict:
                     obj_dict[object_data_id] = datum
+                    # Some resources have their opening periods in resource string
+                    if datum.get("periods", None):
+                        extra_periods[self.get_data_ids(datum)[0]] = datum["periods"]
                 else:
                     # We are trying to import an object whose id has already been
                     # imported. How to handle it depends on object type.
@@ -1222,9 +1218,19 @@ class TPRekImporter(Importer):
                         self.logger.info(
                             f"Duplicate period {datum} found for same dates, period"
                             f" {obj_dict[object_data_id]} read already. Saving this"
-                            f" as a new subsection."
+                            f" as a new subsection if --parse-extra is used."
                         )
-                        extra_subsections.append(datum)
+                        if (
+                            self.get_object_ids(datum["resource"])[0]
+                            in extra_subsections
+                        ):
+                            extra_subsections[
+                                self.get_object_ids(datum["resource"])[0]
+                            ].append(datum)
+                        else:
+                            extra_subsections[
+                                self.get_object_ids(datum["resource"])[0]
+                            ] = [datum]
                     if object_type == "connection":
                         # Duplicate connection found. Just append its foreign keys
                         # to merge connections instead of adding new object.
@@ -1240,12 +1246,12 @@ class TPRekImporter(Importer):
                 # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
                 # - puhelinnumeroita yhdistetään => suurimman massan aukiolo
 
-                # Some resources have their opening periods, or subsections and
-                # their opening periods, in resource string itself
-                if datum.get("periods", None):
-                    extra_periods[object_data_id] = datum["periods"]
+                # Some resources have subsections and
+                # their opening periods in resource string itself
                 if datum.get("subsections", None):
-                    extra_subsections.extend(datum["subsections"])
+                    extra_subsections[self.get_data_ids(datum)[0]] = datum[
+                        "subsections"
+                    ]
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
                 self.logger.info("%s %ss saved" % (idx, object_type))
@@ -1284,8 +1290,10 @@ class TPRekImporter(Importer):
         """
         if not extra_periods:
             return
-        for period_list in extra_periods.values():
+        for resource_id, period_list in extra_periods.items():
             for datum in period_list:
+                # datum may be missing its resource if it was just created
+                datum["resource"] = self.resource_cache.get(resource_id, None)
                 period = self.save_dateperiod(datum)
                 period_syncher.mark(period)
         self.logger.info("Extra opening hours found in imported strings saved")
@@ -1307,50 +1315,53 @@ class TPRekImporter(Importer):
         )
 
         obj_dict = {}
-        for datum in extra_subsections:
-            # We have no way of knowing what the subsection type should be.
-            # Use a different type so generated subsections won't be mixed
-            # with other ones.
+        for parent_id, subsection_list in extra_subsections.items():
+            for datum in subsection_list:
+                parent = self.resource_cache.get(parent_id, None)
+                name = datum["name"]
+                name["fi"] = self.clean_parsed_subsection_name(name["fi"])
+                # We have no way of knowing what the subsection type should be.
+                # Use a different type so generated subsections won't be mixed
+                # with other ones.
+                subsection_data = {
+                    "origins": datum["origins"],
+                    "resource_type": ResourceType.SERVICE_AT_UNIT,
+                    "name": name
+                    if not (
+                        name["fi"] == "Aukioloajat"
+                        or name["fi"] == "Aukiolojakso"
+                        or name["fi"] == "Perusaukiolo"
+                        or name["fi"] == "Poikkeusaukiolo"
+                    )
+                    else {"fi": "Alikohde"},
+                    "description": datum["description"],
+                    "parents": [parent],
+                }
+                data_id = subsection_data["origins"][0]["origin_id"]
 
-            name = datum["name"]
-            name["fi"] = self.clean_parsed_subsection_name(name["fi"])
-            subsection_data = {
-                "origins": datum["origins"],
-                "resource_type": ResourceType.SERVICE_AT_UNIT,
-                "name": name
-                if not (
-                    name["fi"] == "Aukioloajat"
-                    or name["fi"] == "Aukiolojakso"
-                    or name["fi"] == "Perusaukiolo"
-                    or name["fi"] == "Poikkeusaukiolo"
-                )
-                else {"fi": "Alikohde"},
-                "description": datum["description"],
-                "parents": [datum["resource"]],
-            }
-            data_id = subsection_data["origins"][0]["origin_id"]
+                # if we had several duplicate periods, use running index in id
+                idx = 0
+                while data_id in obj_dict:
+                    idx += 1
+                    data_id = (
+                        subsection_data["origins"][0]["origin_id"] + "-" + str(idx)
+                    )
+                subsection_data["origins"][0]["origin_id"] = data_id
+                obj_dict[data_id] = datum
+                subsection = self.save_resource(subsection_data)
+                subsection_syncher.mark(subsection)
 
-            # if we had several duplicate periods, use running index in id
-            idx = 0
-            while data_id in obj_dict:
-                idx += 1
-                data_id = subsection_data["origins"][0]["origin_id"] + "-" + str(idx)
-            subsection_data["origins"][0]["origin_id"] = data_id
-            obj_dict[data_id] = datum
-            subsection = self.save_resource(subsection_data)
-            subsection_syncher.mark(subsection)
+                # get rid of data that is in subsection already
+                del datum["resource"]
+                del datum["name"]
+                del datum["description"]
 
-            # get rid of data that is in subsection already
-            del datum["resource"]
-            del datum["name"]
-            del datum["description"]
-
-            # period id already used, add new subsection id to create period id
-            datum["resource"] = subsection
-            datum["origins"][0]["origin_id"] = "opening-" + data_id
-            datum["name"] = {"fi": "Perusaukiolo"}
-            period = self.save_dateperiod(datum)
-            period_syncher.mark(period)
+                # period id already used, add new subsection id to create period id
+                datum["resource"] = subsection
+                datum["origins"][0]["origin_id"] = "opening-" + data_id
+                datum["name"] = {"fi": "Perusaukiolo"}
+                period = self.save_dateperiod(datum)
+                period_syncher.mark(period)
         subsection_syncher.finish(force=self.options["force"])
         self.logger.info("Extra subsections and opening hours found in strings saved")
 

@@ -1278,7 +1278,8 @@ class TPRekImporter(Importer):
                     period_syncher, extra_subsections, queryset
                 )
             if not object_type == "opening_hours":
-                period_syncher.finish(force=self.options["force"])
+                # allow always deleting additional periods
+                period_syncher.finish(force=True)
         syncher.finish(force=self.options["force"])
 
         self.reconnect_receivers()
@@ -1361,7 +1362,8 @@ class TPRekImporter(Importer):
                 datum["name"] = {"fi": "Perusaukiolo"}
                 period = self.save_dateperiod(datum)
                 period_syncher.mark(period)
-        subsection_syncher.finish(force=self.options["force"])
+        # allow always deleting extra subsections
+        subsection_syncher.finish(force=True)
         self.logger.info("Extra subsections and opening hours found in strings saved")
 
     @db.transaction.atomic

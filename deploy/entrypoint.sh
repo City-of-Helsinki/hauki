@@ -26,6 +26,7 @@ if [ "$1" = "help" ]; then
     _log ""
     _log "In addition to the production server, there are several task commands:"
     _log "start_django_development_server: runs Django development server at port 8000"
+    _log "initial_data: runs some initial import tasks to populate the database"
     _log "migrate: runs Django migrations (manage.py migrate)"
     _log "test: runs Django tests (pytest)"
     _log "start_production_server: run production server (based on UWSGI) at port 8000"

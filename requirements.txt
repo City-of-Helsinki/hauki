@@ -4,63 +4,153 @@
 #
 #    pip-compile requirements.in
 #
-asgiref==3.3.4            # via django
-attrs==20.3.0             # via jsonschema
-bleach==3.3.0             # via -r requirements.in
-cachetools==4.2.1         # via django-helusers
-certifi==2020.12.5        # via elastic-apm, requests, sentry-sdk
-chardet==4.0.0            # via requests
-convertdate==2.3.2        # via holidays
-deprecation==2.1.0        # via django-helusers
-django-cors-headers==3.7.0  # via -r requirements.in
-django-enumfields==2.1.1  # via -r requirements.in
-django-environ==0.4.5     # via -r requirements.in
-django-extra-fields==3.0.2  # via -r requirements.in
-django-filter==2.4.0      # via -r requirements.in
-django-helusers==0.6.0    # via -r requirements.in
-django-js-asset==1.2.2    # via django-mptt
-django-model-utils==4.1.1  # via -r requirements.in
-django-modeltranslation==0.16.2  # via -r requirements.in
-django-mptt==0.12.0       # via django-orghierarchy
-django-orghierarchy==0.1.31  # via -r requirements.in
-django-simple-history==2.12.0  # via -r requirements.in
-django-timezone-field==4.1.2  # via -r requirements.in
-django==3.2               # via -r requirements.in, django-cors-headers, django-extra-fields, django-filter, django-helusers, django-model-utils, django-modeltranslation, django-mptt, django-timezone-field, djangorestframework, drf-spectacular
-djangorestframework==3.12.4  # via -r requirements.in, django-extra-fields, django-orghierarchy, drf-spectacular
-drf-spectacular==0.15.0   # via -r requirements.in
-drf-writable-nested==0.6.2  # via -r requirements.in
-ecdsa==0.14.1             # via python-jose
-elastic-apm==6.1.1        # via -r requirements.in
-hijri-converter==2.1.1    # via holidays
-holidays==0.11.1          # via -r requirements.in
-idna==2.10                # via requests
-importlib-metadata==3.10.0  # via jsonschema
-inflection==0.5.1         # via drf-spectacular
-jsonschema==3.2.0         # via drf-spectacular
-korean-lunar-calendar==0.2.1  # via holidays
-packaging==20.9           # via bleach, deprecation
-psycopg2==2.8.6           # via -r requirements.in
-pyasn1==0.4.8             # via python-jose, rsa
-pymeeus==0.5.11           # via convertdate
-pyparsing==2.4.7          # via packaging
-pyrsistent==0.17.3        # via jsonschema
-python-dateutil==2.8.1    # via holidays
-python-jose==3.2.0        # via django-helusers
-pytz==2021.1              # via convertdate, django, django-timezone-field
-pyyaml==5.4.1             # via drf-spectacular
-requests-cache==0.5.2     # via -r requirements.in
-requests==2.25.1          # via django-helusers, django-orghierarchy, requests-cache
-rsa==4.7.2                # via python-jose
-sentry-sdk==1.0.0         # via -r requirements.in
-six==1.15.0               # via bleach, django-modeltranslation, django-simple-history, ecdsa, holidays, jsonschema, python-dateutil, python-jose
-sqlparse==0.4.1           # via django
-swapper==1.1.2.post1      # via django-orghierarchy
-typing-extensions==3.7.4.3  # via asgiref, importlib-metadata
-uritemplate==3.0.1        # via drf-spectacular
-urllib3==1.26.4           # via elastic-apm, requests, sentry-sdk
-webencodings==0.5.1       # via bleach
-whitenoise==5.2.0         # via -r requirements.in
-zipp==3.4.1               # via importlib-metadata
+asgiref==3.3.4
+    # via django
+attrs==20.3.0
+    # via jsonschema
+bleach==3.3.0
+    # via -r requirements.in
+cachetools==4.2.1
+    # via django-helusers
+certifi==2020.12.5
+    # via
+    #   elastic-apm
+    #   requests
+    #   sentry-sdk
+chardet==4.0.0
+    # via requests
+convertdate==2.3.2
+    # via holidays
+deprecation==2.1.0
+    # via django-helusers
+django-cors-headers==3.7.0
+    # via -r requirements.in
+django-enumfields==2.1.1
+    # via -r requirements.in
+django-environ==0.4.5
+    # via -r requirements.in
+django-extra-fields==3.0.2
+    # via -r requirements.in
+django-filter==2.4.0
+    # via -r requirements.in
+django-helusers==0.6.0
+    # via -r requirements.in
+django-js-asset==1.2.2
+    # via django-mptt
+django-model-utils==4.1.1
+    # via -r requirements.in
+django-modeltranslation==0.16.2
+    # via -r requirements.in
+django-mptt==0.12.0
+    # via django-orghierarchy
+django-orghierarchy==0.1.31
+    # via -r requirements.in
+django-simple-history==2.12.0
+    # via -r requirements.in
+django-timezone-field==4.1.2
+    # via -r requirements.in
+django==3.2.2
+    # via
+    #   -r requirements.in
+    #   django-cors-headers
+    #   django-extra-fields
+    #   django-filter
+    #   django-helusers
+    #   django-model-utils
+    #   django-modeltranslation
+    #   django-mptt
+    #   django-timezone-field
+    #   djangorestframework
+    #   drf-spectacular
+djangorestframework==3.12.4
+    # via
+    #   -r requirements.in
+    #   django-extra-fields
+    #   django-orghierarchy
+    #   drf-spectacular
+drf-spectacular==0.15.0
+    # via -r requirements.in
+drf-writable-nested==0.6.2
+    # via -r requirements.in
+ecdsa==0.14.1
+    # via python-jose
+elastic-apm==6.1.1
+    # via -r requirements.in
+hijri-converter==2.1.1
+    # via holidays
+holidays==0.11.1
+    # via -r requirements.in
+idna==2.10
+    # via requests
+inflection==0.5.1
+    # via drf-spectacular
+jsonschema==3.2.0
+    # via drf-spectacular
+korean-lunar-calendar==0.2.1
+    # via holidays
+packaging==20.9
+    # via
+    #   bleach
+    #   deprecation
+psycopg2==2.8.6
+    # via -r requirements.in
+pyasn1==0.4.8
+    # via
+    #   python-jose
+    #   rsa
+pymeeus==0.5.11
+    # via convertdate
+pyparsing==2.4.7
+    # via packaging
+pyrsistent==0.17.3
+    # via jsonschema
+python-dateutil==2.8.1
+    # via holidays
+python-jose==3.2.0
+    # via django-helusers
+pytz==2021.1
+    # via
+    #   convertdate
+    #   django
+    #   django-timezone-field
+pyyaml==5.4.1
+    # via drf-spectacular
+requests-cache==0.5.2
+    # via -r requirements.in
+requests==2.25.1
+    # via
+    #   django-helusers
+    #   django-orghierarchy
+    #   requests-cache
+rsa==4.7.2
+    # via python-jose
+sentry-sdk==1.0.0
+    # via -r requirements.in
+six==1.15.0
+    # via
+    #   bleach
+    #   django-modeltranslation
+    #   django-simple-history
+    #   ecdsa
+    #   holidays
+    #   jsonschema
+    #   python-dateutil
+    #   python-jose
+sqlparse==0.4.1
+    # via django
+swapper==1.1.2.post1
+    # via django-orghierarchy
+uritemplate==3.0.1
+    # via drf-spectacular
+urllib3==1.26.4
+    # via
+    #   elastic-apm
+    #   requests
+    #   sentry-sdk
+webencodings==0.5.1
+    # via bleach
+whitenoise==5.2.0
+    # via -r requirements.in
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

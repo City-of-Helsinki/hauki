@@ -32,9 +32,19 @@ CONNECTION_TYPE_MAPPING = {
 }
 
 # here we list the tprek connection types that we do *not* want to import as resources
-CONNECTION_TYPES_TO_IGNORE = {"OPENING_HOURS", "SOCIAL_MEDIA_LINK"}
+CONNECTION_TYPES_TO_IGNORE = {
+    "OPENING_HOURS",
+    "SOCIAL_MEDIA_LINK",
+}
 # here we list the tprek connection types that should *not* be parsed for opening hours
-CONNECTION_TYPES_TO_SKIP_HOURS = {"HIGHLIGHT", "OTHER_INFO", "OTHER_ADDRESS", "TOPICAL"}
+CONNECTION_TYPES_TO_SKIP_HOURS = {
+    "ESERVICE_LINK",
+    "HIGHLIGHT",
+    "LINK",
+    "OTHER_ADDRESS",
+    "SOCIAL_MEDIA_LINK",
+    "TOPICAL",
+}
 
 # here we list the tprek resource types that always have common hours and may be
 # merged if the strings are identical

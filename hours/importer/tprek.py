@@ -1155,16 +1155,31 @@ class TPRekImporter(Importer):
         We only wish to import opening hours, and only for objects that have no openings
         from other sources.
         """
-        libraries = Resource.objects.filter(
+        library_ids = Resource.objects.filter(
             origins__data_source=self.kirjastot_data_source
-        )
-        return [
-            connection
-            for connection in data
-            if connection["section_type"] == "OPENING_HOURS"
-            and self.resource_cache.get(str(connection["unit_id"]), None)
-            not in libraries
-        ]
+        ).values_list("id", flat=True)
+
+        def should_import_opening_hours(connection):
+            if connection["section_type"] != "OPENING_HOURS":
+                return False
+
+            # Don't import opening hours for a resource that doesn't exist
+            # or is a library.
+            resource = self.resource_cache.get(str(connection["unit_id"]), None)
+            if not resource or resource.id in library_ids:
+                return False
+
+            # Don't import opening hours for resources that get opening hours from
+            # somewhere else than TPR.
+            resource_data_sources = {
+                origin.data_source_id for origin in resource.origins.all()
+            }
+            if resource_data_sources.intersection({"visithelsinki", "kaupunkialusta"}):
+                return False
+
+            return True
+
+        return list(filter(should_import_opening_hours, data))
 
     @db.transaction.atomic
     def import_objects(

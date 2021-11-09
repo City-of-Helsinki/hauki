@@ -8,7 +8,7 @@ asgiref==3.3.4
     # via django
 attrs==20.3.0
     # via jsonschema
-bleach==3.3.0
+bleach==4.1.0
     # via -r requirements.in
 cachetools==4.2.1
     # via django-helusers

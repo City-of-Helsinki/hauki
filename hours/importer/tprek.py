@@ -70,15 +70,13 @@ class TPRekImporter(Importer):
             "https://asiointi.hel.fi/tprperhe/TPR/UI/ServicePoint/ServicePointEdit/"
         )
         self.CITIZEN_URL_BASE = "https://palvelukartta.hel.fi/fi/unit/"
-        ds_args = dict(id="tprek")
-        defaults = dict(name="Toimipisterekisteri")
         self.data_source, _ = DataSource.objects.get_or_create(
-            defaults=defaults, **ds_args
+            id="tprek",
+            defaults={"name": "Toimipisterekisteri"},
         )
-        ds_args = dict(id="kirkanta")
-        defaults = dict(name="kirjastot.fi")
         self.kirjastot_data_source, _ = DataSource.objects.get_or_create(
-            defaults=defaults, **ds_args
+            id="kirkanta",
+            defaults={"name": "kirjastot.fi"},
         )
 
         self.ignore_hours_list = set()
@@ -469,7 +467,7 @@ class TPRekImporter(Importer):
                 )
         return periods
 
-    def parse_opening_string(self, string: str) -> list:
+    def parse_opening_string(self, opening_string: str) -> list:
         """
         Takes TPREK simple Finnish opening hours string for a single period
         and returns corresponding opening time spans, if found.
@@ -501,7 +499,7 @@ class TPRekImporter(Importer):
         # 2) standardize dashes
         # 3) get rid of common typos:
         #   - "klo.", "klo:", "kl." -> "klo "
-        string = " " + " ".join(string.split()).replace("−", "-")
+        string = " " + " ".join(opening_string.split()).replace("−", "-")
         string = (
             string.replace("klo.", "klo").replace("klo:", "klo").replace("kl.", "klo")
         )

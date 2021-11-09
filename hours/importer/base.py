@@ -220,7 +220,13 @@ class Importer(object):
         # object_origins = set(
         #    klass.origins.field.model.objects.filter(**{klass.origins.field.name: obj})
         # )
-        object_origins = set(obj.origins.all())
+        # Ignore kaupunkialusta origins from TPR
+        object_origins = {
+            origin
+            for origin in obj.origins.all()
+            if origin.data_source_id != "kaupunkialusta"
+        }
+
         # TODO: get_or_create makes the importer not thread-safe,
         # one importer will create an object and another will re-use it
         data_origins = set(

@@ -1,5 +1,5 @@
 # Docker
-# Build a Docker image 
+# Build a Docker image
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 # https://dev.to/n3wt0n/container-image-promotion-across-environments-yaml-1ca6
 
@@ -35,7 +35,7 @@ pool:
 stages:
 - stage: Build
   displayName: Build the images
-  jobs:  
+  jobs:
   - job: Build
     displayName: Build
     steps:
@@ -43,7 +43,6 @@ stages:
           echo 'Running in workspace $(Pipeline.Workspace)'
           echo 'Build.SourceBranchName: $(branch)'
           echo 'Build.SourceVersion: $(tag)'
-          echo 'Build.SourceVersionMessage: $(Build.SourceVersionMessage)'
           echo 'Build.SourcesDirectory: $(Build.SourcesDirectory)'
           echo 'Build.ArtifactStagingDirectory: $(build.artifactstagingdirectory)'
           echo 'Tags: $(tags)'

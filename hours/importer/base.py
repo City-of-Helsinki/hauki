@@ -25,7 +25,7 @@ class Importer(object):
         for obj in (
             Resource.objects.filter(origins__data_source=self.data_source)
             .distinct()
-            .prefetch_related("origins")
+            .prefetch_related("origins", "origins__data_source")
         ):
             # merged resources may exist in the database. store the same object in
             # the cache with all its origin ids.
@@ -53,16 +53,17 @@ class Importer(object):
             self.get_object_ids(obj)[0]: obj
             for obj in DatePeriod.objects.filter(
                 origins__data_source=self.data_source
-            ).prefetch_related("origins")
+            ).prefetch_related("origins", "origins__data_source")
         }
 
     def get_object_ids(self, obj: Model) -> list:
         return [
             origin.origin_id
-            for origin in obj.origins.filter(data_source=self.data_source)
+            for origin in obj.origins.all()
+            if origin.data_source_id == self.data_source.id
         ]
 
-    def get_data_ids(self, data: dict) -> str:
+    def get_data_ids(self, data: dict) -> list:
         return [
             str(origin["origin_id"])
             for origin in data["origins"]

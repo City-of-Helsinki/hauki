@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 from django import db
 from django.db.models import Q
 from django.utils import timezone
+from requests import RequestException
 
 from ..enums import RuleContext, RuleSubject, State, Weekday
 from ..models import (
@@ -131,10 +132,17 @@ class KirjastotImporter(Importer):
             "period.start": start,
             "period.end": end,
         }
-        data = self.api_get("library", kirkanta_id, params)
-
-        if data["total"] > 0:
-            return data
+        try:
+            data = self.api_get("library", kirkanta_id, params)
+            if data["total"] > 0:
+                return data
+        except RequestException as e:
+            self.logger.warning(
+                "Could not fetch data from the kirjastot.fi API"
+                " for library {}:{}. Error: {}".format(
+                    self.data_source.id, kirkanta_id, str(e)
+                )
+            )
 
         return {}
 

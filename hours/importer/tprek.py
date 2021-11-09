@@ -995,9 +995,17 @@ class TPRekImporter(Importer):
 
         data = []
         for period in periods:
-            parsed_time_spans, names, descriptions = self.parse_opening_string(
-                period["string"]
-            )
+            try:
+                parsed_time_spans, names, descriptions = self.parse_opening_string(
+                    period["string"]
+                )
+            except ValueError as e:
+                self.logger.warning(
+                    'Value error "{}" when parsing'
+                    ' period string "{}". Skipping period.'.format(e, period_string)
+                )
+                continue
+
             # Time spans may be grouped if several different services are found!
             # In this case, each additional group will give rise to an additional
             # period in an additional subsection, even though only one period string

@@ -97,8 +97,10 @@ DATABASES = {"default": env.db()}
 
 DATABASES["default"]["CONN_MAX_AGE"] = env("CONN_MAX_AGE")
 
-if env.db("TEST_DATABASE_URL"):
+if env("TEST_DATABASE_URL"):
     DATABASES["default"]["TEST"] = env.db("TEST_DATABASE_URL")
+
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 AUTH_USER_MODEL = "users.User"
 

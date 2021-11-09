@@ -4,6 +4,7 @@ from calendar import day_abbr, different_locale, month_name
 from datetime import date
 from datetime import time as datetime_time
 from itertools import zip_longest
+from pathlib import Path
 from typing import Hashable, Tuple
 
 import pytz
@@ -80,12 +81,19 @@ class TPRekImporter(Importer):
         )
 
         self.ignore_hours_list = set()
-        with open("hours/importer/tprek_ignore_hours_list.csv") as ignore_file:
-            csv_reader = csv.reader(ignore_file, delimiter=";")
-            # do not read the first line
-            next(csv_reader)
-            for row in csv_reader:
-                self.ignore_hours_list.add(row[0])
+
+        ignore_file_name = (
+            Path(__file__).parent.absolute() / "tprek_ignore_hours_list.csv"
+        )
+        try:
+            with open(ignore_file_name) as ignore_file:
+                csv_reader = csv.reader(ignore_file, delimiter=";")
+                # do not read the first line
+                next(csv_reader)
+                for row in csv_reader:
+                    self.ignore_hours_list.add(row[0])
+        except OSError:
+            self.logger.warning('Ignore file "tprek_ignore_hours_list.csv" not found.')
 
         # this maps the imported resource names to Hauki objects
         self.data_to_match = {

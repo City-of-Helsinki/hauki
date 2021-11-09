@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.admin import OrganizationAdmin
+from django_orghierarchy.models import Organization
 from modeltranslation.admin import TranslationAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -13,6 +15,7 @@ from .models import (
     TimeSpan,
     TimeSpanGroup,
 )
+from .utils import get_resource_pk_filter
 
 
 class HaukiModelAdmin(SimpleHistoryAdmin, TranslationAdmin):
@@ -49,7 +52,7 @@ class ParentResourceInline(admin.TabularInline):
 
 
 class ResourceAdmin(HaukiModelAdmin):
-    search_fields = ("name", "description")
+    search_fields = ("id", "name", "description")
     list_display = ("name", "resource_type", "is_public")
     list_filter = ("resource_type", "data_sources", "is_public")
     ordering = ("name",)
@@ -86,6 +89,16 @@ class ResourceAdmin(HaukiModelAdmin):
         # update manually.
         form.instance.update_ancestry()
 
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(
+            request, queryset, search_term
+        )
+
+        if ":" in search_term:
+            queryset |= self.model.objects.filter(**get_resource_pk_filter(search_term))
+
+        return queryset, use_distinct
+
 
 class TimeSpanInline(admin.StackedInline):
     model = TimeSpan
@@ -99,7 +112,7 @@ class RuleInline(admin.StackedInline):
 
 class TimeSpanGroupAdmin(admin.ModelAdmin):
     model = TimeSpanGroup
-    search_fields = ("period__name", "period__resource__name")
+    search_fields = ("id", "period__name", "period__resource__name")
     list_display = (
         "get_period_name",
         "get_resource_name",
@@ -144,7 +157,7 @@ class TimeSpanGroupAdmin(admin.ModelAdmin):
 
 
 class DatePeriodAdmin(HaukiModelAdmin):
-    search_fields = ("resource__name", "name")
+    search_fields = ("id", "resource__name", "name")
     list_display = (
         "name",
         "resource",
@@ -174,8 +187,14 @@ class SignedAuthKeyAdmin(admin.ModelAdmin):
     get_data_source_name.short_description = _("Data source name")
 
 
+class HaukiOrganizationAdmin(OrganizationAdmin):
+    search_fields = ("id", "name")
+
+
 admin.site.register(DataSource, DataSourceAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(DatePeriod, DatePeriodAdmin)
 admin.site.register(TimeSpanGroup, TimeSpanGroupAdmin)
 admin.site.register(SignedAuthKey, SignedAuthKeyAdmin)
+admin.site.unregister(Organization)
+admin.site.register(Organization, HaukiOrganizationAdmin)

@@ -30,6 +30,7 @@ CONNECTION_TYPE_MAPPING = {
     "TOPICAL": ResourceType.SUBSECTION,
     "HIGHLIGHT": ResourceType.SUBSECTION,
     "OTHER_INFO": ResourceType.SUBSECTION,
+    "PRICE": ResourceType.SUBSECTION,
 }
 
 # here we list the tprek connection types that we do *not* want to import as resources
@@ -45,6 +46,7 @@ CONNECTION_TYPES_TO_SKIP_HOURS = {
     "OTHER_ADDRESS",
     "SOCIAL_MEDIA_LINK",
     "TOPICAL",
+    "PRICE",
 }
 
 # here we list the tprek resource types that always have common hours and may be
@@ -929,13 +931,16 @@ class TPRekImporter(Importer):
         # connections
         data.pop("connection_id", None)
         data.pop("unit_id", None)
+        resource_type = CONNECTION_TYPE_MAPPING.get(
+            data["section_type"], ResourceType.SUBSECTION
+        )
         connection_data = {
             "origins": [origin],
-            "resource_type": CONNECTION_TYPE_MAPPING[data["section_type"]],
+            "resource_type": resource_type,
             "name": name,
             "description": description,
             "address": self.get_resource_name(data)
-            if CONNECTION_TYPE_MAPPING[data["section_type"]] == ResourceType.ENTRANCE
+            if resource_type == ResourceType.ENTRANCE
             else "",
             "parents": parents,
             "extra_data": data,

@@ -258,7 +258,10 @@ class Importer(object):
                     # TODO: deleted origin_ids may, however, still refer to objects that
                     # will be imported later, and may have
                     # hours that need to be taken into account.
-                    del cache[origin.origin_id]
+                    try:
+                        del cache[origin.origin_id]
+                    except KeyError:
+                        pass
                     origin.delete()
             except klass.origins.field.model.DoesNotExist:
                 # another object deleted the origin already

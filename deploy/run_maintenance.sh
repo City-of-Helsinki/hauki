@@ -6,9 +6,9 @@
 # TPREK units and connections must be up to date so changed TPREK data is present in Hauki
 # NOTE! --parse-nothing should be used here when Hauki is in production. It will prevent new
 # opening hours being created when resources contain opening hours strings.
-./manage.py hours_import tprek --resources --merge
+./manage.py hours_import tprek --resources
 # Library opening hours must be up to date, because they will not be edited in Hauki
 ./manage.py hours_import kirjastot --openings
 
 # NOTE! Until hauki is in production, we import opening hours from TPREK to stay up to date.
-./manage.py hours_import tprek --openings --merge
+./manage.py hours_import tprek --openings

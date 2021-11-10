@@ -953,11 +953,17 @@ class TPRekImporter(Importer):
         """
         Takes connection data list and filters the connections that should be imported.
         """
-        return [
-            connection
-            for connection in data
-            if connection["section_type"] not in CONNECTION_TYPES_TO_IGNORE
-        ]
+
+        def should_import_connection(connection):
+            if connection["section_type"] in CONNECTION_TYPES_TO_IGNORE:
+                return False
+
+            if connection["connection_id"].startswith("miscinfo-"):
+                return False
+
+            return True
+
+        return list(filter(should_import_connection, data))
 
     def get_opening_hours_data(self, data: dict, allow_missing_resource=False) -> list:
         """

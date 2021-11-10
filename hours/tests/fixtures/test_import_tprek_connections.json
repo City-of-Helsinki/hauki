@@ -1,6 +1,6 @@
 [
         {
-            "connection_id": 1,
+            "connection_id": "contact-1",
             "unit_id": 8215,
             "section_type": "OPENING_HOURS",
             "name_fi": "avoinna ma-to 08-20, pe 08-18, su 12-18, suljettu la",
@@ -8,7 +8,7 @@
             "name_sv": "öppet mån-tor 08-20, fre 08-18, sön 12-18, stängt lör"
         },
         {
-            "connection_id": 2,
+            "connection_id": "contact-2",
             "unit_id": 8215,
             "section_type": "OPENING_HOURS",
             "name_fi": "Aukioloajat",
@@ -19,7 +19,7 @@
             "www_sv": "http://www.helmet.fi/bibliotek/84860/Kontaktuppgifter/"
         },
         {
-            "connection_id": 3,
+            "connection_id": "contact-3",
             "unit_id": 51342,
             "section_type": "OPENING_HOURS",
             "name_fi": "avoinna ma-to 08-20, pe 08-18, su 12-18, suljettu la",
@@ -27,7 +27,7 @@
             "name_sv": "öppet mån-tor 08-20, fre 08-18, sön 12-18, stängt lör"
         },
         {
-            "connection_id": 4,
+            "connection_id": "contact-4",
             "unit_id": 51342,
             "section_type": "OPENING_HOURS",
             "name_fi": "Aukioloajat",
@@ -38,33 +38,33 @@
             "www_sv": "http://www.helmet.fi/bibliotek/86476/Kontaktuppgifter/"
         },
         {
-            "connection_id": 5,
+            "connection_id": "contact-5",
             "unit_id": 8215,
             "section_type": "HIGHLIGHT",
             "name_fi": "COVID-19: Kirjastojen ohjeita epidemiakaudelle.",
             "www_fi": "https://www.helmet.fi/fi-FI/Tapahtumat_ja_vinkit/Uutispalat/Kirjastoasioinnista_koronavirusepidemian(208997)"
         },
         {
-            "connection_id": 6,
+            "connection_id": "contact-6",
             "unit_id": 51342,
             "section_type": "HIGHLIGHT",
             "name_fi": "COVID-19: Kirjastojen ohjeita epidemiakaudelle.",
             "www_fi": "https://www.helmet.fi/fi-FI/Tapahtumat_ja_vinkit/Uutispalat/Kirjastoasioinnista_koronavirusepidemian(208997)"
         },
         {
-            "connection_id": 7,
+            "connection_id": "contact-7",
             "unit_id": 8215,
             "section_type": "HIGHLIGHT",
             "name_fi": "Koululaisilla on mahdollisuus maksulliseen välipalaan 36,10 €/kk."
         },
         {
-            "connection_id": 8,
+            "connection_id": "contact-8",
             "unit_id": 51342,
             "section_type": "HIGHLIGHT",
             "name_fi": "Koululaisilla on mahdollisuus maksulliseen välipalaan 36,10 €/kk."
         },
         {
-            "connection_id": 9,
+            "connection_id": "contact-9",
             "unit_id": 8215,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset ma - pe 9.00 - 14.00",
@@ -74,7 +74,7 @@
             "email": "venepaikkavaraukset@hel.fi"
         },
         {
-            "connection_id": 10,
+            "connection_id": "contact-10",
             "unit_id": 51342,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Myynti, varaus ja ilmoitusasiat Venepaikkavaraukset ma - pe 9.00 - 14.00",
@@ -84,7 +84,7 @@
             "email": "venepaikkavaraukset@hel.fi"
         },
         {
-            "connection_id": 11,
+            "connection_id": "contact-11",
             "unit_id": 8215,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Kirjastonjohtaja",
@@ -93,7 +93,7 @@
             "email": "johtaja@kallio.fi"
         },
         {
-            "connection_id": 12,
+            "connection_id": "contact-12",
             "unit_id": 51342,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Kirjastonjohtaja",
@@ -102,14 +102,14 @@
             "email": "johtaja@oodi.fi"
         },
         {
-            "connection_id": 13,
+            "connection_id": "contact-13",
             "unit_id": 8215,
             "section_type": "TOPICAL",
             "name_fi": "Ilmoittautuminen koululaisten iltapäivätoimintaan",
             "www_fi": "https://www.hel.fi/helsinki/fi/kasvatus-ja-koulutus/perusopetus/iltapaivatoiminta/iptoiminta-leikkipuistoissa/ilmoittautuminen/"
         },
         {
-            "connection_id": 14,
+            "connection_id": "contact-14",
             "unit_id": 8215,
             "section_type": "OTHER_ADDRESS",
             "name_fi": "Sisäänkäynti: Mikkolankuja 1",
@@ -117,7 +117,7 @@
             "name_sv": "Entré: Mikkolankuja 1"
         },
         {
-            "connection_id": 15,
+            "connection_id": "contact-15",
             "unit_id": 51342,
             "section_type": "OTHER_ADDRESS",
             "name_fi": "Sisäänkäynti: Floorantie 3-5 / Jaavankuja 4",
@@ -125,7 +125,7 @@
             "name_sv": "Entré: Floorantie 3-5 / Jaavankuja 4"
         },
         {
-            "connection_id": 16,
+            "connection_id": "contact-16",
             "unit_id": 8215,
             "section_type": "OTHER_INFO",
             "name_fi": "Venepaikan hakeminen",
@@ -136,7 +136,7 @@
             "www_sv": "https://www.hel.fi/helsinki/sv/kultur-och-fritid/friluftsliv/botliv/batplatser/"
         },
         {
-            "connection_id": 17,
+            "connection_id": "contact-17",
             "unit_id": 51342,
             "section_type": "OTHER_INFO",
             "name_fi": "Venepaikan hakeminen",
@@ -147,7 +147,7 @@
             "www_sv": "https://www.hel.fi/helsinki/sv/kultur-och-fritid/friluftsliv/botliv/batplatser/"
         },
         {
-            "connection_id": 18,
+            "connection_id": "contact-18",
             "unit_id": 8215,
             "section_type": "OTHER_INFO",
             "name_fi": "Tarjolla esitystila, kokoustila, näyttelytila.",
@@ -155,7 +155,7 @@
             "name_sv": "Det finns en föreställning utrymme, mötesrum, en utställningsplats."
         },
         {
-            "connection_id": 19,
+            "connection_id": "contact-19",
             "unit_id": 51342,
             "section_type": "OTHER_INFO",
             "name_fi": "Tarjolla esitystila, kokoustila, näyttelytila.",
@@ -163,7 +163,7 @@
             "name_sv": "Det finns en föreställning utrymme, mötesrum, en utställningsplats."
         },
         {
-            "connection_id": 20,
+            "connection_id": "contact-20",
             "unit_id": 51342,
             "section_type": "OTHER_INFO",
             "name_fi": "Ylläpitäjä HSY:n jätehuolto\nwww.hsy.fi/asiointi, puh 09 1561 2110",
@@ -171,7 +171,7 @@
             "name_sv": "Upprätthållaren HSY:n jätehuolto\nwww.hsy.fi/asiointi, puh 09 1561 2110"
         },
         {
-            "connection_id": 21,
+            "connection_id": "contact-21",
             "unit_id": 51342,
             "section_type": "LINK",
             "name_fi": "Vesijumpat",
@@ -182,7 +182,7 @@
             "www_sv": "https://www.hel.fi/helsinki/fi/kulttuuri-ja-vapaa-aika/liikunta/liikuntakurssit/tyoikaiset/vesijumpat"
         },
         {
-            "connection_id": 22,
+            "connection_id": "contact-22",
             "unit_id": 51342,
             "section_type": "LINK",
             "name_fi": "Oodin laite- ja tilavaraukset",
@@ -193,14 +193,14 @@
             "www_sv": "https://varaamo.hel.fi/search?search=oodi"
         },
         {
-            "connection_id": 23,
+            "connection_id": "contact-23",
             "unit_id": 51342,
             "section_type": "ESERVICE_LINK",
             "name_fi": "Ohjattuun liikuntaan ilmoittautuminen",
             "www_fi": "https://resurssivaraus.espoo.fi/ohjattuliikunta/haku"
         },
         {
-            "connection_id": 24,
+            "connection_id": "contact-24",
             "unit_id": 8215,
             "section_type": "SOCIAL_MEDIA_LINK",
             "name_fi": "Twitter",
@@ -211,7 +211,7 @@
             "www_sv": "https://twitter.com/KallionKirjasto"
         },
         {
-            "connection_id": 25,
+            "connection_id": "contact-25",
             "unit_id": 8215,
             "section_type": "SOCIAL_MEDIA_LINK",
             "name_fi": "Instagram",
@@ -222,7 +222,7 @@
             "www_sv": "https://www.instagram.com/kallionkirjasto"
         },
         {
-            "connection_id": 26,
+            "connection_id": "contact-26",
             "unit_id": 8215,
             "section_type": "SOCIAL_MEDIA_LINK",
             "name_fi": "Foursquare",
@@ -233,7 +233,7 @@
             "www_sv": "https://foursquare.com/v/kallion-kirjasto/4baa37d5f964a52069543ae3"
         },
         {
-            "connection_id": 27,
+            "connection_id": "contact-27",
             "unit_id": 8215,
             "section_type": "SOCIAL_MEDIA_LINK",
             "name_fi": "Facebook",
@@ -244,7 +244,7 @@
             "www_sv": "http://www.facebook.com/kirjastokallio"
         },
         {
-            "connection_id": 28,
+            "connection_id": "contact-28",
             "unit_id": 8215,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Yhteinen kirjastovirkailija ma-pe 09-14",
@@ -253,7 +253,7 @@
             "email": "teppo@hel.fi"
         },
         {
-            "connection_id": 29,
+            "connection_id": "contact-29",
             "unit_id": 51342,
             "section_type": "PHONE_OR_EMAIL",
             "name_fi": "Yhteinen kirjastovirkailija ma-pe 09-14",

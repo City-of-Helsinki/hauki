@@ -64,7 +64,7 @@ def mock_tprek_data(requests_mock, request):
         # Single connection should become duplicated.
         connections.append(
             {
-                "connection_id": 100,
+                "connection_id": "contact-100",
                 "unit_id": 8215,
                 "section_type": "ESERVICE_LINK",
                 "name_fi": "Ohjattuun liikuntaan ilmoittautuminen",
@@ -511,16 +511,24 @@ def test_import_tprek(mock_tprek_data):
 
     # Check that the fields in subsections are imported correctly
     mock_subsection = next(
-        filter(lambda x: x["connection_id"] == 5, mock_tprek_data["connections"])
+        filter(
+            lambda x: x["connection_id"] == "contact-5", mock_tprek_data["connections"]
+        )
     )
     mock_contact = next(
-        filter(lambda x: x["connection_id"] == 28, mock_tprek_data["connections"])
+        filter(
+            lambda x: x["connection_id"] == "contact-28", mock_tprek_data["connections"]
+        )
     )
     mock_online_service = next(
-        filter(lambda x: x["connection_id"] == 21, mock_tprek_data["connections"])
+        filter(
+            lambda x: x["connection_id"] == "contact-21", mock_tprek_data["connections"]
+        )
     )
     mock_entrance = next(
-        filter(lambda x: x["connection_id"] == 14, mock_tprek_data["connections"])
+        filter(
+            lambda x: x["connection_id"] == "contact-14", mock_tprek_data["connections"]
+        )
     )
     assert covid1.name_fi == mock_subsection["name_fi"]
     assert covid1.description_fi == mock_subsection["www_fi"]

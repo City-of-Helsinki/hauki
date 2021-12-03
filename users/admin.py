@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm
 from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.models import Organization
 
 from .models import User, UserOrigin
 
@@ -14,6 +15,16 @@ class HaukiUserChangeForm(UserChangeForm):
 class UserOriginInline(admin.TabularInline):
     model = UserOrigin
     extra = 1
+
+
+class AdminOrganizationsInline(admin.TabularInline):
+    model = Organization.admin_users.through
+    extra = 0
+
+
+class OrganizationMembershipsInline(admin.TabularInline):
+    model = Organization.regular_users.through
+    extra = 0
 
 
 class HaukiUserAdmin(UserAdmin):
@@ -37,7 +48,11 @@ class HaukiUserAdmin(UserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
-    inlines = (UserOriginInline,)
+    inlines = (
+        UserOriginInline,
+        AdminOrganizationsInline,
+        OrganizationMembershipsInline,
+    )
 
 
 admin.site.register(User, HaukiUserAdmin)

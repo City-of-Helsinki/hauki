@@ -189,6 +189,7 @@ class SignedAuthKeyAdmin(admin.ModelAdmin):
 
 class HaukiOrganizationAdmin(OrganizationAdmin):
     search_fields = ("id", "name")
+    list_filter = ("admin_users", "regular_users")
 
 
 admin.site.register(DataSource, DataSourceAdmin)

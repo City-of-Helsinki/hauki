@@ -5,6 +5,7 @@ from typing import Tuple
 import pytz
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.http import Http404
 from django.utils import timezone
@@ -14,18 +15,25 @@ from django_orghierarchy.models import Organization
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiParameter,
+    OpenApiResponse,
     extend_schema,
     extend_schema_view,
     inline_serializer,
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.fields import BooleanField, CharField, ListField
 from rest_framework.filters import BaseFilterBackend, OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import clone_request
 from rest_framework.response import Response
 
 from .authentication import HaukiSignedAuthData
@@ -294,6 +302,36 @@ class ResourceFilterBackend(BaseFilterBackend):
     is_open_now=extend_schema(
         summary="Is Resource open now?", responses=IsOpenNowSerializer
     ),
+    copy_date_periods=extend_schema(
+        summary="Copy all the periods from this resource to other resources",
+        request=OpenApiTypes.NONE,
+        parameters=[
+            OpenApiParameter(
+                "target_resources",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Comma separated list of target resource ids",
+            ),
+            OpenApiParameter(
+                "replace",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                description="Replace all the periods in the target resource",
+                default=False,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Copy succeeded",
+            ),
+            400: OpenApiResponse(description="Bad request"),
+            403: OpenApiResponse(
+                description="No permission read source resource or no permission"
+                " to modify one or more of the target resources"
+            ),
+            404: OpenApiResponse(description="One or more target resources not found"),
+        },
+    ),
 )
 class ResourceViewSet(
     OnCreateOrgMembershipCheck, PermissionCheckAction, viewsets.ModelViewSet
@@ -319,7 +357,7 @@ class ResourceViewSet(
 
         return queryset
 
-    def get_object(self):
+    def get_object(self, check_permission=True):
         queryset = self.filter_queryset(self.get_queryset())
 
         # Perform the lookup filtering.
@@ -330,8 +368,9 @@ class ResourceViewSet(
 
         obj = get_object_or_404(queryset, **get_resource_pk_filter(pk))
 
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
+        if check_permission:
+            # May raise a permission denied
+            self.check_object_permissions(self.request, obj)
 
         return obj
 
@@ -475,6 +514,71 @@ class ResourceViewSet(
         serializer = IsOpenNowSerializer(data)
 
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
+    def copy_date_periods(self, request, pk=None):
+        resource = self.get_object(check_permission=False)
+
+        # The user only needs read permission to the source resource
+        self.check_object_permissions(clone_request(self.request, "GET"), resource)
+
+        if not request.query_params.get("target_resources"):
+            raise ValidationError(detail=_("target_resources parameter is required"))
+
+        replace = False
+        if request.query_params.get("replace"):
+            replace_value = request.query_params.get("replace").lower().strip()
+            if replace_value in ["1", "true", "yes"]:
+                replace = True
+
+        target_resource_ids = [
+            resource_id.strip()
+            for resource_id in request.query_params.get("target_resources", "").split(
+                ","
+            )
+            if resource_id.strip()
+        ]
+
+        target_resources = []
+        no_permission_resource_ids = []
+        for target_resource_id in target_resource_ids:
+            try:
+                target_resource = Resource.objects.get(
+                    **get_resource_pk_filter(target_resource_id)
+                )
+            except Resource.DoesNotExist:
+                detail = _('Resource with the id "{}" not found.').format(
+                    target_resource_id
+                )
+                raise NotFound(detail=detail)
+
+            if target_resource.id == resource.id:
+                detail = _("Can't copy date periods to self").format(target_resource_id)
+                raise APIException(detail=detail)
+
+            try:
+                self.check_object_permissions(self.request, target_resource)
+            except PermissionDenied:
+                no_permission_resource_ids.append(target_resource_id)
+                continue
+
+            target_resources.append(target_resource)
+
+        if no_permission_resource_ids:
+            detail = _("No permission to modify resource(s): {}").format(
+                ", ".join(no_permission_resource_ids)
+            )
+            raise PermissionDenied(detail=detail)
+
+        with transaction.atomic():
+            for target_resource in target_resources:
+                resource.copy_all_periods_to_resource(target_resource, replace=replace)
+
+        return Response(
+            {
+                "message": "Date periods copied",
+            }
+        )
 
 
 @extend_schema_view(

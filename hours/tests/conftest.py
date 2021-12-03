@@ -2,6 +2,7 @@ import datetime
 import random
 import string
 import unittest
+import uuid
 
 import factory
 import pytest
@@ -108,6 +109,7 @@ class RuleFactory(factory.django.DjangoModelFactory):
 
 @register
 class OrganizationFactory(factory.django.DjangoModelFactory):
+    id = factory.LazyAttribute(lambda x: str(uuid.uuid4()))
     name = factory.LazyAttribute(lambda x: "ORG-" + faker.pystr())
 
     class Meta:

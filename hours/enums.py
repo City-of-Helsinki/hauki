@@ -116,6 +116,11 @@ class RuleContext(Enum):
         MONTH = pgettext_lazy("RuleContext", "Month")
         # WEEK = pgettext_lazy("RuleContext", "Week")
 
+        # Make strings used in the Rule.as_text method findable by makemessages
+        pgettext_lazy("every_rulecontext", "period")
+        pgettext_lazy("every_rulecontext", "year")
+        pgettext_lazy("every_rulecontext", "month")
+
 
 class RuleSubject(Enum):
     DAY = "day"
@@ -140,6 +145,18 @@ class RuleSubject(Enum):
         FRIDAY = pgettext_lazy("RuleSubject", "Friday")
         SATURDAY = pgettext_lazy("RuleSubject", "Saturday")
         SUNDAY = pgettext_lazy("RuleSubject", "Sunday")
+
+        # Make strings used in the Rule.as_text method findable by makemessages
+        pgettext_lazy("starting_from_nth_rulesubject", "day")
+        pgettext_lazy("starting_from_nth_rulesubject", "week")
+        pgettext_lazy("starting_from_nth_rulesubject", "month")
+        pgettext_lazy("starting_from_nth_rulesubject", "mon")
+        pgettext_lazy("starting_from_nth_rulesubject", "tue")
+        pgettext_lazy("starting_from_nth_rulesubject", "wed")
+        pgettext_lazy("starting_from_nth_rulesubject", "thu")
+        pgettext_lazy("starting_from_nth_rulesubject", "fri")
+        pgettext_lazy("starting_from_nth_rulesubject", "sat")
+        pgettext_lazy("starting_from_nth_rulesubject", "sun")
 
     def is_singular(self):
         return self in [

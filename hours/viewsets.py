@@ -57,6 +57,7 @@ from .serializers import (
     TimeSpanCreateSerializer,
     TimeSpanSerializer,
 )
+from .signals import DeferUpdatingDenormalizedDatePeriodData
 from .utils import get_resource_pk_filter
 
 
@@ -213,6 +214,7 @@ class ResourceFilterBackend(BaseFilterBackend):
         origin_id_exists = request.query_params.get("origin_id_exists", None)
         parent = request.query_params.get("parent", None)
         child = request.query_params.get("child", None)
+        date_periods_hash = request.query_params.get("date_periods_hash", None)
 
         filter_q = Q()
         if data_source is not None:
@@ -242,6 +244,9 @@ class ResourceFilterBackend(BaseFilterBackend):
                     Q(origins__data_source=data_source)
                     & Q(origins__origin_id__isnull=False)
                 )
+
+        if date_periods_hash is not None:
+            filter_q &= Q(date_periods_hash=date_periods_hash)
 
         return queryset.filter(filter_q)
 
@@ -571,8 +576,11 @@ class ResourceViewSet(
             raise PermissionDenied(detail=detail)
 
         with transaction.atomic():
-            for target_resource in target_resources:
-                resource.copy_all_periods_to_resource(target_resource, replace=replace)
+            with DeferUpdatingDenormalizedDatePeriodData():
+                for target_resource in target_resources:
+                    resource.copy_all_periods_to_resource(
+                        target_resource, replace=replace
+                    )
 
         return Response(
             {

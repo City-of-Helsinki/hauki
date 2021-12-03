@@ -59,6 +59,7 @@ class ResourceAdmin(HaukiModelAdmin):
     raw_id_fields = ("children", "organization")
     inlines = (ResourceOriginInline, ParentResourceInline, ChildResourceInline)
     readonly_fields = (
+        "date_periods_hash",
         "ancestry_is_public",
         "ancestry_data_source",
         "ancestry_organization",

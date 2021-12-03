@@ -16,7 +16,11 @@ from model_utils.models import SoftDeletableModel
 
 from ..enums import ResourceType, State, Weekday
 from ..models import DataSource, DatePeriod, Resource
-from ..signals import resource_children_changed, resource_children_cleared
+from ..signals import (
+    DeferUpdatingDenormalizedDatePeriodData,
+    resource_children_changed,
+    resource_children_cleared,
+)
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -1419,14 +1423,16 @@ class TPRekImporter(Importer):
     @db.transaction.atomic
     def import_units(self):
         self.logger.info("Importing TPREK units")
-        self.import_objects("unit")
+        with DeferUpdatingDenormalizedDatePeriodData():
+            self.import_objects("unit")
 
     @db.transaction.atomic
     def import_connections(self):
         self.logger.info("Importing TPREK connections")
         if self.options.get("merge", None):
             self.logger.info("Merging mergeable connections")
-        self.import_objects("connection")
+        with DeferUpdatingDenormalizedDatePeriodData():
+            self.import_objects("connection")
 
     def import_resources(self):
         self.import_units()
@@ -1434,4 +1440,5 @@ class TPRekImporter(Importer):
 
     def import_openings(self):
         self.logger.info("Importing TPREK opening hours")
-        self.import_objects("opening_hours")
+        with DeferUpdatingDenormalizedDatePeriodData():
+            self.import_objects("opening_hours")

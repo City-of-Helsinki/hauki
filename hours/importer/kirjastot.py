@@ -19,6 +19,7 @@ from ..models import (
     TimeElement,
     combine_element_time_spans,
 )
+from ..signals import DeferUpdatingDenormalizedDatePeriodData
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -592,8 +593,7 @@ class KirjastotImporter(Importer):
                     + f"{opening_hours[schedule_date]} vs. {time_elements}"
                 )
 
-    @db.transaction.atomic
-    def import_openings(self):
+    def do_import(self):
         libraries = Resource.objects.filter(origins__data_source=self.data_source)
 
         if self.options.get("single", None):
@@ -726,6 +726,11 @@ class KirjastotImporter(Importer):
                     library, library._kirkanta_data, import_start_date, import_end_date
                 )
                 self.logger.info("Check OK.")
+
+    @db.transaction.atomic
+    def import_openings(self):
+        with DeferUpdatingDenormalizedDatePeriodData():
+            self.do_import()
 
     def import_check(self):
         libraries = Resource.objects.filter(origins__data_source=self.data_source)

@@ -5,7 +5,9 @@ from calendar import Calendar, monthrange
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, field
+from hashlib import md5
 from itertools import chain
+from operator import attrgetter
 from typing import List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
@@ -301,6 +303,8 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     timezone = TimeZoneField(
         default=get_resource_default_timezone, null=True, blank=True
     )
+    # Denormalized values from the date periods
+    date_periods_hash = models.CharField(max_length=64, null=True, blank=True)
     # Denormalized values from the parent resources
     ancestry_is_public = models.BooleanField(null=True, blank=True)
     ancestry_data_source = ArrayField(
@@ -329,6 +333,16 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     @_history_user.setter
     def _history_user(self, value):
         self.last_modified_by = value
+
+    def _get_date_periods_as_hash(self):
+        date_period_hash_inputs = [
+            date_period.as_hash_input()
+            for date_period in self.date_periods.all()
+            if not date_period.is_removed
+        ]
+        date_period_hash_inputs.sort()
+
+        return md5("".join(date_period_hash_inputs).encode("utf8")).hexdigest()  # nosec
 
     def get_daily_opening_hours(self, start_date, end_date):
         # TODO: This is just an MVP. Things yet to do:
@@ -423,6 +437,14 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         self.ancestry_data_source = list(data["data_sources"])
         self.ancestry_organization = list(data["organizations"])
         self.save(update_child_ancestry_fields=update_child_ancestry_fields)
+
+    def update_denormalized_date_periods_data(self):
+        self.date_periods_hash = self._get_date_periods_as_hash()
+
+        self.save(
+            update_fields=["date_periods_hash"],
+            update_child_ancestry_fields=False,
+        )
 
     def save(
         self,
@@ -582,6 +604,27 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     def __str__(self):
         return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"
 
+    def as_hash_input(self) -> str:
+        data = "[DATE_PERIOD:{}]".format(
+            "|".join(
+                [
+                    self.start_date.isoformat() if self.start_date else "*",
+                    self.end_date.isoformat() if self.end_date else "*",
+                    str(self.resource_state.value),
+                    str(self.override),
+                ]
+            )
+        )
+
+        group_strings = []
+        for time_span_group in self.time_span_groups.all():
+            if time_span_group.is_removed:
+                continue
+            group_strings.append(time_span_group.as_hash_input())
+        group_strings.sort()
+
+        return data + "".join(group_strings)
+
     def get_daily_opening_hours(self, start_date, end_date):
         overlap = get_range_overlap(
             start_date, end_date, self.start_date, self.end_date
@@ -691,6 +734,23 @@ class TimeSpanGroup(SoftDeletableModel, models.Model):
     def __str__(self):
         return f"{self.period} time spans {self.time_spans.all()}"
 
+    def as_hash_input(self) -> str:
+        time_span_strings = []
+        for time_span in self.time_spans.all():
+            if time_span.is_removed:
+                continue
+            time_span_strings.append(time_span.as_hash_input())
+        time_span_strings.sort()
+
+        rule_strings = []
+        for rule in self.rules.all():
+            if rule.is_removed:
+                continue
+            rule_strings.append(rule.as_hash_input())
+        rule_strings.sort()
+
+        return "".join(time_span_strings + rule_strings)
+
 
 class TimeSpan(SoftDeletableModel, TimeStampedModel):
     group = models.ForeignKey(
@@ -745,6 +805,26 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
 
         return f"{self.name}({self.start_time} - {self.end_time} {weekdays})"
 
+    def as_hash_input(self) -> str:
+        sorted_weekdays = []
+        if self.weekdays:
+            sorted_weekdays = sorted(self.weekdays, key=attrgetter("value"))
+
+        return "[TIME_SPAN:{}]".format(
+            "|".join(
+                [
+                    self.start_time.isoformat() if self.start_time else "*",
+                    self.end_time.isoformat() if self.end_time else "*",
+                    str(self.end_time_on_next_day),
+                    str(self.full_day),
+                    "".join([str(i.value) for i in sorted_weekdays])
+                    if self.weekdays
+                    else "*",
+                    str(self.resource_state.value),
+                ]
+            )
+        )
+
 
 class Rule(SoftDeletableModel, TimeStampedModel):
     group = models.ForeignKey(
@@ -788,6 +868,23 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 f"every {self.frequency_ordinal} {self.subject}s in "
                 f"{self.context}, starting from {self.start}"
             )
+
+    def as_hash_input(self) -> str:
+        return "[RULE:{}]".format(
+            "|".join(
+                [
+                    self.context.value if self.context else "*",
+                    self.subject.value if self.subject else "*",
+                    str(self.start) if self.start is not None else "*",
+                    str(self.frequency_ordinal)
+                    if self.frequency_ordinal is not None
+                    else "*",
+                    self.frequency_modifier.value
+                    if self.frequency_modifier is not None
+                    else "*",
+                ]
+            )
+        )
 
     def save(self, *args, **kwargs):
         # Note that save is not called if rules are created in the database with bulk

@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from calendar import Calendar, monthrange
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass, field
 from itertools import chain
 from typing import List, Optional, Set, Union
@@ -477,6 +478,50 @@ class Resource(SoftDeletableModel, TimeStampedModel):
             child.get_descendants(acc)
 
         return acc
+
+    def copy_all_periods_to_resource(self, target_resource, replace=False):
+        if (
+            not target_resource
+            or not isinstance(target_resource, Resource)
+            or self.id == target_resource.id
+        ):
+            return
+
+        existing_period_ids = []
+        if replace:
+            existing_period_ids = list(
+                target_resource.date_periods.all().values_list("id", flat=True)
+            )
+
+        def copy_instance(instance, foreign_field_name=None, foreign_instance=None):
+            new_instance = deepcopy(instance)
+            new_instance.id = None
+            if foreign_field_name and foreign_instance:
+                setattr(new_instance, foreign_field_name, foreign_instance)
+            new_instance.save()
+
+            return new_instance
+
+        for period in self.date_periods.all():
+            new_period = copy_instance(period, "resource", target_resource)
+
+            for time_span_group in period.time_span_groups.all():
+                new_time_span_group = copy_instance(
+                    time_span_group, "period", new_period
+                )
+
+                for time_span in time_span_group.time_spans.all():
+                    copy_instance(time_span, "group", new_time_span_group)
+
+                for rule in time_span_group.rules.all():
+                    copy_instance(rule, "group", new_time_span_group)
+
+        if replace:
+            # Mark target's old periods deleted
+            for period in target_resource.date_periods.filter(
+                id__in=existing_period_ids
+            ):
+                period.delete()
 
 
 class ResourceOrigin(models.Model):

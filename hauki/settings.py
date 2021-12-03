@@ -155,6 +155,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.humanize",
     "simple_history",
     # disable Django’s development server static file handling
     "whitenoise.runserver_nostatic",

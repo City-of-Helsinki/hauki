@@ -564,3 +564,65 @@ def test_list_resources_parent_and_child_filter_no_match(
     )
 
     assert response.data["count"] == 0
+
+
+@pytest.mark.django_db
+def test_list_resources_filter_by_multiple_resource_ids(
+    admin_client, data_source_factory, resource_factory, resource_origin_factory
+):
+    data_source = data_source_factory()
+    data_source2 = data_source_factory()
+
+    resources = []
+    for i in range(1, 10):
+        resource = resource_factory()
+        resource_origin_factory(resource=resource, data_source=data_source, origin_id=i)
+        resources.append(resource)
+
+    resource = resource_factory()
+    resource_origin_factory(resource=resource, data_source=data_source, origin_id=1234)
+    resource_origin_factory(resource=resource, data_source=data_source2, origin_id=2345)
+    resources.append(resource)
+
+    url = reverse("resource-list")
+
+    resource_ids = ",".join(
+        [
+            "",
+            ":",
+            str(resources[0].id),
+            "{}:{}".format(
+                resources[2].origins.first().data_source.id,
+                resources[2].origins.first().origin_id,
+            ),
+            f" {resources[5].id} ",
+            "{}:{}".format(
+                resources[8].origins.first().data_source.id,
+                resources[8].origins.first().origin_id,
+            ),
+            "{}:{}".format(
+                resources[9].origins.first().data_source.id,
+                resources[9].origins.first().origin_id,
+            ),
+            "{}:{}".format(
+                resources[9].origins.last().data_source.id,
+                resources[9].origins.last().origin_id,
+            ),
+            "nonsensical value",
+            "second::::nonsensical",
+        ]
+    )
+
+    response = admin_client.get(
+        url,
+        data={
+            "resource_ids": resource_ids,
+            "data_source": data_source.id,
+        },
+    )
+
+    assert response.status_code == 200, "{} {}".format(
+        response.status_code, response.data
+    )
+
+    assert response.data["count"] == 5

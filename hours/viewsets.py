@@ -210,6 +210,7 @@ def get_start_and_end_from_params(request) -> Tuple[datetime.date, datetime.date
 
 class ResourceFilterBackend(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
+        resource_ids = request.query_params.get("resource_ids", None)
         data_source = request.query_params.get("data_source", None)
         origin_id_exists = request.query_params.get("origin_id_exists", None)
         parent = request.query_params.get("parent", None)
@@ -217,8 +218,22 @@ class ResourceFilterBackend(BaseFilterBackend):
         date_periods_hash = request.query_params.get("date_periods_hash", None)
 
         filter_q = Q()
+        if resource_ids is not None:
+            resource_id_parts = resource_ids.split(",")
+            primary_keys = []
+            origin_id_filters = Q()
+            for part in resource_id_parts:
+                part = part.strip()
+                try:
+                    primary_keys.append(int(part))
+                except ValueError:
+                    if ":" in part:
+                        origin_id_filters |= Q(**get_resource_pk_filter(part))
+
+            filter_q &= Q(pk__in=primary_keys) | origin_id_filters
+
         if data_source is not None:
-            filter_q = Q(origins__data_source=data_source) | Q(
+            filter_q &= Q(origins__data_source=data_source) | Q(
                 ancestry_data_source__contains=[data_source]
             )
 
@@ -255,6 +270,14 @@ class ResourceFilterBackend(BaseFilterBackend):
     list=extend_schema(
         summary="List Resources",
         parameters=[
+            OpenApiParameter(
+                "resource_ids",
+                location=OpenApiParameter.QUERY,
+                description="Filter by one or more resource ids (comma separated list)."
+                " Supports [data_source_id]:[origin_id] style ids.",
+                style="form",
+                explode=False,
+            ),
             OpenApiParameter(
                 "data_source",
                 OpenApiTypes.UUID,

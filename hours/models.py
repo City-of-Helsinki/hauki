@@ -343,7 +343,11 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     def _get_date_periods_as_hash(self):
         date_period_hash_inputs = [
             date_period.as_hash_input()
-            for date_period in self.date_periods.all()
+            for date_period in self.date_periods.all().prefetch_related(
+                "time_span_groups",
+                "time_span_groups__time_spans",
+                "time_span_groups__rules",
+            )
             if not date_period.is_removed
         ]
         date_period_hash_inputs.sort()
@@ -353,7 +357,11 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     def _get_date_periods_as_text(self):
         date_periods = [
             date_period
-            for date_period in self.date_periods.all()
+            for date_period in self.date_periods.all().prefetch_related(
+                "time_span_groups",
+                "time_span_groups__time_spans",
+                "time_span_groups__rules",
+            )
             if not date_period.is_removed
         ]
 

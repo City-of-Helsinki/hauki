@@ -23,7 +23,7 @@ convertdate==2.3.2
     # via holidays
 deprecation==2.1.0
     # via django-helusers
-django==3.2.9
+django==2.2.26
     # via
     #   -r requirements.in
     #   django-cors-headers

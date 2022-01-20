@@ -23,7 +23,7 @@ convertdate==2.3.2
     # via holidays
 deprecation==2.1.0
     # via django-helusers
-django==3.2.9
+django==3.2.11
     # via
     #   -r requirements.in
     #   django-cors-headers
@@ -122,7 +122,7 @@ requests==2.25.1
     #   django-helusers
     #   django-orghierarchy
     #   requests-cache
-requests-cache==0.5.2
+requests-cache==0.6.0.dev1
     # via -r requirements.in
 rsa==4.7.2
     # via python-jose
@@ -148,7 +148,7 @@ typing-extensions==3.7.4.3
     #   importlib-metadata
 uritemplate==3.0.1
     # via drf-spectacular
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   elastic-apm
     #   requests

@@ -6,6 +6,7 @@
 #
 appdirs==1.4.4
     # via
+    #   -c requirements.txt
     #   black
     #   virtualenv
 appnope==0.1.2
@@ -14,7 +15,7 @@ asgiref==3.3.4
     # via
     #   -c requirements.txt
     #   django
-attrs==20.3.0
+attrs==21.4.0
     # via
     #   -c requirements.txt
     #   pytest

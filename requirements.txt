@@ -4,14 +4,21 @@
 #
 #    pip-compile requirements.in
 #
+appdirs==1.4.4
+    # via requests-cache
 asgiref==3.3.4
     # via django
-attrs==20.3.0
-    # via jsonschema
+attrs==21.4.0
+    # via
+    #   cattrs
+    #   jsonschema
+    #   requests-cache
 bleach==4.1.0
     # via -r requirements.in
 cachetools==4.2.1
     # via django-helusers
+cattrs==1.10.0
+    # via requests-cache
 certifi==2020.12.5
     # via
     #   elastic-apm
@@ -122,7 +129,7 @@ requests==2.25.1
     #   django-helusers
     #   django-orghierarchy
     #   requests-cache
-requests-cache==0.5.2
+requests-cache==0.9.1
     # via -r requirements.in
 rsa==4.7.2
     # via python-jose
@@ -138,6 +145,7 @@ six==1.15.0
     #   jsonschema
     #   python-dateutil
     #   python-jose
+    #   url-normalize
 sqlparse==0.4.2
     # via django
 swapper==1.1.2.post1
@@ -145,13 +153,17 @@ swapper==1.1.2.post1
 typing-extensions==3.7.4.3
     # via
     #   asgiref
+    #   cattrs
     #   importlib-metadata
 uritemplate==3.0.1
     # via drf-spectacular
+url-normalize==1.4.3
+    # via requests-cache
 urllib3==1.26.4
     # via
     #   elastic-apm
     #   requests
+    #   requests-cache
     #   sentry-sdk
 webencodings==0.5.1
     # via bleach

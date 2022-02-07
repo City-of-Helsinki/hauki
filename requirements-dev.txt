@@ -217,7 +217,7 @@ typing-extensions==3.7.4.3
     #   asgiref
     #   black
     #   importlib-metadata
-urllib3==1.26.4
+urllib3==1.26.8
     # via
     #   -c requirements.txt
     #   requests

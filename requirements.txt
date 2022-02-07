@@ -159,7 +159,7 @@ uritemplate==3.0.1
     # via drf-spectacular
 url-normalize==1.4.3
     # via requests-cache
-urllib3==1.26.4
+urllib3==1.26.8
     # via
     #   elastic-apm
     #   requests

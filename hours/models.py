@@ -669,6 +669,8 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         for time_span_group in self.time_span_groups.all():
             if time_span_group.is_removed:
                 continue
+            if not time_span_group.time_spans.count():
+                continue
             group_strings.append(time_span_group.as_text())
 
         if not group_strings and self.resource_state != State.UNDEFINED:

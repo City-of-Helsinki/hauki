@@ -1,10 +1,14 @@
 import datetime
+import json
 
 import pytest
+from django.core.serializers.json import DjangoJSONEncoder
+from django.urls import reverse
 from django.utils import translation
 
 from hours.enums import FrequencyModifier, RuleContext, RuleSubject, State, Weekday
 from hours.models import Rule
+from hours.serializers import DatePeriodSerializer
 from hours.tests.conftest import (
     DatePeriodFactory,
     RuleFactory,
@@ -278,6 +282,146 @@ def test_resource_date_periods_as_text_is_kept_up_to_date(resource, lang):
         "\n"
         " Voimassa kun kaikki seuraavat pätevät:\n"
         " - Jakson joka 2. viikko\n"
+        "\n"
+        "========================================\n"
+    )
+
+
+@pytest.mark.django_db
+def test_text_updates_when_date_period_is_added_via_api(resource, admin_client):
+    date_period_data = {
+        "resource": resource.id,
+        "name": {"fi": "Regular opening hours", "sv": None, "en": None},
+        "start_date": "2021-01-01",
+        "end_date": "2022-12-31",
+        "resource_state": "open",
+        "time_span_groups": [
+            {
+                "time_spans": [
+                    {
+                        "start_time": "09:00:00",
+                        "end_time": "17:00:00",
+                        "weekdays": [1, 2, 4],
+                    },
+                    {
+                        "start_time": "09:00:00",
+                        "end_time": "19:00:00",
+                        "weekdays": [5, 6],
+                    },
+                    {
+                        "start_time": "10:00:00",
+                        "end_time": "14:00:00",
+                        "weekdays": [7],
+                    },
+                ],
+            }
+        ],
+    }
+
+    assert resource.date_periods_as_text == ""
+
+    url = reverse("date_period-list")
+
+    response = admin_client.post(
+        url,
+        data=json.dumps(date_period_data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201
+
+    resource.refresh_from_db()
+
+    assert resource.date_periods_as_text == (
+        "\n"
+        "========================================\n"
+        "Regular opening hours\n"
+        "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
+        "Aukioloajat:\n"
+        "\n"
+        " Maanantai-Tiistai, Torstai 9.00-17.00 Auki\n"
+        " Perjantai-Lauantai 9.00-19.00 Auki\n"
+        " Sunnuntai 10.00-14.00 Auki\n"
+        "\n"
+        "========================================\n"
+    )
+
+
+@pytest.mark.django_db
+def test_text_updates_when_timespan_is_removed_via_api(resource, admin_client):
+    date_period = DatePeriodFactory(
+        name="Regular opening hours",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2021, month=1, day=1),
+        end_date=datetime.date(year=2022, month=12, day=31),
+    )
+
+    time_span_group = TimeSpanGroupFactory(period=date_period)
+
+    TimeSpanFactory(
+        name="Test time span",
+        group=time_span_group,
+        start_time=datetime.time(hour=9, minute=0),
+        end_time=datetime.time(hour=17, minute=0),
+        weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.THURSDAY],
+    )
+    TimeSpanFactory(
+        name="Test time span 2",
+        group=time_span_group,
+        start_time=datetime.time(hour=9, minute=0),
+        end_time=datetime.time(hour=19, minute=0),
+        weekdays=[Weekday.FRIDAY, Weekday.SATURDAY],
+    )
+
+    TimeSpanFactory(
+        name="Test time span 3",
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=14, minute=0),
+        weekdays=[Weekday.SUNDAY],
+    )
+
+    assert resource.date_periods_as_text == (
+        "\n"
+        "========================================\n"
+        "Regular opening hours\n"
+        "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
+        "Aukioloajat:\n"
+        "\n"
+        " Maanantai-Tiistai, Torstai 9.00-17.00 Auki\n"
+        " Perjantai-Lauantai 9.00-19.00 Auki\n"
+        " Sunnuntai 10.00-14.00 Auki\n"
+        "\n"
+        "========================================\n"
+    )
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.id})
+
+    serializer = DatePeriodSerializer(instance=date_period)
+    data = serializer.data
+
+    del data["time_span_groups"][0]["time_spans"][0]
+
+    response = admin_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+
+    resource.refresh_from_db()
+
+    assert resource.date_periods_as_text == (
+        "\n"
+        "========================================\n"
+        "Regular opening hours\n"
+        "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
+        "Aukioloajat:\n"
+        "\n"
+        " Perjantai-Lauantai 9.00-19.00 Auki\n"
+        " Sunnuntai 10.00-14.00 Auki\n"
         "\n"
         "========================================\n"
     )

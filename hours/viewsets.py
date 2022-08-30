@@ -709,6 +709,10 @@ class DatePeriodViewSet(
             )
         return super().list(request, *args, **kwargs)
 
+    def update(self, request, *args, **kwargs):
+        with DeferUpdatingDenormalizedDatePeriodData():
+            return super().update(request, *args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List Rules"),

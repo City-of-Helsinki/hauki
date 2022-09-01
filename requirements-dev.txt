@@ -51,7 +51,7 @@ django==3.2.12
     #   django-extensions
 django-extensions==3.1.2
     # via -r requirements-dev.in
-dparse==0.5.1
+dparse==0.5.2
     # via safety
 factory-boy==3.2.0
     # via

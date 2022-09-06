@@ -51,7 +51,7 @@ django==3.2.15
     #   django-extensions
 django-extensions==3.1.2
     # via -r requirements-dev.in
-dparse==0.5.1
+dparse==0.5.2
     # via safety
 factory-boy==3.2.0
     # via
@@ -169,7 +169,6 @@ pyyaml==5.4.1
     # via
     #   -c requirements.txt
     #   bandit
-    #   dparse
     #   pre-commit
 regex==2021.4.4
     # via black
@@ -214,6 +213,7 @@ typed-ast==1.4.2
 typing-extensions==3.7.4.3
     # via
     #   -c requirements.txt
+    #   asgiref
     #   black
     #   gitpython
     #   importlib-metadata

@@ -1009,6 +1009,7 @@ class TPRekImporter(Importer):
         periods = self.parse_period_string(period_string)
 
         data = []
+        used_origin_ids = set()
         for period in periods:
             try:
                 parsed_time_spans, names, descriptions = self.parse_opening_string(
@@ -1118,11 +1119,20 @@ class TPRekImporter(Importer):
 
                 start_date = period.get("start_date", date.today())
                 end_date = period.get("end_date", None)
+
+                origin_id = "{0}-{1}-{2}".format(connection_id, start_date, end_date)
+                counter = 1
+                while origin_id in used_origin_ids:
+                    origin_id = "{0}-{1}-{2}-{3}".format(
+                        connection_id, start_date, end_date, counter
+                    )
+                    counter += 1
+
+                used_origin_ids.add(origin_id)
+
                 origin = {
                     "data_source_id": self.data_source.id,
-                    "origin_id": "{0}-{1}-{2}".format(
-                        connection_id, start_date, end_date
-                    ),
+                    "origin_id": origin_id,
                 }
                 if time_spans:
                     time_span_groups = [

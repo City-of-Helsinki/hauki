@@ -11,6 +11,6 @@ uwsgi:
   reload-on-rss: 300
   # Allow large image uploads
   # chunked-input-limit: 10485760
-  buffer-size: 32768
+  buffer-size: 65535
   http: :8000
   static-map: /static=/srv/static

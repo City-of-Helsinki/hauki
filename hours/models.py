@@ -948,6 +948,12 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
 
         return weekdays_text
 
+    def get_description(self) -> str:
+        if self.description_fi:
+            return '"' + self.description_fi.replace("\n", "").replace("/", "") + '"'
+        else:
+            return ""
+
     def as_text(self) -> str:
         if self.resource_state == State.UNDEFINED:
             state = self.group.period.resource_state.label
@@ -963,11 +969,12 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
                 else "",
                 end_time=formats.time_format(self.end_time) if self.end_time else "",
             )
-        return pgettext("timespan_as_text", "{weekdays} {times} {state}").format(
+        return pgettext("timespan_as_text", "{weekdays} {times} {state} {description}").format(
             state=state,
             weekdays=self.get_weekdays_as_text(),
             times=times,
-        )
+            description=self.get_description(),
+        ).rstrip()
 
 
 class Rule(SoftDeletableModel, TimeStampedModel):

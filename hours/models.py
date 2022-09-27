@@ -963,10 +963,23 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
                 else "",
                 end_time=formats.time_format(self.end_time) if self.end_time else "",
             )
-        return pgettext("timespan_as_text", "{weekdays} {times} {state}").format(
+
+        description = ""
+        if self.description:
+            description = ' "{}"'.format(
+                # Sanitize TPR parsing specific special chars
+                self.description.replace("\n", " ")
+                .replace("/", "")
+                .replace('"', "")
+            )
+
+        return pgettext(
+            "timespan_as_text", "{weekdays} {times} {state}{description}"
+        ).format(
             state=state,
             weekdays=self.get_weekdays_as_text(),
             times=times,
+            description=description,
         )
 
 

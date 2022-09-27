@@ -1199,7 +1199,7 @@ class TPRekImporter(Importer):
             resource_data_sources = {
                 origin.data_source_id for origin in resource.origins.all()
             }
-            if resource_data_sources.intersection({"visithelsinki", "kaupunkialusta"}):
+            if resource_data_sources.intersection({"visithelsinki"}):
                 return False
 
             return True

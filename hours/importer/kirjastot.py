@@ -329,10 +329,7 @@ class KirjastotImporter(Importer):
                         if not start_time and not end_time:
                             full_day = True
                         if start_time and end_time:
-                            if end_time < start_time or (
-                                start_time == time(hour=0, minute=0)
-                                and end_time == time(hour=0, minute=0)
-                            ):
+                            if end_time < start_time:
                                 end_time_on_next_day = True
 
                         time_spans.append(
@@ -425,10 +422,7 @@ class KirjastotImporter(Importer):
                 if not start_time and not end_time:
                     full_day = True
                 if start_time and end_time:
-                    if end_time < start_time or (
-                        start_time == time(hour=0, minute=0)
-                        and end_time == time(hour=0, minute=0)
-                    ):
+                    if end_time < start_time:
                         end_time_on_next_day = True
 
                 time_spans.append(
@@ -571,13 +565,8 @@ class KirjastotImporter(Importer):
                     except ValueError:
                         end_time = None
 
-                    end_time_on_next_day = False
-                    if start_time and end_time:
-                        if end_time < start_time or (
-                            start_time == time(hour=0, minute=0)
-                            and end_time == time(hour=0, minute=0)
-                        ):
-                            end_time_on_next_day = True
+                    if end_time < start_time:
+                        end_time_on_next_day = True
 
                     time_elements.append(
                         TimeElement(

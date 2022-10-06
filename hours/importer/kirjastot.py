@@ -551,6 +551,7 @@ class KirjastotImporter(Importer):
                     )
                 )
             else:
+                end_time_on_next_day = False
                 for schedule_time in schedule.get("times"):
                     try:
                         start_time = datetime.strptime(
@@ -564,6 +565,10 @@ class KirjastotImporter(Importer):
                         ).time()
                     except ValueError:
                         end_time = None
+
+                    if end_time_on_next_day:
+                        time_elements.add(len(time_elements) - 1)
+                        end_time_on_next_day = False                        
 
                     if end_time < start_time:
                         end_time_on_next_day = True

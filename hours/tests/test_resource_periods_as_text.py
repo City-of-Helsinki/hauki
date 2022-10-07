@@ -21,7 +21,7 @@ from hours.tests.conftest import (
 @pytest.mark.parametrize("lang", ["en", "fi"])
 def test_resource_opening_hours_as_text_no_date_periods(resource, lang):
     with translation.override(lang):
-        assert resource._get_date_periods_as_text() == ""
+        assert resource.get_date_periods_as_text() == ""
 
 
 @pytest.mark.django_db
@@ -108,7 +108,7 @@ def test_resource_opening_hours_as_text(resource):
     )
 
     with translation.override("en"):
-        assert resource._get_date_periods_as_text() == (
+        assert resource.get_date_periods_as_text() == (
             "\n"
             "========================================\n"
             "Regular opening hours\n"
@@ -142,7 +142,7 @@ def test_resource_opening_hours_as_text(resource):
         )
 
     with translation.override("fi"):
-        assert resource._get_date_periods_as_text() == (
+        assert resource.get_date_periods_as_text() == (
             "\n"
             "========================================\n"
             "Regular opening hours\n"
@@ -426,6 +426,7 @@ def test_text_updates_when_timespan_is_removed_via_api(resource, admin_client):
         "========================================\n"
     )
 
+
 @pytest.mark.django_db
 def test_date_period_as_text_with_time_span_description(resource):
     date_period = DatePeriodFactory(
@@ -444,7 +445,7 @@ def test_date_period_as_text_with_time_span_description(resource):
         start_time=datetime.time(hour=14, minute=0),
         end_time=datetime.time(hour=16, minute=0),
         weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.THURSDAY],
-        description_fi="Naisten vuoro"
+        description_fi="Naisten vuoro",
     )
 
     assert resource.date_periods_as_text == (
@@ -454,10 +455,11 @@ def test_date_period_as_text_with_time_span_description(resource):
         "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
         "Aukioloajat:\n"
         "\n"
-        " Maanantai-Tiistai, Torstai 14.00-16.00 Auki \"Naisten vuoro\"\n"
+        ' Maanantai-Tiistai, Torstai 14.00-16.00 Auki "Naisten vuoro"\n'
         "\n"
         "========================================\n"
     )
+
 
 @pytest.mark.django_db
 def test_date_period_as_text_with_time_span_description_strip_special_chars(resource):
@@ -477,7 +479,7 @@ def test_date_period_as_text_with_time_span_description_strip_special_chars(reso
         start_time=datetime.time(hour=14, minute=0),
         end_time=datetime.time(hour=16, minute=0),
         weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.THURSDAY],
-        description_fi='Naisten\n//vu"oro'
+        description_fi='Naisten\n//vu"oro',
     )
 
     assert resource.date_periods_as_text == (
@@ -487,7 +489,7 @@ def test_date_period_as_text_with_time_span_description_strip_special_chars(reso
         "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
         "Aukioloajat:\n"
         "\n"
-        " Maanantai-Tiistai, Torstai 14.00-16.00 Auki \"Naisten vuoro\"\n"
+        ' Maanantai-Tiistai, Torstai 14.00-16.00 Auki "Naisten vuoro"\n'
         "\n"
         "========================================\n"
     )

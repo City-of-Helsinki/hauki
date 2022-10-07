@@ -120,6 +120,13 @@ def _get_times_for_sort(item: TimeElement) -> tuple:
     )
 
 
+def _get_dates_for_sort(item: DatePeriod) -> tuple:
+    return (
+        item.start_date if item.start_date else datetime.date.min,
+        item.end_date if item.end_date else datetime.date.max,
+    )
+
+
 def combine_element_time_spans(elements, override=False):
     """Combines overlapping time elements
 
@@ -343,36 +350,38 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     def _get_date_periods_as_hash(self):
         date_period_hash_inputs = [
             date_period.as_hash_input()
-            for date_period in self.date_periods.all().prefetch_related(
-                "time_span_groups",
-                "time_span_groups__time_spans",
-                "time_span_groups__rules",
-            )
+            for date_period in self.date_periods.all()
             if not date_period.is_removed
         ]
         date_period_hash_inputs.sort()
 
         return md5("".join(date_period_hash_inputs).encode("utf8")).hexdigest()  # nosec
 
-    def _get_date_periods_as_text(self):
-        date_periods = [
-            date_period
-            for date_period in self.date_periods.all().prefetch_related(
-                "time_span_groups",
-                "time_span_groups__time_spans",
-                "time_span_groups__rules",
-            )
-            if not date_period.is_removed
-        ]
+    def get_date_periods_as_text(self, start_date=datetime.date.min):
+        date_periods = sorted(
+            [
+                date_period
+                for date_period in self.date_periods.all()
+                if not date_period.is_removed
+                and start_date
+                <= (
+                    date_period.end_date
+                    if date_period.end_date is not None
+                    else datetime.date.max
+                )
+            ],
+            key=_get_dates_for_sort,
+        )
 
         if not date_periods:
             return ""
 
         separator = pgettext(
-            "periods_as_text_separator", "\n========================================\n"
+            "periods_as_text_separator",
+            "\n========================================\n",
         )
         date_periods = separator.join(
-            [date_period.as_text() for date_period in date_periods]
+            [date_period.as_text(start_date) for date_period in date_periods]
         )
 
         return _("{separator}{date_periods}{separator}").format(
@@ -475,10 +484,15 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         self.save(update_child_ancestry_fields=update_child_ancestry_fields)
 
     def update_denormalized_date_periods_data(self):
+        self.date_periods.prefetch_related(
+            "time_span_groups",
+            "time_span_groups__time_spans",
+            "time_span_groups__rules",
+        )
         self.date_periods_hash = self._get_date_periods_as_hash()
         # TODO: Save text in all languages
         with translation.override("fi"):
-            self.date_periods_as_text = self._get_date_periods_as_text()
+            self.date_periods_as_text = self.get_date_periods_as_text()
 
         self.save(
             update_fields=["date_periods_hash", "date_periods_as_text"],
@@ -664,7 +678,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
 
         return data + "".join(group_strings)
 
-    def as_text(self) -> str:
+    def as_text(self, after_start_date=datetime.date.min) -> str:
         group_strings = []
         for time_span_group in self.time_span_groups.all():
             if time_span_group.is_removed:
@@ -680,15 +694,19 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
             group_strings
         )
 
+        start_date = (
+            self.start_date
+            if self.start_date is not None and self.start_date > after_start_date
+            else None
+        )
+
         dates = _("Not specified")
-        if self.start_date or self.end_date:
-            if self.start_date == self.end_date:
-                dates = formats.date_format(self.start_date)
+        if start_date or self.end_date:
+            if start_date == self.end_date:
+                dates = formats.date_format(start_date)
             else:
                 dates = "{start_date} - {end_date}".format(
-                    start_date=formats.date_format(self.start_date)
-                    if self.start_date
-                    else "",
+                    start_date=formats.date_format(start_date) if start_date else "",
                     end_date=formats.date_format(self.end_date)
                     if self.end_date
                     else "",

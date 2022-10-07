@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.http import Http404
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from django_orghierarchy.models import Organization
@@ -52,6 +52,7 @@ from .serializers import (
     OrganizationSerializer,
     ResourceDailyOpeningHoursSerializer,
     ResourceSerializer,
+    ResourceSimpleSerializer,
     RuleCreateSerializer,
     RuleSerializer,
     TimeSpanCreateSerializer,
@@ -964,3 +965,82 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(results, many=True)
 
         return self.get_paginated_response(serializer.data)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List date periods as texts",
+        exclude=True,
+        parameters=[
+            OpenApiParameter(
+                "resource",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
+            ),
+        ],
+    ),
+)
+class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
+    filter_backends = (DjangoFilterBackend,)
+    pagination_class = PageSizePageNumberPagination
+
+    def get_queryset(self):
+        queryset = (
+            Resource.objects.filter(
+                # Query only resources that have date periods
+                Exists(DatePeriod.objects.filter(resource=OuterRef("pk"))),
+                data_sources__in=["tprek"],
+            )
+            .prefetch_related(
+                "origins",
+                "origins__data_source",
+                "date_periods",
+                "date_periods__time_span_groups",
+                "date_periods__time_span_groups__time_spans",
+                "date_periods__time_span_groups__rules",
+            )
+            .distinct()
+            .order_by("id")
+        )
+
+        # Filter the queryset according to read permissions
+        queryset = filter_queryset_by_permission(
+            self.request.user, queryset, auth=self.request.auth
+        )
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        time_now = timezone.now()
+        results = []
+
+        for resource in page:
+            tz = resource.timezone
+            if not tz:
+                tz = pytz.timezone("Europe/Helsinki")
+
+            start_date = time_now.astimezone(tz).date()
+            resource_serializer = ResourceSimpleSerializer(resource)
+
+            with translation.override("fi"):
+                date_periods_as_text_fi = resource.get_date_periods_as_text(start_date)
+            with translation.override("sv"):
+                date_periods_as_text_sv = resource.get_date_periods_as_text(start_date)
+            with translation.override("en"):
+                date_periods_as_text_en = resource.get_date_periods_as_text(start_date)
+
+            results.append(
+                {
+                    "resource": resource_serializer.data,
+                    "date_periods_as_text": {
+                        "fi": date_periods_as_text_fi,
+                        "sv": date_periods_as_text_sv,
+                        "en": date_periods_as_text_en,
+                    },
+                }
+            )
+
+        return self.get_paginated_response(results)

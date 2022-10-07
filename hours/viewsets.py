@@ -330,6 +330,9 @@ class ResourceFilterBackend(BaseFilterBackend):
     is_open_now=extend_schema(
         summary="Is Resource open now?", responses=IsOpenNowSerializer
     ),
+    date_periods_as_text_for_tprek=extend_schema(
+        summary="Get opening hours as text for Resource",
+    ),
     copy_date_periods=extend_schema(
         summary="Copy all the periods from this resource to other resources",
         request=OpenApiTypes.NONE,
@@ -423,6 +426,27 @@ class ResourceViewSet(
         serializer = DailyOpeningHoursSerializer(opening_hours_list, many=True)
 
         return Response(serializer.data)
+
+    @action(detail=True)
+    def date_periods_as_text_for_tprek(self, request, pk=None):
+        resource = self.get_object()
+        time_now = timezone.now()
+
+        tz = resource.timezone
+        if not tz:
+            tz = pytz.timezone(settings.RESOURCE_DEFAULT_TIMEZONE)
+            if not tz:
+                tz = pytz.timezone("Europe/Helsinki")
+
+        start_date = time_now.astimezone(tz).date()
+
+        return Response(
+            {
+                "fi": resource.get_date_periods_as_text("fi", start_date),
+                "sv": resource.get_date_periods_as_text("sv", start_date),
+                "en": resource.get_date_periods_as_text("en", start_date),
+            }
+        )
 
     @action(detail=True)
     def is_open_now(self, request, pk=None):

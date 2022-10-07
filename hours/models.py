@@ -354,31 +354,47 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
         return md5("".join(date_period_hash_inputs).encode("utf8")).hexdigest()  # nosec
 
-    def _get_date_periods_as_text(self):
-        date_periods = [
-            date_period
-            for date_period in self.date_periods.all().prefetch_related(
-                "time_span_groups",
-                "time_span_groups__time_spans",
-                "time_span_groups__rules",
+    def get_date_periods_as_text(
+        self, lang="fi", start_date=datetime.date.min, end_date=datetime.date.max
+    ):
+        with translation.override(lang):
+            date_periods = [
+                date_period
+                for date_period in self.date_periods.all().prefetch_related(
+                    "time_span_groups",
+                    "time_span_groups__time_spans",
+                    "time_span_groups__rules",
+                )
+                if not date_period.is_removed
+                and (
+                    date_period.start_date
+                    if date_period.start_date is not None
+                    else datetime.date.min
+                )
+                < end_date
+                and (
+                    date_period.end_date
+                    if date_period.end_date is not None
+                    else datetime.date.max
+                )
+                > start_date
+            ]
+
+            if not date_periods:
+                return ""
+
+            separator = pgettext(
+                "periods_as_text_separator",
+                "\n========================================\n",
             )
-            if not date_period.is_removed
-        ]
+            date_periods = separator.join(
+                [date_period.as_text() for date_period in date_periods]
+            )
 
-        if not date_periods:
-            return ""
-
-        separator = pgettext(
-            "periods_as_text_separator", "\n========================================\n"
-        )
-        date_periods = separator.join(
-            [date_period.as_text() for date_period in date_periods]
-        )
-
-        return _("{separator}{date_periods}{separator}").format(
-            date_periods=date_periods,
-            separator=separator,
-        )
+            return _("{separator}{date_periods}{separator}").format(
+                date_periods=date_periods,
+                separator=separator,
+            )
 
     def get_daily_opening_hours(self, start_date, end_date):
         # TODO: This is just an MVP. Things yet to do:
@@ -478,7 +494,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         self.date_periods_hash = self._get_date_periods_as_hash()
         # TODO: Save text in all languages
         with translation.override("fi"):
-            self.date_periods_as_text = self._get_date_periods_as_text()
+            self.date_periods_as_text = self.get_date_periods_as_text()
 
         self.save(
             update_fields=["date_periods_hash", "date_periods_as_text"],

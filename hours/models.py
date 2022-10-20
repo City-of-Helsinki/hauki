@@ -851,7 +851,8 @@ class TimeSpanGroup(SoftDeletableModel, models.Model):
 
     def as_text(self) -> str:
         rule_strings = []
-        for rule in self.rules.all():
+        rules = sorted(self.rules.all(), key=attrgetter("created"))
+        for rule in rules:
             if rule.is_removed:
                 continue
             rule_strings.append(" - " + rule.as_text())

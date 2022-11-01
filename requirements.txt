@@ -89,8 +89,6 @@ holidays==0.11.1
     # via -r requirements.in
 idna==2.10
     # via requests
-importlib-metadata==3.10.0
-    # via jsonschema
 inflection==0.5.1
     # via drf-spectacular
 jsonschema==3.2.0
@@ -150,11 +148,6 @@ sqlparse==0.4.2
     # via django
 swapper==1.1.2.post1
     # via django-orghierarchy
-typing-extensions==3.7.4.3
-    # via
-    #   asgiref
-    #   cattrs
-    #   importlib-metadata
 uritemplate==3.0.1
     # via drf-spectacular
 url-normalize==1.4.3
@@ -169,8 +162,6 @@ webencodings==0.5.1
     # via bleach
 whitenoise==5.2.0
     # via -r requirements.in
-zipp==3.4.1
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

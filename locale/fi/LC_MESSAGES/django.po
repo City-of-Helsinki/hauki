@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-13 08:47+0300\n"
+"POT-Creation-Date: 2022-11-01 13:35+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -37,19 +37,19 @@ msgstr ""
 msgid "Period name"
 msgstr "Jakson nimi"
 
-#: hours/admin.py:143 hours/models.py:328
+#: hours/admin.py:143 hours/models.py:335
 msgid "Resource"
 msgstr "Resurssi"
 
-#: hours/admin.py:148 hours/models.py:627
+#: hours/admin.py:148 hours/models.py:634
 msgid "Start date"
 msgstr "Alkupäivämäärä"
 
-#: hours/admin.py:153 hours/models.py:630
+#: hours/admin.py:153 hours/models.py:637
 msgid "End date"
 msgstr "Loppupäivämäärä"
 
-#: hours/admin.py:158 hours/models.py:634 hours/models.py:892
+#: hours/admin.py:158 hours/models.py:641 hours/models.py:904
 msgid "Resource state"
 msgstr "Resurssin tila"
 
@@ -100,389 +100,399 @@ msgstr ""
 msgid "User inactive or deleted."
 msgstr ""
 
-#: hours/enums.py:21
+#: hours/enums.py:23
 msgctxt "State"
 msgid "Open"
 msgstr "Auki"
 
-#: hours/enums.py:22
+#: hours/enums.py:24
 msgctxt "State"
 msgid "Closed"
 msgstr "Suljettu"
 
-#: hours/enums.py:23
+#: hours/enums.py:25
 msgctxt "State"
 msgid "Undefined"
 msgstr "Määrittelemätön"
 
-#: hours/enums.py:24
+#: hours/enums.py:26
 msgctxt "State"
 msgid "Self service"
 msgstr "Itsepalvelu"
 
-#: hours/enums.py:25
+#: hours/enums.py:27
 msgctxt "State"
 msgid "With key"
 msgstr "Avaimella"
 
-#: hours/enums.py:26
+#: hours/enums.py:28
 msgctxt "State"
 msgid "With reservation"
 msgstr "Varauksella"
 
-#: hours/enums.py:27
+#: hours/enums.py:29
 msgctxt "State"
 msgid "Open and reservable"
 msgstr "Auki ja varattavissa"
 
-#: hours/enums.py:28
+#: hours/enums.py:30
 msgctxt "State"
 msgid "With key and reservation"
 msgstr "Avaimella ja varauksella"
 
-#: hours/enums.py:29
+#: hours/enums.py:31
 msgctxt "State"
 msgid "Enter only"
 msgstr "Vain sisäänkäynti"
 
-#: hours/enums.py:30
+#: hours/enums.py:32
 msgctxt "State"
 msgid "Exit only"
 msgstr "Vain uloskäynti"
 
-#: hours/enums.py:31
+#: hours/enums.py:33
 msgctxt "State"
 msgid "Weather permitting"
 msgstr "Sään salliessa"
 
-#: hours/enums.py:32
+#: hours/enums.py:34
 msgctxt "State"
 msgid "Not in use"
 msgstr "Ei vuoroa käytössä"
 
-#: hours/enums.py:33
+#: hours/enums.py:35
 msgctxt "State"
 msgid "Maintenance"
 msgstr "Siivoustauko/huoltotauko"
 
-#: hours/enums.py:64
+#: hours/enums.py:36
+msgctxt "State"
+msgid "Reserved"
+msgstr "Varattu"
+
+#: hours/enums.py:37
+msgctxt "State"
+msgid "By appointment"
+msgstr "Ajanvarauksella"
+
+#: hours/enums.py:70
 msgctxt "ResourceType"
 msgid "Unit"
 msgstr ""
 
-#: hours/enums.py:65
+#: hours/enums.py:71
 msgctxt "ResourceType"
 msgid "Section"
 msgstr ""
 
-#: hours/enums.py:66
+#: hours/enums.py:72
 msgctxt "ResourceType"
 msgid "Special group"
 msgstr ""
 
-#: hours/enums.py:67
+#: hours/enums.py:73
 msgctxt "ResourceType"
 msgid "Contact email or phone number"
 msgstr ""
 
-#: hours/enums.py:68
+#: hours/enums.py:74
 msgctxt "ResourceType"
 msgid "Online service"
 msgstr ""
 
-#: hours/enums.py:69
+#: hours/enums.py:75
 msgctxt "ResourceType"
 msgid "Service"
 msgstr ""
 
-#: hours/enums.py:70
+#: hours/enums.py:76
 msgctxt "ResourceType"
 msgid "Service channel"
 msgstr ""
 
-#: hours/enums.py:71
+#: hours/enums.py:77
 msgctxt "ResourceType"
 msgid "Service at unit"
 msgstr ""
 
-#: hours/enums.py:72
+#: hours/enums.py:78
 msgctxt "ResourceType"
 msgid "Reservable resource"
 msgstr ""
 
-#: hours/enums.py:73
+#: hours/enums.py:79
 msgctxt "ResourceType"
 msgid "Building"
 msgstr ""
 
-#: hours/enums.py:74
+#: hours/enums.py:80
 msgctxt "ResourceType"
 msgid "Area"
 msgstr ""
 
-#: hours/enums.py:75
+#: hours/enums.py:81
 msgctxt "ResourceType"
 msgid "Entrance or exit"
 msgstr ""
 
-#: hours/enums.py:88
+#: hours/enums.py:94
 msgctxt "Weekday"
 msgid "Monday"
 msgstr "Maanantai"
 
-#: hours/enums.py:89
+#: hours/enums.py:95
 msgctxt "Weekday"
 msgid "Tuesday"
 msgstr "Tiistai"
 
-#: hours/enums.py:90
+#: hours/enums.py:96
 msgctxt "Weekday"
 msgid "Wednesday"
 msgstr "Keskiviikko"
 
-#: hours/enums.py:91
+#: hours/enums.py:97
 msgctxt "Weekday"
 msgid "Thursday"
 msgstr "Torstai"
 
-#: hours/enums.py:92
+#: hours/enums.py:98
 msgctxt "Weekday"
 msgid "Friday"
 msgstr "Perjantai"
 
-#: hours/enums.py:93
+#: hours/enums.py:99
 msgctxt "Weekday"
 msgid "Saturday"
 msgstr "Lauantai"
 
-#: hours/enums.py:94
+#: hours/enums.py:100
 msgctxt "Weekday"
 msgid "Sunday"
 msgstr "Sunnuntai"
 
-#: hours/enums.py:118
+#: hours/enums.py:124
 msgctxt "RuleContext"
 msgid "Period"
 msgstr "Jakso"
 
-#: hours/enums.py:119
+#: hours/enums.py:125
 msgctxt "RuleContext"
 msgid "Year"
 msgstr "Vuosi"
 
-#: hours/enums.py:120
+#: hours/enums.py:126
 msgctxt "RuleContext"
 msgid "Month"
 msgstr "Kuukausi"
 
-#: hours/enums.py:124
+#: hours/enums.py:130
 msgctxt "every_rulecontext"
 msgid "period"
 msgstr "Jakson"
 
-#: hours/enums.py:125
+#: hours/enums.py:131
 msgctxt "every_rulecontext"
 msgid "year"
 msgstr "vuoden"
 
-#: hours/enums.py:126
+#: hours/enums.py:132
 msgctxt "every_rulecontext"
 msgid "month"
 msgstr "kuukauden"
 
-#: hours/enums.py:142
+#: hours/enums.py:148
 msgctxt "RuleSubject"
 msgid "Day"
 msgstr "Päivä"
 
-#: hours/enums.py:143
+#: hours/enums.py:149
 msgctxt "RuleSubject"
 msgid "Week"
 msgstr "Viikko"
 
-#: hours/enums.py:144
+#: hours/enums.py:150
 msgctxt "RuleSubject"
 msgid "Month"
 msgstr "Kuukausi"
 
-#: hours/enums.py:145
+#: hours/enums.py:151
 msgctxt "RuleSubject"
 msgid "Monday"
 msgstr "Maanantai"
 
-#: hours/enums.py:146
+#: hours/enums.py:152
 msgctxt "RuleSubject"
 msgid "Tuesday"
 msgstr "Tiistai"
 
-#: hours/enums.py:147
+#: hours/enums.py:153
 msgctxt "RuleSubject"
 msgid "Wednesday"
 msgstr "Keskiviikko"
 
-#: hours/enums.py:148
+#: hours/enums.py:154
 msgctxt "RuleSubject"
 msgid "Thursday"
 msgstr "Torstai"
 
-#: hours/enums.py:149
+#: hours/enums.py:155
 msgctxt "RuleSubject"
 msgid "Friday"
 msgstr "Perjantai"
 
-#: hours/enums.py:150
+#: hours/enums.py:156
 msgctxt "RuleSubject"
 msgid "Saturday"
 msgstr "Lauantai"
 
-#: hours/enums.py:151
+#: hours/enums.py:157
 msgctxt "RuleSubject"
 msgid "Sunday"
 msgstr "Sunnuntai"
 
-#: hours/enums.py:154
+#: hours/enums.py:160
 msgctxt "starting_from_nth_rulesubject"
 msgid "day"
 msgstr "päivästä"
 
-#: hours/enums.py:155
+#: hours/enums.py:161
 msgctxt "starting_from_nth_rulesubject"
 msgid "week"
 msgstr "viikosta"
 
-#: hours/enums.py:156
+#: hours/enums.py:162
 msgctxt "starting_from_nth_rulesubject"
 msgid "month"
 msgstr "kuukaudesta"
 
-#: hours/enums.py:157
+#: hours/enums.py:163
 msgctxt "starting_from_nth_rulesubject"
 msgid "mon"
 msgstr "maanantaista"
 
-#: hours/enums.py:158
+#: hours/enums.py:164
 msgctxt "starting_from_nth_rulesubject"
 msgid "tue"
 msgstr "tiistaista"
 
-#: hours/enums.py:159
+#: hours/enums.py:165
 msgctxt "starting_from_nth_rulesubject"
 msgid "wed"
 msgstr "keskiviikosta"
 
-#: hours/enums.py:160
+#: hours/enums.py:166
 msgctxt "starting_from_nth_rulesubject"
 msgid "thu"
 msgstr "torstaista"
 
-#: hours/enums.py:161
+#: hours/enums.py:167
 msgctxt "starting_from_nth_rulesubject"
 msgid "fri"
 msgstr "perjantaista"
 
-#: hours/enums.py:162
+#: hours/enums.py:168
 msgctxt "starting_from_nth_rulesubject"
 msgid "sat"
 msgstr "lauantaista"
 
-#: hours/enums.py:163
+#: hours/enums.py:169
 msgctxt "starting_from_nth_rulesubject"
 msgid "sun"
 msgstr "sunnuntaista"
 
-#: hours/enums.py:207
+#: hours/enums.py:213
 msgctxt "FrequencyModifier"
 msgid "Even"
 msgstr "Parillinen"
 
-#: hours/enums.py:208
+#: hours/enums.py:214
 msgctxt "FrequencyModifier"
 msgid "Odd"
 msgstr "Pariton"
 
-#: hours/models.py:247 hours/models.py:274 hours/models.py:623
-#: hours/models.py:868 hours/models.py:998
+#: hours/models.py:254 hours/models.py:281 hours/models.py:630
+#: hours/models.py:880 hours/models.py:1010
 msgid "Name"
 msgstr "Nimi"
 
-#: hours/models.py:248 hours/models.py:276 hours/models.py:625
-#: hours/models.py:870 hours/models.py:1000
+#: hours/models.py:255 hours/models.py:283 hours/models.py:632
+#: hours/models.py:882 hours/models.py:1012
 msgid "Description"
 msgstr "Kuvaus"
 
-#: hours/models.py:250
+#: hours/models.py:257
 msgid "Organizations may be edited by users"
 msgstr ""
 
-#: hours/models.py:253
+#: hours/models.py:260
 msgid "Resources may be edited by users"
 msgstr ""
 
-#: hours/models.py:257
+#: hours/models.py:264
 msgid "Data source"
 msgstr "Lähdejärjestelmä"
 
-#: hours/models.py:258
+#: hours/models.py:265
 msgid "Data sources"
 msgstr "Lähdejärjestelmät"
 
-#: hours/models.py:277
+#: hours/models.py:284
 msgid "Street address"
 msgstr "Katuosoite"
 
-#: hours/models.py:280
+#: hours/models.py:287
 msgid "Resource type"
 msgstr "Resurssin tyyppi"
 
-#: hours/models.py:286
+#: hours/models.py:293
 msgid "Sub resources"
 msgstr "Aliresurssit"
 
-#: hours/models.py:306
+#: hours/models.py:313
 msgid "Extra data"
 msgstr "Lisätiedot"
 
-#: hours/models.py:329
+#: hours/models.py:336
 msgid "Resources"
 msgstr "Resurssit"
 
-#: hours/models.py:380
+#: hours/models.py:381
 msgctxt "periods_as_text_separator"
 msgid ""
 "\n"
 "========================================\n"
 msgstr ""
 
-#: hours/models.py:386
+#: hours/models.py:387
 #, python-brace-format
 msgid "{separator}{date_periods}{separator}"
 msgstr ""
 
-#: hours/models.py:601 hours/models.py:799 users/models.py:38
+#: hours/models.py:608 hours/models.py:810 users/models.py:38
 msgid "Origin ID"
 msgstr "Tunniste lähdejärjestelmässä"
 
-#: hours/models.py:605
+#: hours/models.py:612
 msgid "Resource origin"
 msgstr "Resurssin lähde"
 
-#: hours/models.py:606
+#: hours/models.py:613
 msgid "Resource origins"
 msgstr "Resurssin lähteet"
 
-#: hours/models.py:639
+#: hours/models.py:646
 msgid "Override"
 msgstr "Yliajo"
 
-#: hours/models.py:645
+#: hours/models.py:652
 msgid "Period"
 msgstr "Jakso"
 
-#: hours/models.py:646
+#: hours/models.py:653
 msgid "Periods"
 msgstr "Jaksot"
 
-#: hours/models.py:686
+#: hours/models.py:693
 msgid ""
 "\n"
 "\n"
@@ -490,11 +500,11 @@ msgid ""
 "\n"
 msgstr ""
 
-#: hours/models.py:690
+#: hours/models.py:703
 msgid "Not specified"
 msgstr "Ei määritelty"
 
-#: hours/models.py:705
+#: hours/models.py:716
 #, python-brace-format
 msgid ""
 "{name}{description}Date period: {dates}\n"
@@ -507,15 +517,15 @@ msgstr ""
 "\n"
 "{time_span_groups}\n"
 
-#: hours/models.py:803
+#: hours/models.py:814
 msgid "Period origin"
 msgstr "Jakson lähde"
 
-#: hours/models.py:804
+#: hours/models.py:815
 msgid "Period origins"
 msgstr "Jakson lähteet"
 
-#: hours/models.py:856
+#: hours/models.py:868
 msgid ""
 "\n"
 "\n"
@@ -525,51 +535,51 @@ msgstr ""
 "\n"
 " Voimassa kun kaikki seuraavat pätevät:\n"
 
-#: hours/models.py:872
+#: hours/models.py:884
 msgid "Start time"
 msgstr "Alkuaika"
 
-#: hours/models.py:875
+#: hours/models.py:887
 msgid "End time"
 msgstr "Loppuaika"
 
-#: hours/models.py:878
+#: hours/models.py:890
 msgid "Is end time on the next day"
 msgstr ""
 
-#: hours/models.py:880
+#: hours/models.py:892
 msgid "24 hours"
 msgstr "24 tuntia"
 
-#: hours/models.py:884
+#: hours/models.py:896
 msgid "Weekday"
 msgstr "Viikonpäivä"
 
-#: hours/models.py:898
+#: hours/models.py:910
 msgid "Time span"
 msgstr "Aikaväli"
 
-#: hours/models.py:899
+#: hours/models.py:911
 msgid "Time spans"
 msgstr "Aikavälit"
 
-#: hours/models.py:938
+#: hours/models.py:950
 msgctxt "timespan_as_text"
 msgid "Every day"
 msgstr "Joka päivä"
 
-#: hours/models.py:965
+#: hours/models.py:977
 msgctxt "timespan_as_text"
 msgid "The whole day"
 msgstr "Koko päivän"
 
-#: hours/models.py:967
+#: hours/models.py:979
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{start_time}-{end_time}"
 msgstr "{start_time}-{end_time}"
 
-#: hours/models.py:984
+#: hours/models.py:996
 #, fuzzy, python-brace-format
 #| msgctxt "timespan_as_text"
 #| msgid "{weekdays} {times} {state}"
@@ -577,145 +587,145 @@ msgctxt "timespan_as_text"
 msgid "{weekdays} {times} {state}{description}"
 msgstr "{weekdays} {times} {state}"
 
-#: hours/models.py:1003
+#: hours/models.py:1015
 msgid "Context"
 msgstr "Konteksti"
 
-#: hours/models.py:1008
+#: hours/models.py:1020
 msgid "Subject"
 msgstr "Kohde"
 
-#: hours/models.py:1011
+#: hours/models.py:1023
 msgid "Start"
 msgstr "Alku"
 
-#: hours/models.py:1013
+#: hours/models.py:1025
 msgid "Frequency (ordinal)"
 msgstr "Toistuvuus (järjestysnumero)"
 
-#: hours/models.py:1017
+#: hours/models.py:1029
 msgid "Frequency (modifier)"
 msgstr "Toistuvuus (määre)"
 
-#: hours/models.py:1024
+#: hours/models.py:1036
 msgid "Rule"
 msgstr "Sääntö"
 
-#: hours/models.py:1025
+#: hours/models.py:1037
 msgid "Rules"
 msgstr "Säännöt"
 
-#: hours/models.py:1055
+#: hours/models.py:1067
 msgctxt "rule_as_text_context"
 msgid "the period"
 msgstr "Jakson"
 
-#: hours/models.py:1057
+#: hours/models.py:1069
 #, python-brace-format
 msgctxt "rule_as_text_context"
 msgid "every {context}"
 msgstr "Jokaisen {context}"
 
-#: hours/models.py:1063
+#: hours/models.py:1075
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "{nth} {subject} in {context}"
 msgstr "{context} {nth} {subject}"
 
-#: hours/models.py:1072
+#: hours/models.py:1084
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "starting from the {nth} {last} {subject}"
 msgstr "alkaen {nth} {last} {subject}"
 
-#: hours/models.py:1075
+#: hours/models.py:1087
 msgctxt "starting_from_the_last"
 msgid "last"
 msgstr "viimeisestä"
 
-#: hours/models.py:1085
+#: hours/models.py:1097
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "Every {nth} {subject} in {context} {starting_from_text}"
 msgstr "{context} joka {nth} {subject} {starting_from_text}"
 
-#: hours/models.py:1096
+#: hours/models.py:1108
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "On {modifier} {subject}s in {context}"
 msgstr "{context} jokainen {modifier} {subject}"
 
-#: hours/models.py:1117
+#: hours/models.py:1129
 msgid ""
 "We cannot start counting from period start in an infinite period. Please "
 "select shorter context for your rule."
 msgstr ""
 
-#: hours/models.py:1122
+#: hours/models.py:1134
 msgid "Subject must be a shorter timespan than context."
 msgstr ""
 
-#: hours/models.py:1126
+#: hours/models.py:1138
 msgid ""
 "You cannot add a rule with both even/odd and another frequency at the same "
 "time."
 msgstr ""
 
-#: hours/models.py:1135
+#: hours/models.py:1147
 msgid ""
 "Rule can only start from zero if starting from zeroth ISO week of the year. "
 "All other rules start counting from 1. Use negative numbers to count from "
 "the end of the context."
 msgstr ""
 
-#: hours/models.py:1143
+#: hours/models.py:1155
 msgid ""
 "Even/odd subjects are not counted starting from a specific time. If you wish "
 "to have an alternating rule starting from a specific time, please use "
 "frequency_ordinal=2 with start=1 or start=2."
 msgstr ""
 
-#: hours/models.py:1410
+#: hours/models.py:1422
 msgid "Signature"
 msgstr "Allekirjoitus"
 
-#: hours/models.py:1411
+#: hours/models.py:1423
 msgid "Signature created at"
 msgstr "Allekirjoituksen luontiaika"
 
-#: hours/models.py:1412
+#: hours/models.py:1424
 msgid "Signature valid until"
 msgstr "Allekirjoituksen vanhenemisaika"
 
-#: hours/models.py:1414
+#: hours/models.py:1426
 msgid "Invalidated time"
 msgstr "Mitätöintiaika"
 
-#: hours/models.py:1418
+#: hours/models.py:1430
 msgid "Signed auth entry"
 msgstr ""
 
-#: hours/models.py:1419
+#: hours/models.py:1431
 msgid "Signed auth entries"
 msgstr ""
 
-#: hours/models.py:1424
+#: hours/models.py:1436
 msgid "Signing key"
 msgstr "Allekirjoitusavain"
 
-#: hours/models.py:1425
+#: hours/models.py:1437
 msgid "Key valid after"
 msgstr "Avaimen voimassaoloaika alkaa"
 
-#: hours/models.py:1427
+#: hours/models.py:1439
 msgid "Key valid until"
 msgstr "Avaimen voimassaoloaika loppuu"
 
-#: hours/models.py:1431
+#: hours/models.py:1443
 msgid "Signed auth key"
 msgstr ""
 
-#: hours/models.py:1432
+#: hours/models.py:1444
 msgid "Signed auth keys"
 msgstr ""
 

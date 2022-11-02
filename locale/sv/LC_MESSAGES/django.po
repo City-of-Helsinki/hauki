@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-11-02 13:12+0200\n"
+"POT-Creation-Date: 2022-11-10 08:06+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,7 +49,7 @@ msgstr ""
 msgid "End date"
 msgstr ""
 
-#: hours/admin.py:158 hours/models.py:641 hours/models.py:904
+#: hours/admin.py:158 hours/models.py:641 hours/models.py:906
 msgid "Resource state"
 msgstr ""
 
@@ -100,323 +100,328 @@ msgstr ""
 msgid "User inactive or deleted."
 msgstr ""
 
-#: hours/enums.py:23
+#: hours/enums.py:24
 msgctxt "State"
 msgid "Open"
 msgstr "Öppet"
 
-#: hours/enums.py:24
+#: hours/enums.py:25
 msgctxt "State"
 msgid "Closed"
 msgstr "Stängt"
 
-#: hours/enums.py:25
+#: hours/enums.py:26
 msgctxt "State"
 msgid "Undefined"
-msgstr "Odefinierat"
+msgstr ""
 
-#: hours/enums.py:26
+#: hours/enums.py:27
 msgctxt "State"
 msgid "Self service"
 msgstr "Självbetjäning"
 
-#: hours/enums.py:27
+#: hours/enums.py:28
 msgctxt "State"
 msgid "With key"
 msgstr "Med nyckel"
 
-#: hours/enums.py:28
+#: hours/enums.py:29
 msgctxt "State"
 msgid "With reservation"
 msgstr "Med bokning"
 
-#: hours/enums.py:29
+#: hours/enums.py:30
 msgctxt "State"
 msgid "Open and reservable"
 msgstr "Öppet och bokningsbart"
 
-#: hours/enums.py:30
+#: hours/enums.py:31
 msgctxt "State"
 msgid "With key and reservation"
 msgstr "Med nyckel och bokning"
 
-#: hours/enums.py:31
+#: hours/enums.py:32
 msgctxt "State"
 msgid "Enter only"
 msgstr "Endast ingång"
 
-#: hours/enums.py:32
+#: hours/enums.py:33
 msgctxt "State"
 msgid "Exit only"
 msgstr "Endast utgång"
 
-#: hours/enums.py:33
+#: hours/enums.py:34
 msgctxt "State"
 msgid "Weather permitting"
 msgstr "Om vädret tillåter"
 
-#: hours/enums.py:34
+#: hours/enums.py:35
 msgctxt "State"
 msgid "Not in use"
 msgstr "Ingen tur i bruk "
 
-#: hours/enums.py:35
+#: hours/enums.py:36
 msgctxt "State"
 msgid "Maintenance"
 msgstr "Rengörings-/servicepaus"
 
-#: hours/enums.py:36
+#: hours/enums.py:37
 msgctxt "State"
 msgid "Reserved"
 msgstr "Upptaget"
 
-#: hours/enums.py:37
+#: hours/enums.py:38
 msgctxt "State"
 msgid "By appointment"
 msgstr "Med tidsbeställning"
 
-#: hours/enums.py:70
+#: hours/enums.py:39
+msgctxt "State"
+msgid "No opening hours"
+msgstr "Ingen öpptettid"
+
+#: hours/enums.py:72
 msgctxt "ResourceType"
 msgid "Unit"
 msgstr ""
 
-#: hours/enums.py:71
+#: hours/enums.py:73
 msgctxt "ResourceType"
 msgid "Section"
 msgstr ""
 
-#: hours/enums.py:72
+#: hours/enums.py:74
 msgctxt "ResourceType"
 msgid "Special group"
 msgstr ""
 
-#: hours/enums.py:73
+#: hours/enums.py:75
 msgctxt "ResourceType"
 msgid "Contact email or phone number"
 msgstr ""
 
-#: hours/enums.py:74
+#: hours/enums.py:76
 msgctxt "ResourceType"
 msgid "Online service"
 msgstr ""
 
-#: hours/enums.py:75
+#: hours/enums.py:77
 msgctxt "ResourceType"
 msgid "Service"
 msgstr ""
 
-#: hours/enums.py:76
+#: hours/enums.py:78
 msgctxt "ResourceType"
 msgid "Service channel"
 msgstr ""
 
-#: hours/enums.py:77
+#: hours/enums.py:79
 msgctxt "ResourceType"
 msgid "Service at unit"
 msgstr ""
 
-#: hours/enums.py:78
+#: hours/enums.py:80
 msgctxt "ResourceType"
 msgid "Reservable resource"
 msgstr ""
 
-#: hours/enums.py:79
+#: hours/enums.py:81
 msgctxt "ResourceType"
 msgid "Building"
 msgstr ""
 
-#: hours/enums.py:80
+#: hours/enums.py:82
 msgctxt "ResourceType"
 msgid "Area"
 msgstr ""
 
-#: hours/enums.py:81
+#: hours/enums.py:83
 msgctxt "ResourceType"
 msgid "Entrance or exit"
 msgstr ""
 
-#: hours/enums.py:94
+#: hours/enums.py:96
 msgctxt "Weekday"
 msgid "Monday"
 msgstr "Måndag"
 
-#: hours/enums.py:95
+#: hours/enums.py:97
 msgctxt "Weekday"
 msgid "Tuesday"
 msgstr "Tisdag"
 
-#: hours/enums.py:96
+#: hours/enums.py:98
 msgctxt "Weekday"
 msgid "Wednesday"
 msgstr "Onsdag"
 
-#: hours/enums.py:97
+#: hours/enums.py:99
 msgctxt "Weekday"
 msgid "Thursday"
 msgstr "Torsdag"
 
-#: hours/enums.py:98
+#: hours/enums.py:100
 msgctxt "Weekday"
 msgid "Friday"
 msgstr "Fredag"
 
-#: hours/enums.py:99
+#: hours/enums.py:101
 msgctxt "Weekday"
 msgid "Saturday"
 msgstr "Lördag"
 
-#: hours/enums.py:100
+#: hours/enums.py:102
 msgctxt "Weekday"
 msgid "Sunday"
 msgstr "Söndag"
 
-#: hours/enums.py:124
+#: hours/enums.py:126
 msgctxt "RuleContext"
 msgid "Period"
 msgstr "Period"
 
-#: hours/enums.py:125
+#: hours/enums.py:127
 msgctxt "RuleContext"
 msgid "Year"
 msgstr "År"
 
-#: hours/enums.py:126
+#: hours/enums.py:128
 msgctxt "RuleContext"
 msgid "Month"
 msgstr "Månad"
 
-#: hours/enums.py:130
+#: hours/enums.py:132
 msgctxt "every_rulecontext"
 msgid "period"
 msgstr "av period"
 
-#: hours/enums.py:131
+#: hours/enums.py:133
 msgctxt "every_rulecontext"
 msgid "year"
 msgstr "årets"
 
-#: hours/enums.py:132
+#: hours/enums.py:134
 msgctxt "every_rulecontext"
 msgid "month"
 msgstr "månadens"
 
-#: hours/enums.py:148
+#: hours/enums.py:150
 msgctxt "RuleSubject"
 msgid "Day"
 msgstr "Dag"
 
-#: hours/enums.py:149
+#: hours/enums.py:151
 msgctxt "RuleSubject"
 msgid "Week"
 msgstr "Vecka"
 
-#: hours/enums.py:150
+#: hours/enums.py:152
 msgctxt "RuleSubject"
 msgid "Month"
 msgstr "Månad"
 
-#: hours/enums.py:151
+#: hours/enums.py:153
 msgctxt "RuleSubject"
 msgid "Monday"
 msgstr "Måndag"
 
-#: hours/enums.py:152
+#: hours/enums.py:154
 msgctxt "RuleSubject"
 msgid "Tuesday"
 msgstr "Tisdag"
 
-#: hours/enums.py:153
+#: hours/enums.py:155
 msgctxt "RuleSubject"
 msgid "Wednesday"
 msgstr "Onsdag"
 
-#: hours/enums.py:154
+#: hours/enums.py:156
 msgctxt "RuleSubject"
 msgid "Thursday"
 msgstr "Torsdag"
 
-#: hours/enums.py:155
+#: hours/enums.py:157
 msgctxt "RuleSubject"
 msgid "Friday"
 msgstr "Fredag"
 
-#: hours/enums.py:156
+#: hours/enums.py:158
 msgctxt "RuleSubject"
 msgid "Saturday"
 msgstr "Lördag"
 
-#: hours/enums.py:157
+#: hours/enums.py:159
 msgctxt "RuleSubject"
 msgid "Sunday"
 msgstr "Söndag"
 
-#: hours/enums.py:160
+#: hours/enums.py:162
 msgctxt "starting_from_nth_rulesubject"
 msgid "day"
 msgstr "av dag"
 
-#: hours/enums.py:161
+#: hours/enums.py:163
 msgctxt "starting_from_nth_rulesubject"
 msgid "week"
 msgstr "från vecka"
 
-#: hours/enums.py:162
+#: hours/enums.py:164
 msgctxt "starting_from_nth_rulesubject"
 msgid "month"
 msgstr "från och med månad"
 
-#: hours/enums.py:163
+#: hours/enums.py:165
 msgctxt "starting_from_nth_rulesubject"
 msgid "mon"
 msgstr "från måndag"
 
-#: hours/enums.py:164
+#: hours/enums.py:166
 msgctxt "starting_from_nth_rulesubject"
 msgid "tue"
 msgstr "från tisdag"
 
-#: hours/enums.py:165
+#: hours/enums.py:167
 msgctxt "starting_from_nth_rulesubject"
 msgid "wed"
 msgstr "från onsdag"
 
-#: hours/enums.py:166
+#: hours/enums.py:168
 msgctxt "starting_from_nth_rulesubject"
 msgid "thu"
 msgstr "från torsdag"
 
-#: hours/enums.py:167
+#: hours/enums.py:169
 msgctxt "starting_from_nth_rulesubject"
 msgid "fri"
 msgstr "från fredag"
 
-#: hours/enums.py:168
+#: hours/enums.py:170
 msgctxt "starting_from_nth_rulesubject"
 msgid "sat"
 msgstr "från lördag"
 
-#: hours/enums.py:169
+#: hours/enums.py:171
 msgctxt "starting_from_nth_rulesubject"
 msgid "sun"
 msgstr "från söndag"
 
-#: hours/enums.py:213
+#: hours/enums.py:215
 msgctxt "FrequencyModifier"
 msgid "Even"
 msgstr "Jämn"
 
-#: hours/enums.py:214
+#: hours/enums.py:216
 msgctxt "FrequencyModifier"
 msgid "Odd"
 msgstr "Udd"
 
 #: hours/models.py:254 hours/models.py:281 hours/models.py:630
-#: hours/models.py:880 hours/models.py:1010
+#: hours/models.py:882 hours/models.py:1012
 msgid "Name"
 msgstr ""
 
 #: hours/models.py:255 hours/models.py:283 hours/models.py:632
-#: hours/models.py:882 hours/models.py:1012
+#: hours/models.py:884 hours/models.py:1014
 msgid "Description"
 msgstr ""
 
@@ -525,7 +530,7 @@ msgstr ""
 msgid "Period origins"
 msgstr ""
 
-#: hours/models.py:868
+#: hours/models.py:870
 msgid ""
 "\n"
 "\n"
@@ -535,195 +540,195 @@ msgstr ""
 "\n"
 "Giltig när alla följanär gäller:\n"
 
-#: hours/models.py:884
+#: hours/models.py:886
 msgid "Start time"
 msgstr ""
 
-#: hours/models.py:887
+#: hours/models.py:889
 msgid "End time"
 msgstr ""
 
-#: hours/models.py:890
+#: hours/models.py:892
 msgid "Is end time on the next day"
 msgstr ""
 
-#: hours/models.py:892
+#: hours/models.py:894
 msgid "24 hours"
 msgstr "24 timmar"
 
-#: hours/models.py:896
+#: hours/models.py:898
 msgid "Weekday"
 msgstr "Veckodag"
 
-#: hours/models.py:910
+#: hours/models.py:912
 msgid "Time span"
 msgstr ""
 
-#: hours/models.py:911
+#: hours/models.py:913
 msgid "Time spans"
 msgstr ""
 
-#: hours/models.py:950
+#: hours/models.py:952
 msgctxt "timespan_as_text"
 msgid "Every day"
 msgstr "Varje dag"
 
-#: hours/models.py:977
+#: hours/models.py:979
 msgctxt "timespan_as_text"
 msgid "The whole day"
 msgstr "Hela dagen"
 
-#: hours/models.py:979
+#: hours/models.py:981
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{start_time}-{end_time}"
 msgstr ""
 
-#: hours/models.py:996
+#: hours/models.py:998
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{weekdays} {times} {state}{description}"
 msgstr ""
 
-#: hours/models.py:1015
+#: hours/models.py:1017
 msgid "Context"
 msgstr ""
 
-#: hours/models.py:1020
+#: hours/models.py:1022
 msgid "Subject"
 msgstr ""
 
-#: hours/models.py:1023
+#: hours/models.py:1025
 msgid "Start"
 msgstr "Början"
 
-#: hours/models.py:1025
+#: hours/models.py:1027
 msgid "Frequency (ordinal)"
 msgstr "Upprepning (sekvensnummer)"
 
-#: hours/models.py:1029
+#: hours/models.py:1031
 msgid "Frequency (modifier)"
 msgstr "Upprepning (kval)"
 
-#: hours/models.py:1036
+#: hours/models.py:1038
 msgid "Rule"
 msgstr "Reger"
 
-#: hours/models.py:1037
+#: hours/models.py:1039
 msgid "Rules"
 msgstr "Regler"
 
-#: hours/models.py:1067
+#: hours/models.py:1069
 msgctxt "rule_as_text_context"
 msgid "the period"
 msgstr "Av period"
 
-#: hours/models.py:1069
+#: hours/models.py:1071
 #, python-brace-format
 msgctxt "rule_as_text_context"
 msgid "every {context}"
 msgstr "Varje {context}"
 
-#: hours/models.py:1075
+#: hours/models.py:1077
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "{nth} {subject} in {context}"
 msgstr "{context} {nth} {subject}"
 
-#: hours/models.py:1084
+#: hours/models.py:1086
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "starting from the {nth} {last} {subject}"
 msgstr "från {nth} {last} {subject}"
 
-#: hours/models.py:1087
+#: hours/models.py:1089
 msgctxt "starting_from_the_last"
 msgid "last"
 msgstr "från den sista"
 
-#: hours/models.py:1097
+#: hours/models.py:1099
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "Every {nth} {subject} in {context} {starting_from_text}"
 msgstr "{context} varje {nth} {subject} {starting_from_text}"
 
-#: hours/models.py:1108
+#: hours/models.py:1110
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "On {modifier} {subject}s in {context}"
 msgstr "{context} varje {modifier} {subject}"
 
-#: hours/models.py:1129
+#: hours/models.py:1131
 msgid ""
 "We cannot start counting from period start in an infinite period. Please "
 "select shorter context for your rule."
 msgstr ""
 
-#: hours/models.py:1134
+#: hours/models.py:1136
 msgid "Subject must be a shorter timespan than context."
 msgstr ""
 
-#: hours/models.py:1138
+#: hours/models.py:1140
 msgid ""
 "You cannot add a rule with both even/odd and another frequency at the same "
 "time."
 msgstr ""
 
-#: hours/models.py:1147
+#: hours/models.py:1149
 msgid ""
 "Rule can only start from zero if starting from zeroth ISO week of the year. "
 "All other rules start counting from 1. Use negative numbers to count from "
 "the end of the context."
 msgstr ""
 
-#: hours/models.py:1155
+#: hours/models.py:1157
 msgid ""
 "Even/odd subjects are not counted starting from a specific time. If you wish "
 "to have an alternating rule starting from a specific time, please use "
 "frequency_ordinal=2 with start=1 or start=2."
 msgstr ""
 
-#: hours/models.py:1422
+#: hours/models.py:1424
 msgid "Signature"
 msgstr ""
 
-#: hours/models.py:1423
+#: hours/models.py:1425
 msgid "Signature created at"
 msgstr ""
 
-#: hours/models.py:1424
+#: hours/models.py:1426
 msgid "Signature valid until"
 msgstr ""
 
-#: hours/models.py:1426
+#: hours/models.py:1428
 msgid "Invalidated time"
 msgstr ""
 
-#: hours/models.py:1430
+#: hours/models.py:1432
 msgid "Signed auth entry"
 msgstr ""
 
-#: hours/models.py:1431
+#: hours/models.py:1433
 msgid "Signed auth entries"
 msgstr ""
 
-#: hours/models.py:1436
+#: hours/models.py:1438
 msgid "Signing key"
 msgstr ""
 
-#: hours/models.py:1437
+#: hours/models.py:1439
 msgid "Key valid after"
 msgstr ""
 
-#: hours/models.py:1439
+#: hours/models.py:1441
 msgid "Key valid until"
 msgstr ""
 
-#: hours/models.py:1443
+#: hours/models.py:1445
 msgid "Signed auth key"
 msgstr ""
 
-#: hours/models.py:1444
+#: hours/models.py:1446
 msgid "Signed auth keys"
 msgstr ""
 

@@ -18,6 +18,7 @@ class State(Enum):
     MAINTENANCE = "maintenance"
     RESERVED = "reserved"
     BY_APPOINTMENT = "by_appointment"
+    NO_OPENING_HOURS = "no_opening_hours"
 
     class Labels:
         OPEN = pgettext_lazy("State", "Open")
@@ -35,6 +36,7 @@ class State(Enum):
         MAINTENANCE = pgettext_lazy("State", "Maintenance")
         RESERVED = pgettext_lazy("State", "Reserved")
         BY_APPOINTMENT = pgettext_lazy("State", "By appointment")
+        NO_OPENING_HOURS = pgettext_lazy("State", "No opening hours")
 
     @classmethod
     def open_states(cls):

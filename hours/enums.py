@@ -5,7 +5,6 @@ from enumfields import Enum
 class State(Enum):
     OPEN = "open"
     CLOSED = "closed"
-    UNDEFINED = "undefined"
     SELF_SERVICE = "self_service"
     WITH_KEY = "with_key"
     WITH_RESERVATION = "with_reservation"
@@ -18,6 +17,7 @@ class State(Enum):
     MAINTENANCE = "maintenance"
     RESERVED = "reserved"
     BY_APPOINTMENT = "by_appointment"
+    UNDEFINED = "undefined"
 
     class Labels:
         OPEN = pgettext_lazy("State", "Open")

@@ -113,7 +113,7 @@ msgstr "Stängt"
 #: hours/enums.py:25
 msgctxt "State"
 msgid "Undefined"
-msgstr "Odefinierat"
+msgstr "Ingen öpptettid"
 
 #: hours/enums.py:26
 msgctxt "State"

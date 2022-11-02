@@ -859,7 +859,7 @@ class TimeSpanGroup(SoftDeletableModel, models.Model):
 
         time_span_strings = []
         for time_span in self.time_spans.all():
-            if time_span.is_removed:
+            if time_span.is_removed or time_span.resource_state == State.UNDEFINED:
                 continue
             time_span_strings.append(" " + time_span.as_text())
 
@@ -968,11 +968,6 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         return weekdays_text
 
     def as_text(self) -> str:
-        if self.resource_state == State.UNDEFINED:
-            state = self.group.period.resource_state.label
-        else:
-            state = self.resource_state.label
-
         if self.full_day:
             times = pgettext("timespan_as_text", "The whole day")
         else:
@@ -995,7 +990,7 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         return pgettext(
             "timespan_as_text", "{weekdays} {times} {state}{description}"
         ).format(
-            state=state,
+            state=self.resource_state.label,
             weekdays=self.get_weekdays_as_text(),
             times=times,
             description=description,

@@ -113,7 +113,7 @@ msgstr "Suljettu"
 #: hours/enums.py:25
 msgctxt "State"
 msgid "Undefined"
-msgstr "Määrittelemätön"
+msgstr "Ei aukioloa"
 
 #: hours/enums.py:26
 msgctxt "State"

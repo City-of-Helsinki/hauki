@@ -114,7 +114,7 @@ msgstr ""
 #: hours/enums.py:25
 msgctxt "State"
 msgid "Undefined"
-msgstr ""
+msgstr "No opening hours"
 
 #: hours/enums.py:26
 msgctxt "State"

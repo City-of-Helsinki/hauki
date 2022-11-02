@@ -861,6 +861,8 @@ class TimeSpanGroup(SoftDeletableModel, models.Model):
         for time_span in self.time_spans.all():
             if time_span.is_removed:
                 continue
+            if time_span.resource_state == State.NO_OPENING_HOURS:
+                continue
             time_span_strings.append(" " + time_span.as_text())
 
         result = "\n".join(time_span_strings)

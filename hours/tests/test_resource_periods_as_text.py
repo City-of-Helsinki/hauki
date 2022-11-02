@@ -493,3 +493,60 @@ def test_date_period_as_text_with_time_span_description_strip_special_chars(reso
         "\n"
         "========================================\n"
     )
+
+
+@pytest.mark.django_db
+def test_date_period_as_text_with_time_span_resource_state_no_opening_hours(resource):
+    date_period = DatePeriodFactory(
+        name="Regular opening hours",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2021, month=1, day=1),
+        end_date=datetime.date(year=2022, month=12, day=31),
+    )
+
+    time_span_group = TimeSpanGroupFactory(period=date_period)
+
+    TimeSpanFactory(
+        name="Test time span 1",
+        group=time_span_group,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.THURSDAY],
+    )
+
+    TimeSpanFactory(
+        name="Test time span 2",
+        group=time_span_group,
+        resource_state=State.NO_OPENING_HOURS,
+        weekdays=[Weekday.WEDNESDAY],
+    )
+
+    TimeSpanFactory(
+        name="Test time span 3",
+        group=time_span_group,
+        start_time=datetime.time(hour=10, minute=0),
+        end_time=datetime.time(hour=15, minute=0),
+        weekdays=[Weekday.SATURDAY],
+    )
+
+    TimeSpanFactory(
+        name="Test time span 4",
+        group=time_span_group,
+        resource_state=State.CLOSED,
+        weekdays=[Weekday.SUNDAY],
+    )
+
+    assert resource.date_periods_as_text == (
+        "\n"
+        "========================================\n"
+        "Regular opening hours\n"
+        "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
+        "Aukioloajat:\n"
+        "\n"
+        " Maanantai-Tiistai, Torstai 8.00-16.00 Auki\n"
+        " Lauantai 10.00-15.00 Auki\n"
+        " Sunnuntai - Suljettu\n"
+        "\n"
+        "========================================\n"
+    )

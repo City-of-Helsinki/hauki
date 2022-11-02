@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-11-01 13:35+0200\n"
+"POT-Creation-Date: 2022-11-02 13:12+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -616,25 +616,25 @@ msgstr "Regler"
 #: hours/models.py:1067
 msgctxt "rule_as_text_context"
 msgid "the period"
-msgstr "av period"
+msgstr "Av period"
 
 #: hours/models.py:1069
 #, python-brace-format
 msgctxt "rule_as_text_context"
 msgid "every {context}"
-msgstr ""
+msgstr "Varje {context}"
 
 #: hours/models.py:1075
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "{nth} {subject} in {context}"
-msgstr ""
+msgstr "{context} {nth} {subject}"
 
 #: hours/models.py:1084
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "starting from the {nth} {last} {subject}"
-msgstr ""
+msgstr "från {nth} {last} {subject}"
 
 #: hours/models.py:1087
 msgctxt "starting_from_the_last"
@@ -645,13 +645,13 @@ msgstr "från den sista"
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "Every {nth} {subject} in {context} {starting_from_text}"
-msgstr ""
+msgstr "{context} varje {nth} {subject} {starting_from_text}"
 
 #: hours/models.py:1108
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "On {modifier} {subject}s in {context}"
-msgstr ""
+msgstr "{context} varje {modifier} {subject}"
 
 #: hours/models.py:1129
 msgid ""

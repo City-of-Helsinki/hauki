@@ -14,7 +14,7 @@ trigger: none
 pr: none
 
 # By default, use self-hosted agents
-pool: Default
+pool: Production
 
 resources:
   repositories:

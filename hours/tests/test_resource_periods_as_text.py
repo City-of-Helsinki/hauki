@@ -550,3 +550,90 @@ def test_date_period_as_text_with_time_span_resource_state_no_opening_hours(reso
         "\n"
         "========================================\n"
     )
+
+
+@pytest.mark.django_db
+def test_date_period_as_text_rules_order(resource):
+    assert resource.date_periods_as_text == ""
+
+    date_period = DatePeriodFactory(
+        name="",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=datetime.date(year=2022, month=11, day=7),
+    )
+
+    time_span_group1 = TimeSpanGroupFactory(period=date_period)
+
+    TimeSpanFactory(
+        group=time_span_group1,
+        start_time=datetime.time(hour=8, minute=0),
+        end_time=datetime.time(hour=16, minute=0),
+        weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.WEDNESDAY, Weekday.THURSDAY],
+        resource_state=State.BY_APPOINTMENT,
+    )
+
+    RuleFactory(
+        group=time_span_group1,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        frequency_modifier="even",
+    )
+
+    time_span_group2 = TimeSpanGroupFactory(period=date_period)
+
+    TimeSpanFactory(
+        group=time_span_group2,
+        start_time=datetime.time(hour=9, minute=0),
+        end_time=datetime.time(hour=15, minute=0),
+        weekdays=[Weekday.MONDAY, Weekday.TUESDAY, Weekday.WEDNESDAY, Weekday.THURSDAY],
+        resource_state=State.SELF_SERVICE,
+    )
+
+    RuleFactory(
+        group=time_span_group2,
+        context=RuleContext.YEAR,
+        subject=RuleSubject.WEEK,
+        frequency_modifier="odd",
+    )
+
+    time_span_group3 = TimeSpanGroupFactory(period=date_period)
+
+    TimeSpanFactory(
+        group=time_span_group3,
+        start_time=datetime.time(hour=11, minute=0),
+        end_time=datetime.time(hour=12, minute=0),
+        weekdays=[Weekday.FRIDAY],
+        resource_state=State.OPEN,
+    )
+
+    TimeSpanFactory(
+        group=time_span_group3,
+        weekdays=[Weekday.SATURDAY, Weekday.SUNDAY],
+        resource_state=State.CLOSED,
+    )
+
+    assert resource.date_periods_as_text == (
+        "\n========================================\n"
+        "Aikajakso: 7. marraskuuta 2022 - \n"
+        "Aukioloajat:\n"
+        "\n"
+        " Perjantai 11.00-12.00 Auki\n"
+        " Lauantai-Sunnuntai - Suljettu\n"
+        "\n"
+        " ---------------------------------------\n"
+        "\n"
+        " Maanantai-Torstai 8.00-16.00 Ajanvarauksella\n"
+        "\n"
+        " Voimassa kun kaikki seuraavat pätevät:\n"
+        " - Jokaisen vuoden jokainen parillinen viikko\n"
+        "\n"
+        " ---------------------------------------\n"
+        "\n"
+        " Maanantai-Torstai 9.00-15.00 Itsepalvelu\n"
+        "\n"
+        " Voimassa kun kaikki seuraavat pätevät:\n"
+        " - Jokaisen vuoden jokainen pariton viikko\n"
+        "\n"
+        "========================================\n"
+    )

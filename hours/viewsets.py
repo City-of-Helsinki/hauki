@@ -967,6 +967,38 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
         return self.get_paginated_response(serializer.data)
 
 
+class DatePeriodsAsTextForTprekBackend(BaseFilterBackend):
+    def filter_queryset(self, request, queryset, view):
+        data_source = request.query_params.get("data_source", None)
+        resource = request.query_params.get("resource", None)
+
+        # Originally the endpoint was meant to be used to only get all
+        # tprek specific date period texts. This keeps it backwards
+        # compatible. We can remove this once tprek starts to use
+        # the data source query param
+        if data_source is None and resource is None:
+            data_source = "tprek"
+
+        if data_source is not None:
+            queryset = queryset.filter(
+                Q(origins__data_source=data_source)
+                | Q(ancestry_data_source__contains=[data_source])
+            )
+
+        if resource is not None:
+            filters = map(get_resource_pk_filter, resource.split(","))
+            q_objects = [Q(**filter) for filter in filters]
+            query_q = Q()
+            for q in q_objects:
+                query_q |= q
+            try:
+                queryset = queryset.filter(query_q)
+            except (ValueError, Resource.DoesNotExist):
+                pass
+
+        return queryset
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List date periods as texts",
@@ -978,11 +1010,17 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
                 OpenApiParameter.QUERY,
                 description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
             ),
+            OpenApiParameter(
+                "data_source",
+                OpenApiTypes.UUID,
+                OpenApiParameter.QUERY,
+                description="Filter by resource data source",
+            ),
         ],
     ),
 )
 class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, DatePeriodsAsTextForTprekBackend)
     pagination_class = PageSizePageNumberPagination
 
     def get_queryset(self):
@@ -990,7 +1028,6 @@ class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
             Resource.objects.filter(
                 # Query only resources that have date periods
                 Exists(DatePeriod.objects.filter(resource=OuterRef("pk"))),
-                data_sources__in=["tprek"],
             )
             .prefetch_related(
                 "origins",

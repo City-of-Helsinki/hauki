@@ -190,8 +190,8 @@ class HaukiSignedAuthentication(BaseAuthentication):
             try:
                 user_origin = user.origins.get(data_source=data_source)
             except UserOrigin.DoesNotExist:
-                raise exceptions.AuthenticationFailed(
-                    _("User not from the same data source")
+                user_origin = UserOrigin.objects.create(
+                    user=user, data_source=data_source
                 )
         except User.DoesNotExist:
             user = User()
@@ -213,15 +213,12 @@ class HaukiSignedAuthentication(BaseAuthentication):
             try:
                 organization = Organization.objects.get(id=params["hsa_organization"])
 
-                # Allow joining users only to organizations that are from
-                # the same data source
-                if data_source == organization.data_source:
-                    users_organizations = user.organization_memberships.all()
+                users_organizations = user.organization_memberships.all()
 
-                    if organization not in users_organizations:
-                        user.organization_memberships.add(organization)
+                if organization not in users_organizations:
+                    user.organization_memberships.add(organization)
 
-                    hsa_auth_data.organization = organization
+                hsa_auth_data.organization = organization
             except Organization.DoesNotExist:
                 # TODO: Should we raise exception here
                 pass

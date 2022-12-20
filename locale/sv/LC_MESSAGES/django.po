@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-11-10 08:06+0200\n"
+"POT-Creation-Date: 2022-12-21 11:48+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,7 +49,7 @@ msgstr ""
 msgid "End date"
 msgstr ""
 
-#: hours/admin.py:158 hours/models.py:641 hours/models.py:906
+#: hours/admin.py:158 hours/models.py:641 hours/models.py:911
 msgid "Resource state"
 msgstr ""
 
@@ -90,10 +90,6 @@ msgstr ""
 
 #: hours/authentication.py:183
 msgid "Signature has been invalidated"
-msgstr ""
-
-#: hours/authentication.py:194
-msgid "User not from the same data source"
 msgstr ""
 
 #: hours/authentication.py:205
@@ -416,12 +412,12 @@ msgid "Odd"
 msgstr "Udd"
 
 #: hours/models.py:254 hours/models.py:281 hours/models.py:630
-#: hours/models.py:882 hours/models.py:1012
+#: hours/models.py:887 hours/models.py:1017
 msgid "Name"
 msgstr ""
 
 #: hours/models.py:255 hours/models.py:283 hours/models.py:632
-#: hours/models.py:884 hours/models.py:1014
+#: hours/models.py:889 hours/models.py:1019
 msgid "Description"
 msgstr ""
 
@@ -473,7 +469,7 @@ msgstr ""
 msgid "{separator}{date_periods}{separator}"
 msgstr ""
 
-#: hours/models.py:608 hours/models.py:810 users/models.py:38
+#: hours/models.py:608 hours/models.py:815 users/models.py:38
 msgid "Origin ID"
 msgstr ""
 
@@ -497,7 +493,7 @@ msgstr ""
 msgid "Periods"
 msgstr ""
 
-#: hours/models.py:693
+#: hours/models.py:698
 msgid ""
 "\n"
 "\n"
@@ -505,11 +501,11 @@ msgid ""
 "\n"
 msgstr ""
 
-#: hours/models.py:703
+#: hours/models.py:708
 msgid "Not specified"
 msgstr "Ej fastställt"
 
-#: hours/models.py:716
+#: hours/models.py:721
 #, python-brace-format
 msgid ""
 "{name}{description}Date period: {dates}\n"
@@ -522,15 +518,15 @@ msgstr ""
 "\n"
 "{time_span_groups}\n"
 
-#: hours/models.py:814
+#: hours/models.py:819
 msgid "Period origin"
 msgstr ""
 
-#: hours/models.py:815
+#: hours/models.py:820
 msgid "Period origins"
 msgstr ""
 
-#: hours/models.py:870
+#: hours/models.py:875
 msgid ""
 "\n"
 "\n"
@@ -540,195 +536,195 @@ msgstr ""
 "\n"
 "Giltig när alla följanär gäller:\n"
 
-#: hours/models.py:886
+#: hours/models.py:891
 msgid "Start time"
 msgstr ""
 
-#: hours/models.py:889
+#: hours/models.py:894
 msgid "End time"
 msgstr ""
 
-#: hours/models.py:892
+#: hours/models.py:897
 msgid "Is end time on the next day"
 msgstr ""
 
-#: hours/models.py:894
+#: hours/models.py:899
 msgid "24 hours"
 msgstr "24 timmar"
 
-#: hours/models.py:898
+#: hours/models.py:903
 msgid "Weekday"
 msgstr "Veckodag"
 
-#: hours/models.py:912
+#: hours/models.py:917
 msgid "Time span"
 msgstr ""
 
-#: hours/models.py:913
+#: hours/models.py:918
 msgid "Time spans"
 msgstr ""
 
-#: hours/models.py:952
+#: hours/models.py:957
 msgctxt "timespan_as_text"
 msgid "Every day"
 msgstr "Varje dag"
 
-#: hours/models.py:979
+#: hours/models.py:984
 msgctxt "timespan_as_text"
 msgid "The whole day"
 msgstr "Hela dagen"
 
-#: hours/models.py:981
+#: hours/models.py:986
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{start_time}-{end_time}"
 msgstr ""
 
-#: hours/models.py:998
+#: hours/models.py:1003
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{weekdays} {times} {state}{description}"
 msgstr ""
 
-#: hours/models.py:1017
+#: hours/models.py:1022
 msgid "Context"
 msgstr ""
 
-#: hours/models.py:1022
+#: hours/models.py:1027
 msgid "Subject"
 msgstr ""
 
-#: hours/models.py:1025
+#: hours/models.py:1030
 msgid "Start"
 msgstr "Början"
 
-#: hours/models.py:1027
+#: hours/models.py:1032
 msgid "Frequency (ordinal)"
 msgstr "Upprepning (sekvensnummer)"
 
-#: hours/models.py:1031
+#: hours/models.py:1036
 msgid "Frequency (modifier)"
 msgstr "Upprepning (kval)"
 
-#: hours/models.py:1038
+#: hours/models.py:1043
 msgid "Rule"
 msgstr "Reger"
 
-#: hours/models.py:1039
+#: hours/models.py:1044
 msgid "Rules"
 msgstr "Regler"
 
-#: hours/models.py:1069
+#: hours/models.py:1074
 msgctxt "rule_as_text_context"
 msgid "the period"
 msgstr "Av period"
 
-#: hours/models.py:1071
+#: hours/models.py:1076
 #, python-brace-format
 msgctxt "rule_as_text_context"
 msgid "every {context}"
 msgstr "Varje {context}"
 
-#: hours/models.py:1077
+#: hours/models.py:1082
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "{nth} {subject} in {context}"
 msgstr "{context} {nth} {subject}"
 
-#: hours/models.py:1086
+#: hours/models.py:1091
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "starting from the {nth} {last} {subject}"
 msgstr "från {nth} {last} {subject}"
 
-#: hours/models.py:1089
+#: hours/models.py:1094
 msgctxt "starting_from_the_last"
 msgid "last"
 msgstr "från den sista"
 
-#: hours/models.py:1099
+#: hours/models.py:1104
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "Every {nth} {subject} in {context} {starting_from_text}"
 msgstr "{context} varje {nth} {subject} {starting_from_text}"
 
-#: hours/models.py:1110
+#: hours/models.py:1115
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "On {modifier} {subject}s in {context}"
 msgstr "{context} varje {modifier} {subject}"
 
-#: hours/models.py:1131
+#: hours/models.py:1136
 msgid ""
 "We cannot start counting from period start in an infinite period. Please "
 "select shorter context for your rule."
 msgstr ""
 
-#: hours/models.py:1136
+#: hours/models.py:1141
 msgid "Subject must be a shorter timespan than context."
 msgstr ""
 
-#: hours/models.py:1140
+#: hours/models.py:1145
 msgid ""
 "You cannot add a rule with both even/odd and another frequency at the same "
 "time."
 msgstr ""
 
-#: hours/models.py:1149
+#: hours/models.py:1154
 msgid ""
 "Rule can only start from zero if starting from zeroth ISO week of the year. "
 "All other rules start counting from 1. Use negative numbers to count from "
 "the end of the context."
 msgstr ""
 
-#: hours/models.py:1157
+#: hours/models.py:1162
 msgid ""
 "Even/odd subjects are not counted starting from a specific time. If you wish "
 "to have an alternating rule starting from a specific time, please use "
 "frequency_ordinal=2 with start=1 or start=2."
 msgstr ""
 
-#: hours/models.py:1424
+#: hours/models.py:1429
 msgid "Signature"
 msgstr ""
 
-#: hours/models.py:1425
+#: hours/models.py:1430
 msgid "Signature created at"
 msgstr ""
 
-#: hours/models.py:1426
+#: hours/models.py:1431
 msgid "Signature valid until"
 msgstr ""
 
-#: hours/models.py:1428
+#: hours/models.py:1433
 msgid "Invalidated time"
 msgstr ""
 
-#: hours/models.py:1432
+#: hours/models.py:1437
 msgid "Signed auth entry"
 msgstr ""
 
-#: hours/models.py:1433
+#: hours/models.py:1438
 msgid "Signed auth entries"
 msgstr ""
 
-#: hours/models.py:1438
+#: hours/models.py:1443
 msgid "Signing key"
 msgstr ""
 
-#: hours/models.py:1439
+#: hours/models.py:1444
 msgid "Key valid after"
 msgstr ""
 
-#: hours/models.py:1441
+#: hours/models.py:1446
 msgid "Key valid until"
 msgstr ""
 
-#: hours/models.py:1445
+#: hours/models.py:1450
 msgid "Signed auth key"
 msgstr ""
 
-#: hours/models.py:1446
+#: hours/models.py:1451
 msgid "Signed auth keys"
 msgstr ""
 

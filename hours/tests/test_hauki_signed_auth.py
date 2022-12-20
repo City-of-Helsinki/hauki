@@ -4,7 +4,6 @@ import urllib.parse
 import pytest
 from django.urls import reverse
 from pytz import UTC
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIRequestFactory
 from rest_framework.views import APIView
 
@@ -384,45 +383,6 @@ def test_join_user_to_organization_invalid_org(
 
 
 @pytest.mark.django_db
-def test_join_user_to_organization_wrong_data_source_org(
-    api_client, data_source_factory, organization_factory, signed_auth_key_factory
-):
-    data_source1 = data_source_factory()
-    data_source2 = data_source_factory()
-
-    org = organization_factory(data_source=data_source2, origin_id=1234)
-
-    signed_auth_key = signed_auth_key_factory(data_source=data_source1)
-
-    url = reverse("auth_required_test-list")
-
-    now = datetime.datetime.utcnow()
-
-    data = {
-        "hsa_source": data_source1.id,
-        "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
-        "hsa_organization": org.id,
-    }
-
-    signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
-
-    authz_string = "haukisigned " + urllib.parse.urlencode(
-        {**data, "hsa_signature": signature}
-    )
-
-    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
-
-    assert response.status_code == 200
-    assert response.data["username"] == "test_user"
-
-    user = User.objects.get(username="test_user")
-
-    assert user.organization_memberships.count() == 0
-
-
-@pytest.mark.django_db
 def test_signed_auth_entry_not_invalidated(
     api_client, data_source, signed_auth_key_factory
 ):
@@ -680,11 +640,10 @@ def test_authenticate_existing_user_no_existing_data_source(
     request = APIView().initialize_request(http_request)
 
     auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
 
-    with pytest.raises(AuthenticationFailed) as e:
-        auth.authenticate(request)[0]
-
-    assert e.value.detail == "User not from the same data source"
+    assert auth.user_origin.user == user
+    assert auth.user_origin.data_source == data_source
 
 
 @pytest.mark.django_db
@@ -758,11 +717,10 @@ def test_authenticate_existing_user_existing_different_data_source(
     request = APIView().initialize_request(http_request)
 
     auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
 
-    with pytest.raises(AuthenticationFailed) as e:
-        auth.authenticate(request)[0]
-
-    assert e.value.detail == "User not from the same data source"
+    assert auth.user_origin.user == user
+    assert auth.user_origin.data_source == data_source1
 
 
 @pytest.mark.django_db
@@ -819,40 +777,6 @@ def test_auth_data_org(
     assert auth.user_origin.data_source == data_source
     assert auth.has_organization_rights is False
     assert auth.organization == org
-    assert auth.resource is None
-
-
-@pytest.mark.django_db
-def test_auth_data_org_different_data_source(
-    api_client, data_source_factory, organization_factory, hsa_params_factory
-):
-    data_source = data_source_factory()
-    data_source2 = data_source_factory()
-
-    org = organization_factory(data_source=data_source2, origin_id=1234)
-
-    hsa_params = {
-        "username": "test_user",
-        "data_source": data_source,
-        "organization": org,
-    }
-    params = hsa_params_factory(**hsa_params)
-
-    # Create a fake DRF request
-    request_factory = APIRequestFactory()
-    http_request = request_factory.get("/", params)
-    request = APIView().initialize_request(http_request)
-
-    auth = HaukiSignedAuthentication()
-    (authenticated_user, auth) = auth.authenticate(request)
-
-    assert authenticated_user.id is not None
-    assert authenticated_user.username == "test_user"
-
-    assert auth.user == authenticated_user
-    assert auth.user_origin.data_source == data_source
-    assert auth.has_organization_rights is False
-    assert auth.organization is None
     assert auth.resource is None
 
 

@@ -79,7 +79,7 @@ def test_copy_all_periods_to_resource_copy_to_self_prevented(resource):
     create_test_periods(resource)
 
     assert resource.date_periods.count() == 1
-    resource.copy_all_periods_to_resource(resource)
+    resource.copy_all_periods_to_resource([resource])
     assert resource.date_periods.count() == 1
 
 
@@ -90,7 +90,7 @@ def test_copy_all_periods_to_resource(
 ):
     create_test_periods(resource)
     resource2 = resource_factory()
-    resource.copy_all_periods_to_resource(resource2)
+    resource.copy_all_periods_to_resource([resource2])
 
     assert resource2.date_periods.count() == 1
     check_opening_hours_same(
@@ -120,7 +120,7 @@ def test_copy_all_periods_to_resource_replace(
         override=True,
     )
 
-    resource.copy_all_periods_to_resource(resource2, replace=replace)
+    resource.copy_all_periods_to_resource([resource2], replace=replace)
 
     if replace:
         assert resource2.date_periods.count() == 1

@@ -1,9 +1,21 @@
+from django.contrib.auth.models import UserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from helusers.models import AbstractUser
 
 
+class CustomUserManager(UserManager):
+    def get(self, *args, **kwargs):
+        return (
+            super()
+            .prefetch_related("admin_organizations", "organization_memberships")
+            .get(*args, **kwargs)
+        )
+
+
 class User(AbstractUser):
+    objects = CustomUserManager()
+
     def __str__(self):
         if self.first_name and self.last_name:
             return "%s %s (%s)" % (self.last_name, self.first_name, self.email)
@@ -14,17 +26,17 @@ class User(AbstractUser):
 
     def get_all_organizations(self) -> set:
         # returns admin and member organizations and their descendants
-        if (
-            not self.admin_organizations.all()
-            and not self.organization_memberships.all()
-        ):
+        admin_organizations = self.admin_organizations.all()
+        organization_memberships = self.organization_memberships.all()
+
+        if not admin_organizations and not organization_memberships:
             return set()
         # regular users have rights to all organizations below their level
         orgs = set()
-        for org in self.admin_organizations.all():
+        for org in admin_organizations:
             if org not in orgs:
                 orgs.update(org.get_descendants(include_self=True))
-        for org in self.organization_memberships.all():
+        for org in organization_memberships:
             if org not in orgs:
                 orgs.update(org.get_descendants(include_self=True))
         # for multiple orgs, we have to combine the querysets

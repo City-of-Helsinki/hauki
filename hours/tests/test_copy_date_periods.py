@@ -239,7 +239,7 @@ def test_copy_all_periods_to_resource_copy_to_self_prevented(resource):
     create_test_periods(resource)
 
     assert resource.date_periods.count() == 1
-    resource.copy_periods_to_resource(resource)
+    resource.copy_all_periods_to_resource([resource])
     assert resource.date_periods.count() == 1
 
 
@@ -250,7 +250,7 @@ def test_copy_all_periods_to_resource_with_no_date_periods(
 ):
     create_test_periods(resource)
     resource2 = resource_factory()
-    resource.copy_periods_to_resource(resource2)
+    resource.copy_all_periods_to_resource([resource2])
 
     assert resource2.date_periods.count() == 1
     check_opening_hours_same(
@@ -262,10 +262,12 @@ def test_copy_all_periods_to_resource_with_no_date_periods(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("replace", [False, True])
 def test_copy_all_periods_to_resource_replace(
     resource,
     resource_factory,
     date_period_factory,
+    replace,
 ):
     create_test_periods(resource)
     resource2 = resource_factory()
@@ -278,15 +280,84 @@ def test_copy_all_periods_to_resource_replace(
         override=True,
     )
 
-    resource.copy_periods_to_resource(resource2, replace=True)
+    resource.copy_all_periods_to_resource([resource2], replace=replace)
 
-    assert resource2.date_periods.count() == 1
-    check_opening_hours_same(
-        resource,
-        resource2,
-        start_date=datetime.date(year=2020, month=10, day=12),
-        end_date=datetime.date(year=2020, month=10, day=18),
-    )
+    if replace:
+        assert resource2.date_periods.count() == 1
+        check_opening_hours_same(
+            resource,
+            resource2,
+            start_date=datetime.date(year=2020, month=10, day=12),
+            end_date=datetime.date(year=2020, month=10, day=18),
+        )
+    else:
+        assert resource2.date_periods.count() == 2
+        resource2_opening_hours = resource2.get_daily_opening_hours(
+            datetime.date(year=2020, month=10, day=12),
+            datetime.date(year=2020, month=10, day=18),
+        )
+        assert resource2_opening_hours == {
+            datetime.date(2020, 10, 12): [
+                TimeElement(
+                    start_time=datetime.time(8, 0),
+                    end_time_on_next_day=False,
+                    end_time=datetime.time(16, 0),
+                    resource_state=State.OPEN,
+                    override=False,
+                    full_day=False,
+                )
+            ],
+            datetime.date(2020, 10, 13): [
+                TimeElement(
+                    start_time=None,
+                    end_time_on_next_day=False,
+                    end_time=None,
+                    resource_state=State.CLOSED,
+                    override=True,
+                    full_day=True,
+                )
+            ],
+            datetime.date(2020, 10, 14): [
+                TimeElement(
+                    start_time=None,
+                    end_time_on_next_day=False,
+                    end_time=None,
+                    resource_state=State.CLOSED,
+                    override=True,
+                    full_day=True,
+                )
+            ],
+            datetime.date(2020, 10, 15): [
+                TimeElement(
+                    start_time=None,
+                    end_time_on_next_day=False,
+                    end_time=None,
+                    resource_state=State.CLOSED,
+                    override=True,
+                    full_day=True,
+                )
+            ],
+            datetime.date(2020, 10, 16): [
+                TimeElement(
+                    start_time=datetime.time(8, 0),
+                    end_time_on_next_day=False,
+                    end_time=datetime.time(16, 0),
+                    resource_state=State.OPEN,
+                    override=False,
+                    full_day=False,
+                )
+            ],
+            datetime.date(2020, 10, 18): [
+                TimeElement(
+                    start_time=datetime.time(10, 0),
+                    end_time_on_next_day=False,
+                    end_time=datetime.time(14, 0),
+                    resource_state=State.OPEN,
+                    override=False,
+                    full_day=False,
+                )
+            ],
+        }
 
 
 @pytest.mark.django_db
@@ -306,7 +377,7 @@ def test_copy_all_periods_to_resource_with_existing_date_periods(
         override=True,
     )
 
-    resource.copy_periods_to_resource(resource2)
+    resource.copy_all_periods_to_resource([resource2])
 
     assert resource2.date_periods.count() == 2
     resource2_opening_hours = resource2.get_daily_opening_hours(

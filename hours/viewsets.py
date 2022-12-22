@@ -972,13 +972,6 @@ class DatePeriodsAsTextForTprekBackend(BaseFilterBackend):
         data_source = request.query_params.get("data_source", None)
         resource = request.query_params.get("resource", None)
 
-        # Originally the endpoint was meant to be used to only get all
-        # tprek specific date period texts. This keeps it backwards
-        # compatible. We can remove this once tprek starts to use
-        # the data source query param
-        if data_source is None and resource is None:
-            data_source = "tprek"
-
         if data_source is not None:
             queryset = queryset.filter(
                 Q(origins__data_source=data_source)

@@ -209,7 +209,11 @@ class HaukiSignedAuthentication(BaseAuthentication):
         hsa_auth_data.user_origin = user_origin
         hsa_auth_data.original_params = params
 
-        if params.get("hsa_organization"):
+        hsa_auth_data.has_organization_rights = False
+        if params.get("hsa_has_organization_rights", "").lower() == "true":
+            hsa_auth_data.has_organization_rights = True
+
+        if params.get("hsa_organization") and hsa_auth_data.has_organization_rights:
             try:
                 organization = Organization.objects.get(id=params["hsa_organization"])
 
@@ -222,10 +226,6 @@ class HaukiSignedAuthentication(BaseAuthentication):
             except Organization.DoesNotExist:
                 # TODO: Should we raise exception here
                 pass
-
-        hsa_auth_data.has_organization_rights = False
-        if params.get("hsa_has_organization_rights", "").lower() == "true":
-            hsa_auth_data.has_organization_rights = True
 
         hsa_auth_data.resource = None
         if params.get("hsa_resource"):

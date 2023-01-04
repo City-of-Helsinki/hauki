@@ -240,6 +240,7 @@ def test_join_user_to_organization(
         "hsa_created_at": now.isoformat() + "Z",
         "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
         "hsa_organization": org.id,
+        "hsa_has_organization_rights": "true",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -284,6 +285,7 @@ def test_join_user_to_organization_existing_user(
         "hsa_created_at": now.isoformat() + "Z",
         "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
         "hsa_organization": org.id,
+        "hsa_has_organization_rights": "true",
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -776,7 +778,6 @@ def test_auth_data_org(
     assert auth.user == authenticated_user
     assert auth.user_origin.data_source == data_source
     assert auth.has_organization_rights is False
-    assert auth.organization == org
     assert auth.resource is None
 
 

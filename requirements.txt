@@ -19,7 +19,7 @@ cachetools==4.2.1
     # via django-helusers
 cattrs==1.10.0
     # via requests-cache
-certifi==2020.12.5
+certifi==2022.12.7
     # via
     #   elastic-apm
     #   requests
@@ -174,3 +174,4 @@ zipp==3.4.1
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -962,9 +962,6 @@ class TPRekImporter(Importer):
             if connection["section_type"] in CONNECTION_TYPES_TO_IGNORE:
                 return False
 
-            if connection["connection_id"].startswith("miscinfo-"):
-                return False
-
             return True
 
         return list(filter(should_import_connection, data))

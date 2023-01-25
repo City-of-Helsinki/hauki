@@ -984,10 +984,12 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
             times = pgettext("timespan_as_text", "The whole day")
         else:
             times = pgettext("timespan_as_text", "{start_time}-{end_time}").format(
-                start_time=formats.time_format(self.start_time)
+                start_time=formats.time_format(self.start_time, "G.i")
                 if self.start_time
                 else "",
-                end_time=formats.time_format(self.end_time) if self.end_time else "",
+                end_time=formats.time_format(self.end_time, "G.i")
+                if self.end_time
+                else "",
             )
 
         description = ""

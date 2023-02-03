@@ -554,13 +554,29 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
         return acc
 
-    def copy_all_periods_to_resource(self, target_resource, replace=False):
+    def copy_all_periods_to_resource(
+        self, target_resource, selected_date_periods_ids, replace=False
+    ):
         if (
             not target_resource
             or not isinstance(target_resource, Resource)
             or self.id == target_resource.id
         ):
             return
+
+        selected_date_periods = self.date_periods.filter(
+            id__in=selected_date_periods_ids
+        )
+
+        if selected_date_periods.count() != len(selected_date_periods_ids):
+            not_found_ids = set(selected_date_periods_ids) - set(
+                selected_date_periods.values_list("id", flat=True)
+            )
+            raise ValueError(
+                _(
+                    "One or more date periods with the given IDs were not found: {}"
+                ).format(not_found_ids)
+            )
 
         existing_period_ids = []
         if replace:
@@ -577,7 +593,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
             return new_instance
 
-        for period in self.date_periods.all():
+        for period in selected_date_periods:
             new_period = copy_instance(period, "resource", target_resource)
 
             for time_span_group in period.time_span_groups.all():

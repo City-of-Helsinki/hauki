@@ -348,6 +348,12 @@ class ResourceFilterBackend(BaseFilterBackend):
                 description="Replace all the periods in the target resource",
                 default=False,
             ),
+            OpenApiParameter(
+                "selected_date_periods",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Comma separated list of target resource ids",
+            ),
         ],
         responses={
             200: OpenApiResponse(
@@ -599,12 +605,23 @@ class ResourceViewSet(
             )
             raise PermissionDenied(detail=detail)
 
-        with transaction.atomic():
-            with DeferUpdatingDenormalizedDatePeriodData():
-                for target_resource in target_resources:
-                    resource.copy_all_periods_to_resource(
-                        target_resource, replace=replace
-                    )
+        selected_date_periods_ids = [
+            resource_id.strip()
+            for resource_id in request.query_params.get(
+                "selected_date_periods", ""
+            ).split(",")
+            if resource_id.strip()
+        ]
+
+        try:
+            with transaction.atomic():
+                with DeferUpdatingDenormalizedDatePeriodData():
+                    for target_resource in target_resources:
+                        resource.copy_all_periods_to_resource(
+                            target_resource, selected_date_periods_ids, replace=replace
+                        )
+        except ValueError as e:
+            raise ValidationError(detail=str(e))
 
         return Response(
             {

@@ -150,7 +150,7 @@ sqlparse==0.4.2
     # via django
 swapper==1.1.2.post1
     # via django-orghierarchy
-typing-extensions==3.7.4.3
+typing-extensions==3.10.0.0
     # via
     #   asgiref
     #   cattrs

@@ -7,10 +7,7 @@
 appdirs==1.4.4
     # via
     #   -c requirements.txt
-    #   black
     #   virtualenv
-appnope==0.1.2
-    # via ipython
 asgiref==3.3.4
     # via
     #   -c requirements.txt
@@ -25,7 +22,7 @@ bandit==1.7.0
     # via -r requirements-dev.in
 black==22.3
     # via -r requirements-dev.in
-certifi==2020.12.5
+certifi==2022.12.7
     # via
     #   -c requirements.txt
     #   requests
@@ -77,16 +74,6 @@ idna==2.10
     # via
     #   -c requirements.txt
     #   requests
-importlib-metadata==3.10.0
-    # via
-    #   -c requirements.txt
-    #   click
-    #   flake8
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   stevedore
-    #   virtualenv
 inflection==0.5.1
     # via
     #   -c requirements.txt
@@ -125,6 +112,8 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
+platformdirs==3.0.0
+    # via black
 pluggy==0.13.1
     # via pytest
 pre-commit==2.12.0
@@ -171,8 +160,6 @@ pyyaml==5.4.1
     #   -c requirements.txt
     #   bandit
     #   pre-commit
-regex==2021.4.4
-    # via black
 requests==2.25.1
     # via
     #   -c requirements.txt
@@ -201,7 +188,6 @@ text-unidecode==1.3
     # via faker
 toml==0.10.2
     # via
-    #   black
     #   dparse
     #   pre-commit
     #   pytest
@@ -209,15 +195,6 @@ traitlets==5.0.5
     # via
     #   ipython
     #   matplotlib-inline
-typed-ast==1.4.2
-    # via black
-typing-extensions==3.10.0.0
-    # via
-    #   -c requirements.txt
-    #   asgiref
-    #   black
-    #   gitpython
-    #   importlib-metadata
 urllib3==1.26.8
     # via
     #   -c requirements.txt
@@ -226,11 +203,6 @@ virtualenv==20.4.3
     # via pre-commit
 wcwidth==0.2.5
     # via prompt-toolkit
-zipp==3.4.1
-    # via
-    #   -c requirements.txt
-    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
-setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -211,16 +211,15 @@ class TPRekImporter(Importer):
         return not obj.is_public
 
     def mark_deleted(self, obj: SoftDeletableModel) -> bool:
-        # Only TPREK units will be marked non-public instead of deleted.
+        # TPREK units and connections will be marked non-public instead of deleted.
         # They might still lurk in TPREK and be needed non-publicly.
-        if type(obj) == Resource and obj.resource_type == ResourceType.UNIT:
+        if type(obj) == Resource:
             return self.mark_non_public(obj)
-        # TPREK does not have non-public connections. Connections and opening
-        # hours will be deleted.
+        # Opening hours will be deleted.
         return super().mark_deleted(obj)
 
     def check_deleted(self, obj: SoftDeletableModel) -> bool:
-        if type(obj) == Resource and obj.resource_type == ResourceType.UNIT:
+        if type(obj) == Resource:
             return self.check_non_public(obj)
         return super().check_deleted(obj)
 

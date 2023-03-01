@@ -1225,7 +1225,7 @@ class TPRekImporter(Importer):
         api_params = {
             "official": "yes",
         }
-        if object_type == "connection":
+        if object_type in ["unit", "connection"]:
             api_params["connectionmode"] = "hauki"
 
         if self.options.get("single", None):

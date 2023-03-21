@@ -375,7 +375,7 @@ if not DEBUG and not SECRET_KEY:
 # expecting SECRET_KEY to stay same will break upon restart. Should not be a
 # problem for development.
 if not SECRET_KEY:
-    logger.warn(
+    logger.warning(
         "SECRET_KEY was not defined in configuration."
         " Generating a temporary key for dev."
     )

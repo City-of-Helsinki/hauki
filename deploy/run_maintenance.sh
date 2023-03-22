@@ -1,6 +1,8 @@
 #!/bin/bash
 # This file is for any management commands Hauki needs to run hourly i.e. cronjobs
 
+set -e
+
 # TPREK organization structure must be up to date so users have the correct organization rights
 ./manage.py import_organizations -c tprek http://www.hel.fi/palvelukarttaws/rest/v4/department/
 # TPREK units and connections must be up to date so changed TPREK data is present in Hauki

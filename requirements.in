@@ -20,3 +20,4 @@ requests-cache
 sentry-sdk
 whitenoise
 elastic-apm
+tzdata

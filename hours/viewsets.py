@@ -568,30 +568,42 @@ class ResourceViewSet(
             if resource_id.strip()
         ]
 
-        target_resources = []
-        no_permission_resource_ids = []
-        for target_resource_id in target_resource_ids:
-            try:
-                target_resource = Resource.objects.get(
-                    **get_resource_pk_filter(target_resource_id)
-                )
-            except Resource.DoesNotExist:
-                detail = _('Resource with the id "{}" not found.').format(
-                    target_resource_id
-                )
-                raise NotFound(detail=detail)
+        filters = map(get_resource_pk_filter, target_resource_ids)
+        q_objects = [Q(**filter) for filter in filters]
+        query_q = Q()
+        for q in q_objects:
+            query_q |= q
 
+        target_resources = (
+            Resource.objects.prefetch_related(
+                "origins__data_source", "parents", "organization"
+            )
+            .filter(query_q)
+            .all()
+        )
+
+        if target_resources.count() != len(target_resource_ids):
+            for target_resource_id in target_resource_ids:
+                try:
+                    Resource.objects.get(**get_resource_pk_filter(target_resource_id))
+                except Resource.DoesNotExist:
+                    detail = _('Resource with the id "{}" not found.').format(
+                        target_resource_id
+                    )
+                    raise NotFound(detail=detail)
+
+        no_permission_resource_ids = []
+
+        for target_resource in target_resources:
             if target_resource.id == resource.id:
-                detail = _("Can't copy date periods to self").format(target_resource_id)
+                detail = _("Can't copy date periods to self")
                 raise APIException(detail=detail)
 
             try:
                 self.check_object_permissions(self.request, target_resource)
             except PermissionDenied:
-                no_permission_resource_ids.append(target_resource_id)
+                no_permission_resource_ids.append(str(target_resource.id))
                 continue
-
-            target_resources.append(target_resource)
 
         if no_permission_resource_ids:
             detail = _("No permission to modify resource(s): {}").format(
@@ -600,11 +612,7 @@ class ResourceViewSet(
             raise PermissionDenied(detail=detail)
 
         with transaction.atomic():
-            with DeferUpdatingDenormalizedDatePeriodData():
-                for target_resource in target_resources:
-                    resource.copy_all_periods_to_resource(
-                        target_resource, replace=replace
-                    )
+            resource.copy_all_periods_to_resource(target_resources, replace=replace)
 
         return Response(
             {

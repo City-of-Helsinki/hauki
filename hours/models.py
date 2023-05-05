@@ -24,6 +24,7 @@ from django.utils.translation import pgettext
 from django_orghierarchy.models import Organization
 from enumfields import EnumField, EnumIntegerField
 from model_utils.models import SoftDeletableModel, TimeStampedModel
+from simple_history.utils import bulk_create_with_history, bulk_update_with_history
 from timezone_field import TimeZoneField
 
 from hours.enums import (
@@ -483,7 +484,12 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         self.ancestry_organization = list(data["organizations"])
         self.save(update_child_ancestry_fields=update_child_ancestry_fields)
 
-    def update_denormalized_date_periods_data(self):
+    def update_denormalized_date_periods_data(self, save_result=True):
+        """
+        Update resources date_periods_hash and date_periods_as_text
+
+        Use save_result False to only update the fields. Beneficial for bulk operations.
+        """
         self.date_periods.prefetch_related(
             "time_span_groups",
             "time_span_groups__time_spans",
@@ -494,10 +500,11 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         with translation.override("fi"):
             self.date_periods_as_text = self.get_date_periods_as_text()
 
-        self.save(
-            update_fields=["date_periods_hash", "date_periods_as_text"],
-            update_child_ancestry_fields=False,
-        )
+        if save_result:
+            self.save(
+                update_fields=["date_periods_hash", "date_periods_as_text"],
+                update_child_ancestry_fields=False,
+            )
 
     def save(
         self,
@@ -554,49 +561,80 @@ class Resource(SoftDeletableModel, TimeStampedModel):
 
         return acc
 
-    def copy_all_periods_to_resource(self, target_resource, replace=False):
-        if (
-            not target_resource
-            or not isinstance(target_resource, Resource)
-            or self.id == target_resource.id
+    def copy_all_periods_to_resource(self, target_resources=[], replace=False):
+        if len(target_resources) == 0 or next(
+            (
+                target_resource
+                for target_resource in target_resources
+                if target_resource.id == self.id
+            ),
+            None,
         ):
             return
-
-        existing_period_ids = []
-        if replace:
-            existing_period_ids = list(
-                target_resource.date_periods.all().values_list("id", flat=True)
-            )
 
         def copy_instance(instance, foreign_field_name=None, foreign_instance=None):
             new_instance = deepcopy(instance)
             new_instance.id = None
             if foreign_field_name and foreign_instance:
                 setattr(new_instance, foreign_field_name, foreign_instance)
-            new_instance.save()
 
             return new_instance
 
-        for period in self.date_periods.all():
-            new_period = copy_instance(period, "resource", target_resource)
+        new_periods = []
+        new_time_span_groups = []
+        new_time_spans = []
+        new_rules = []
 
-            for time_span_group in period.time_span_groups.all():
-                new_time_span_group = copy_instance(
-                    time_span_group, "period", new_period
-                )
+        date_periods = self.date_periods.prefetch_related(
+            "time_span_groups",
+            "time_span_groups__time_spans",
+            "time_span_groups__rules",
+        ).all()
 
-                for time_span in time_span_group.time_spans.all():
-                    copy_instance(time_span, "group", new_time_span_group)
+        for target_resource in target_resources:
+            for period in date_periods:
+                new_period = copy_instance(period, "resource", target_resource)
+                new_periods.append(new_period)
 
-                for rule in time_span_group.rules.all():
-                    copy_instance(rule, "group", new_time_span_group)
+                for time_span_group in period.time_span_groups.all():
+                    new_time_span_group = copy_instance(
+                        time_span_group, "period", new_period
+                    )
+                    new_time_span_groups.append(new_time_span_group)
+
+                    for time_span in time_span_group.time_spans.all():
+                        new_time_spans.append(
+                            copy_instance(time_span, "group", new_time_span_group)
+                        )
+
+                    for rule in time_span_group.rules.all():
+                        new_rules.append(
+                            copy_instance(rule, "group", new_time_span_group)
+                        )
 
         if replace:
-            # Mark target's old periods deleted
-            for period in target_resource.date_periods.filter(
-                id__in=existing_period_ids
-            ):
-                period.delete()
+            DatePeriod.objects.filter(resource__in=target_resources).delete()
+
+        bulk_create_with_history(new_periods, DatePeriod)
+        TimeSpanGroup.objects.bulk_create(new_time_span_groups)
+        bulk_create_with_history(new_time_spans, TimeSpan)
+        bulk_create_with_history(new_rules, Rule)
+
+        if replace:
+            date_periods_hash = self._get_date_periods_as_hash()
+            date_periods_as_text = self.get_date_periods_as_text()
+
+            for target_resource in target_resources:
+                target_resource.date_periods_hash = date_periods_hash
+                target_resource.date_periods_as_text = date_periods_as_text
+
+        else:
+            for target_resource in target_resources:
+                target_resource.update_denormalized_date_periods_data(False)
+
+        bulk_update_with_history(
+            target_resources, Resource, ["date_periods_hash", "date_periods_as_text"]
+        )
 
 
 class ResourceOrigin(models.Model):

@@ -116,7 +116,7 @@ pytz==2023.3
     #   djangorestframework
 pyyaml==6.0
     # via drf-spectacular
-requests==2.30.0
+requests==2.31.0
     # via
     #   django-helusers
     #   django-orghierarchy

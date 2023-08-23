@@ -120,13 +120,6 @@ def _get_times_for_sort(item: TimeElement) -> tuple:
     )
 
 
-def _get_dates_for_sort(item: DatePeriod) -> tuple:
-    return (
-        item.start_date if item.start_date else datetime.date.min,
-        item.end_date if item.end_date else datetime.date.max,
-    )
-
-
 def combine_element_time_spans(elements, override=False):
     """Combines overlapping time elements
 
@@ -370,7 +363,7 @@ class Resource(SoftDeletableModel, TimeStampedModel):
                     else datetime.date.max
                 )
             ],
-            key=_get_dates_for_sort,
+            key=lambda dp: dp._get_values_for_sort(),
         )
 
         if not date_periods:
@@ -656,6 +649,21 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
 
     def __str__(self):
         return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"
+
+    def _get_values_for_sort(self) -> tuple:
+        """
+        Priorities for sorting DatePeriods:
+        1. Sort by start date. First periods with missing start date and then start
+        dates in ascending order.
+        2. Sort by end date. If two periods have the same start date (or missing start
+        date) then sort by the end date: first periods with missing end dates and then
+        in ascending order.
+        3. Use ID of the DatePeriod
+        """
+        start_date = self.start_date or datetime.date.min
+        end_date = self.end_date or datetime.date.min
+
+        return start_date, end_date, self.pk
 
     def as_hash_input(self) -> str:
         data = "[DATE_PERIOD:{}]".format(

@@ -587,6 +587,145 @@ def test_date_period_as_text_with_time_span_resource_state_no_opening_hours(reso
 
 
 @pytest.mark.django_db
+def test_resource_date_periods_as_text_ordering(resource):
+    """Test that the DatePeriods are ordered correctly in the content."""
+    date_periods = [
+        (
+            "6",
+            datetime.date(year=2021, month=1, day=2),
+            datetime.date(year=2023, month=1, day=1),
+        ),
+        (
+            "5",
+            datetime.date(year=2021, month=1, day=1),
+            datetime.date(year=2023, month=1, day=1),
+        ),
+        (
+            "4",
+            datetime.date(year=2021, month=1, day=1),
+            datetime.date(year=2022, month=12, day=31),
+        ),
+        ("3", datetime.date(year=2021, month=1, day=1), None),
+        ("2", None, datetime.date(year=2023, month=1, day=1)),
+        ("1", None, None),
+    ]
+
+    for name, start_date, end_date in date_periods:
+        DatePeriodFactory(
+            name=name,
+            resource=resource,
+            resource_state=State.OPEN,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    with translation.override("fi"):
+        assert resource.get_date_periods_as_text() == (
+            "\n"
+            "========================================\n"
+            "1\n"
+            "Aikajakso: Ei määritelty\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "2\n"
+            "Aikajakso:  - 1. tammikuuta 2023\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "3\n"
+            "Aikajakso: 1. tammikuuta 2021 - \n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "4\n"
+            "Aikajakso: 1. tammikuuta 2021 - 31. joulukuuta 2022\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "5\n"
+            "Aikajakso: 1. tammikuuta 2021 - 1. tammikuuta 2023\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "6\n"
+            "Aikajakso: 2. tammikuuta 2021 - 1. tammikuuta 2023\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+        )
+
+
+@pytest.mark.django_db
+def test_resource_date_periods_as_text_ordering_by_pk(resource):
+    """Test that the DatePeriods are ordered by primary key when dates are the same."""
+    date_periods = [
+        ("1", None, None),
+        (
+            "2",
+            datetime.date(year=2021, month=1, day=1),
+            datetime.date(year=2023, month=1, day=1),
+        ),
+    ]
+    date_periods *= 2
+
+    for i, (name, start_date, end_date) in enumerate(date_periods):
+        DatePeriodFactory(
+            name=f"{name} - {i}",
+            resource=resource,
+            resource_state=State.OPEN,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    with translation.override("fi"):
+        assert resource.get_date_periods_as_text() == (
+            "\n"
+            "========================================\n"
+            "1 - 0\n"
+            "Aikajakso: Ei määritelty\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "1 - 2\n"
+            "Aikajakso: Ei määritelty\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "2 - 1\n"
+            "Aikajakso: 1. tammikuuta 2021 - 1. tammikuuta 2023\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+            "2 - 3\n"
+            "Aikajakso: 1. tammikuuta 2021 - 1. tammikuuta 2023\n"
+            "Aukioloajat:\n"
+            "\n"
+            " Auki\n"
+            "\n"
+            "========================================\n"
+        )
+
+
+@pytest.mark.django_db
 def test_date_period_as_text_rules_order(resource):
     assert resource.date_periods_as_text == ""
 

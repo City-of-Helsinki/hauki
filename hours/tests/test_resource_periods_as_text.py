@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
@@ -239,6 +240,41 @@ def test_rule_as_text_frequency_ordinal(context, subject, start, ordinal, modifi
     assert rule_as_text_en
     assert rule_as_text_fi
     assert rule_as_text_en != rule_as_text_fi
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,expected_text",
+    [
+        (datetime.date(2023, 1, 1), None, r"^Aikajakso: Ei määritelty$"),
+        (
+            datetime.date(2023, 1, 1),
+            datetime.date(2023, 3, 1),
+            r"^Aikajakso: 1. tammikuuta 2023 - 1. maaliskuuta 2023$",
+        ),
+        (None, None, r"^Aikajakso: Ei määritelty$"),
+        (None, datetime.date(2023, 3, 1), r"^Aikajakso:  - 1. maaliskuuta 2023$"),
+        (datetime.date(2023, 3, 1), None, r"^Aikajakso: 1. maaliskuuta 2023 - $"),
+        (
+            datetime.date(2023, 3, 1),
+            datetime.date(2023, 3, 31),
+            r"^Aikajakso: 1. maaliskuuta 2023 - 31. maaliskuuta 2023$",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_date_period_as_text_content(resource, start_date, end_date, expected_text):
+    after_start_date = datetime.date(2023, 2, 1)
+    date_period = DatePeriodFactory(
+        name="Test hours",
+        resource=resource,
+        resource_state=State.OPEN,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    with translation.override("fi"):
+        text = date_period.as_text(after_start_date)
+    assert re.search(expected_text, text, re.MULTILINE)
 
 
 @pytest.mark.django_db

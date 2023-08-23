@@ -709,7 +709,8 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
 
         start_date = (
             self.start_date
-            if self.start_date is not None and self.start_date > after_start_date
+            if self.start_date is not None
+            and (self.start_date > after_start_date or self.end_date is not None)
             else None
         )
 

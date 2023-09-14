@@ -18,7 +18,7 @@ black==23.3.0
     # via -r requirements-dev.in
 build==0.10.0
     # via pip-tools
-certifi==2022.12.7
+certifi==2023.7.22
     # via
     #   -c requirements.txt
     #   requests
@@ -39,7 +39,7 @@ decorator==5.1.1
     # via ipython
 distlib==0.3.6
     # via virtualenv
-django==3.2.19
+django==3.2.21
     # via
     #   -c requirements.txt
     #   django-extensions
@@ -172,7 +172,7 @@ pyyaml==6.0
     #   -c requirements.txt
     #   bandit
     #   pre-commit
-requests==2.30.0
+requests==2.31.0
     # via
     #   -c requirements.txt
     #   requests-mock

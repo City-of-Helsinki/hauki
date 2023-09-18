@@ -5,7 +5,6 @@ import itertools
 import re
 from calendar import Calendar, monthrange
 from collections import defaultdict
-from copy import deepcopy
 from dataclasses import dataclass, field
 from hashlib import md5
 from itertools import chain
@@ -34,6 +33,7 @@ from hours.enums import (
     State,
     Weekday,
 )
+from hours.utils import copy_instance
 
 
 @dataclass(order=True, frozen=True)
@@ -574,33 +574,24 @@ class Resource(SoftDeletableModel, TimeStampedModel):
                 target_resource.date_periods.all().values_list("id", flat=True)
             )
 
-        def copy_instance(instance, foreign_field_name=None, foreign_instance=None):
-            new_instance = deepcopy(instance)
-            new_instance.id = None
-            if foreign_field_name and foreign_instance:
-                setattr(new_instance, foreign_field_name, foreign_instance)
-            new_instance.save()
-
-            return new_instance
-
         if date_period_ids:
             date_periods = self.date_periods.filter(id__in=date_period_ids)
         else:
             date_periods = self.date_periods.all()
 
         for period in date_periods:
-            new_period = copy_instance(period, "resource", target_resource)
+            new_period = copy_instance(period, {"resource": target_resource})
 
             for time_span_group in period.time_span_groups.all():
                 new_time_span_group = copy_instance(
-                    time_span_group, "period", new_period
+                    time_span_group, {"period": new_period}
                 )
 
                 for time_span in time_span_group.time_spans.all():
-                    copy_instance(time_span, "group", new_time_span_group)
+                    copy_instance(time_span, {"group": new_time_span_group})
 
                 for rule in time_span_group.rules.all():
-                    copy_instance(rule, "group", new_time_span_group)
+                    copy_instance(rule, {"group": new_time_span_group})
 
         if replace:
             # Mark target's old periods deleted

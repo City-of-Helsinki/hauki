@@ -332,7 +332,7 @@ class ResourceFilterBackend(BaseFilterBackend):
         summary="Is Resource open now?", responses=IsOpenNowSerializer
     ),
     copy_date_periods=extend_schema(
-        summary="Copy all the periods from this resource to other resources",
+        summary="Copy all or the selected periods from this resource to other resources",
         request=OpenApiTypes.NONE,
         parameters=[
             OpenApiParameter(
@@ -346,6 +346,13 @@ class ResourceFilterBackend(BaseFilterBackend):
                 OpenApiTypes.BOOL,
                 OpenApiParameter.QUERY,
                 description="Replace all the periods in the target resource",
+                default=False,
+            ),
+            OpenApiParameter(
+                "date_period_ids",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Comma separated list of date period ids to copy",
                 default=False,
             ),
         ],
@@ -599,11 +606,36 @@ class ResourceViewSet(
             )
             raise PermissionDenied(detail=detail)
 
+        if date_period_ids := request.query_params.get("date_period_ids"):
+            date_period_ids = date_period_ids.split(",")
+            date_period_diff = set(date_period_ids).difference(
+                set(
+                    [
+                        # Convert to string to make sure we are comparing
+                        # strings to strings
+                        str(val)
+                        for val in list(
+                            resource.date_periods.filter(
+                                id__in=date_period_ids
+                            ).values_list("id", flat=True)
+                        )
+                    ]
+                )
+            )
+            if date_period_diff:
+                raise NotFound(
+                    detail=_("Date periods not found: {}").format(
+                        ", ".join(date_period_diff)
+                    )
+                )
+
         with transaction.atomic():
             with DeferUpdatingDenormalizedDatePeriodData():
                 for target_resource in target_resources:
-                    resource.copy_all_periods_to_resource(
-                        target_resource, replace=replace
+                    resource.copy_periods_to_resource(
+                        target_resource,
+                        date_period_ids=date_period_ids,
+                        replace=replace,
                     )
 
         return Response(

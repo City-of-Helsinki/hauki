@@ -6,12 +6,8 @@ from django.utils.http import urlencode
 
 from hours.enums import FrequencyModifier, RuleContext, RuleSubject, State, Weekday
 from hours.models import TimeElement
-from hours.tests.conftest import (
-    DatePeriodFactory,
-    RuleFactory,
-    TimeSpanFactory,
-    TimeSpanGroupFactory,
-)
+from hours.tests.conftest import DatePeriodFactory
+from hours.tests.utils import TimeSpanGroupBuilder, assert_response_status_code
 
 DEFAULT_YEAR = 2020
 DEFAULT_START_OF_YEAR = datetime.date(year=DEFAULT_YEAR, month=1, day=1)
@@ -133,15 +129,6 @@ def make_closed_date_period(date_period_factory):
     return _make_closed_date_period
 
 
-def assert_response_status_code(response, expected_status_code):
-    """
-    Assert that the response has the expected status code and print the response data if it doesn't.
-    """
-    assert response.status_code == expected_status_code, "{} {}".format(
-        response.status_code, response.data
-    )
-
-
 def assert_all_date_period_opening_hours_in_resource_opening_hours(
     resource,
     date_period,
@@ -220,41 +207,6 @@ def create_test_periods(resource):
         end_time=datetime.time(14),
         weekdays=Weekday.weekend(),
     ).create()
-
-
-class TimeSpanGroupBuilder:
-    """
-    Helper class for building TimeSpanGroups.
-
-    Usage:
-    TimeSpanGroupBuilder(date_period).with_rule(...).with_time_span(...).create()
-    """
-
-    def __init__(self, date_period):
-        self.date_period = date_period
-        self.time_spans = []
-        self.rule = None
-
-    def with_rule(self, **kwargs):
-        kwargs.setdefault("context", RuleContext.PERIOD)
-        kwargs.setdefault("subject", RuleSubject.DAY)
-        self.rule = kwargs
-        return self
-
-    def with_time_span(self, **kwargs):
-        self.time_spans.append(kwargs)
-        return self
-
-    def create(self):
-        time_span_group = TimeSpanGroupFactory(period=self.date_period)
-
-        if self.rule is not None:
-            RuleFactory(group=time_span_group, **self.rule)
-
-        for time_span in self.time_spans:
-            TimeSpanFactory(group=time_span_group, **time_span)
-
-        return time_span_group
 
 
 def check_opening_hours_same(resource1, resource2, start_date, end_date):

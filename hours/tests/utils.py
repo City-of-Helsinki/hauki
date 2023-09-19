@@ -1,79 +1,46 @@
-from hours.models import DailyHours, Status, Target
+from hours.enums import RuleContext, RuleSubject
+from hours.tests.conftest import RuleFactory, TimeSpanFactory, TimeSpanGroupFactory
 
-KIRKANTA_STATUS_MAP = {0: Status.CLOSED, 1: Status.OPEN, 2: Status.SELF_SERVICE}
 
-
-def check_opening_hours(data):
-    # Check that all library hours from data are found in db
-    kirkanta_id = data["id"]
-    target = Target.objects.get(
-        identifiers__data_source="kirkanta", identifiers__origin_id=kirkanta_id
+def assert_response_status_code(response, expected_status_code):
+    """
+    Assert that the response has the expected status code and print the response data if it doesn't.
+    """
+    assert response.status_code == expected_status_code, "{} {}".format(
+        response.status_code, response.data
     )
-    if not data["schedules"]:
-        print("No opening hours found for library %s" % target)
-        return
-    print("Checking hours for library %s" % target)
 
-    # TODO: Fix the checks below not to use pytest or asserts, so it can run in
-    #  production
-    # This way the check is faster and we check that the hours are identical
-    # (no extra hours)
-    # start = data['schedules'][0]['date']
-    # end = data['schedules'][-1]['date']
-    # daily_hours = groupby(list(DailyHours.objects.filter(
-    #     date__gte=start, date__lte=end, target=target
-    #     ).select_related('opening').order_by(
-    #         'date','opening__opens','opening__closes','opening__status'
-    #         )), key=lambda x: x.date)
-    # for day_in_data, day_in_db in zip_longest(data['schedules'], daily_hours,
-    #         fillvalue=None):
-    #     if day_in_data == None:
-    #         raise Exception('Missing day in incoming data')
-    #     if day_in_db == None:
-    #         raise Exception('Missing hours in database')
-    #     if type(day_in_data['date']) != date:
-    #         day_in_data['date'] = parse_date(day_in_data['date'])
-    #     assert day_in_data['date'] == day_in_db[0]
-    #     times_in_data = sorted(day_in_data['times'],
-    #                            key=itemgetter('from', 'to', 'status'))
-    #     if not times_in_data:
-    #         hours_in_db = next(day_in_db[1])
-    #         with pytest.raises(StopIteration):
-    #             next(day_in_db[1])
-    #         assert Status.CLOSED == hours_in_db.opening.status
-    #         assert str(day_in_data['period']) == hours_in_db.opening.period.origin_id
-    #     for hours_in_data, hours_in_db in zip_longest(times_in_data, day_in_db[1],
-    #             fillvalue=None):
-    #         if hours_in_data == None:
-    #             raise Exception('Extra hours in database')
-    #         if hours_in_db == None:
-    #             raise Exception('Missing hours in database')
-    #         assert parse_time(hours_in_data['from']) == hours_in_db.opening.opens
-    #         assert parse_time(hours_in_data['to']) == hours_in_db.opening.closes
-    #         assert KIRKANTA_STATUS_MAP[
-    #             hours_in_data['status']] == hours_in_db.opening.status
-    #         assert str(day_in_data['period']) == hours_in_db.opening.period.origin_id
 
-    for day in data["schedules"]:
-        if day["times"]:
-            for opening in day["times"]:
-                DailyHours.objects.get(
-                    date=day["date"],
-                    target=target,
-                    opening__opens=opening["from"],
-                    opening__closes=opening["to"],
-                    opening__status=KIRKANTA_STATUS_MAP[opening["status"]],
-                    opening__period__origin_id=day["period"],
-                )
-        else:
-            print("closed for the day")
-            print(day)
-            try:
-                DailyHours.objects.get(
-                    date=day["date"],
-                    target=target,
-                    opening__status=Status.CLOSED,
-                    opening__period__origin_id=day["period"],
-                )
-            except DailyHours.DoesNotExist:
-                print("DATA NOT FOUND IN HAUKI")
+class TimeSpanGroupBuilder:
+    """
+    Helper class for building TimeSpanGroups.
+
+    Usage:
+    TimeSpanGroupBuilder(date_period).with_rule(...).with_time_span(...).create()
+    """
+
+    def __init__(self, date_period):
+        self.date_period = date_period
+        self.time_spans = []
+        self.rule = None
+
+    def with_rule(self, **kwargs):
+        kwargs.setdefault("context", RuleContext.PERIOD)
+        kwargs.setdefault("subject", RuleSubject.DAY)
+        self.rule = kwargs
+        return self
+
+    def with_time_span(self, **kwargs):
+        self.time_spans.append(kwargs)
+        return self
+
+    def create(self):
+        time_span_group = TimeSpanGroupFactory(period=self.date_period)
+
+        if self.rule is not None:
+            RuleFactory(group=time_span_group, **self.rule)
+
+        for time_span in self.time_spans:
+            TimeSpanFactory(group=time_span_group, **time_span)
+
+        return time_span_group

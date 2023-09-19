@@ -57,6 +57,82 @@ def _post_to_api(
     return response
 
 
+@pytest.fixture
+def make_date_period_with_regular_opening_hours(date_period_factory):
+    """
+    Factory for creating a date period with regular opening hours. The date period covers the whole year with the
+    following opening hours:
+    - Monday to Friday 8-16
+    - Saturday to Sunday 10-14
+    """
+
+    def _make_simple_date_period(resource, **kwargs):
+        kwargs.setdefault("resource_state", State.OPEN)
+        kwargs.setdefault("start_date", DEFAULT_START_OF_YEAR)
+        kwargs.setdefault("end_date", DEFAULT_END_OF_YEAR)
+        TimeSpanGroupBuilder(
+            date_period := date_period_factory(
+                resource=resource,
+                **kwargs,
+            )
+        ).with_time_span(
+            start_time=datetime.time(8),
+            end_time=datetime.time(16),
+            weekdays=Weekday.business_days(),
+        ).with_time_span(
+            start_time=datetime.time(10),
+            end_time=datetime.time(14),
+            weekdays=Weekday.weekend(),
+        ).create()
+        return date_period
+
+    return _make_simple_date_period
+
+
+@pytest.fixture
+def make_date_period_with_summer_opening_hours(date_period_factory):
+    """
+    Factory for creating a date period with summer opening hours. The date period covers the summer with the following
+    opening hours:
+    - Monday to Friday 10-12
+    """
+
+    def _make_summer_date_period(resource, **kwargs):
+        kwargs.setdefault("resource_state", State.OPEN)
+        kwargs.setdefault("start_date", start_of_month(6))
+        kwargs.setdefault("end_date", end_of_month(8))
+        kwargs.setdefault("override", True)
+        TimeSpanGroupBuilder(
+            date_period := date_period_factory(
+                resource=resource,
+                **kwargs,
+            )
+        ).with_time_span(
+            start_time=datetime.time(10),
+            end_time=datetime.time(12),
+            weekdays=Weekday.business_days(),
+        ).create()
+        return date_period
+
+    return _make_summer_date_period
+
+
+@pytest.fixture
+def make_closed_date_period(date_period_factory):
+    """
+    Factory for creating a date period with closed state. The date period covers the whole year.
+    """
+
+    def _make_closed_date_period(resource, **kwargs):
+        kwargs.setdefault("resource_state", State.CLOSED)
+        kwargs.setdefault("start_date", DEFAULT_START_OF_YEAR)
+        kwargs.setdefault("end_date", DEFAULT_END_OF_YEAR)
+        date_period = date_period_factory(resource=resource, **kwargs)
+        return date_period
+
+    return _make_closed_date_period
+
+
 def assert_response_status_code(response, expected_status_code):
     """
     Assert that the response has the expected status code and print the response data if it doesn't.
@@ -73,7 +149,8 @@ def assert_all_date_period_opening_hours_in_resource_opening_hours(
     end_date=DEFAULT_END_OF_YEAR,
 ):
     """
-    Assert that all the date period's opening hours are found in resource's opening hours.
+    Assert that all the date period opening hours are found in the resource opening hours,
+    i.e. the date period opening hours are a subset of the resource opening hours.
     """
     date_period_opening_hours = date_period.get_daily_opening_hours(
         start_date=start_date, end_date=end_date
@@ -96,7 +173,8 @@ def assert_date_period_opening_hours_not_in_resource_opening_hours(
     end_date=DEFAULT_END_OF_YEAR,
 ):
     """
-    Assert that none of the date period's opening hours are found in resource's opening hours.
+    Assert that none of the opening hours of the date period are found in the opening hours of the resource,
+    i.e. there is no overlap between the two.
     """
     date_period_opening_hours = date_period.get_daily_opening_hours(
         start_date=start_date, end_date=end_date
@@ -116,41 +194,32 @@ def create_test_periods(resource):
     date_period = DatePeriodFactory(
         resource=resource,
         resource_state=State.OPEN,
-        start_date=datetime.date(year=2020, month=1, day=1),
-        end_date=datetime.date(year=2020, month=12, day=31),
+        start_date=DEFAULT_START_OF_YEAR,
+        end_date=DEFAULT_END_OF_YEAR,
     )
 
     DatePeriodFactory(
         resource=resource,
         resource_state=State.CLOSED,
-        start_date=datetime.date(year=2020, month=1, day=1),
-        end_date=datetime.date(year=2020, month=12, day=31),
+        start_date=DEFAULT_START_OF_YEAR,
+        end_date=DEFAULT_END_OF_YEAR,
         override=True,
         is_removed=True,
     )
 
-    time_span_group = TimeSpanGroupFactory(period=date_period)
-
-    RuleFactory(
-        group=time_span_group,
+    TimeSpanGroupBuilder(date_period).with_rule(
         context=RuleContext.PERIOD,
         subject=RuleSubject.DAY,
         frequency_modifier=FrequencyModifier.EVEN,
-    )
-
-    TimeSpanFactory(
-        group=time_span_group,
-        start_time=datetime.time(hour=8, minute=0),
-        end_time=datetime.time(hour=16, minute=0),
+    ).with_time_span(
+        start_time=datetime.time(8),
+        end_time=datetime.time(16),
         weekdays=Weekday.business_days(),
-    )
-
-    TimeSpanFactory(
-        group=time_span_group,
-        start_time=datetime.time(hour=10, minute=0),
-        end_time=datetime.time(hour=14, minute=0),
+    ).with_time_span(
+        start_time=datetime.time(10),
+        end_time=datetime.time(14),
         weekdays=Weekday.weekend(),
-    )
+    ).create()
 
 
 class TimeSpanGroupBuilder:
@@ -217,7 +286,7 @@ def test_copy_all_periods_to_resource_copy_to_self_prevented(resource):
 
 
 @pytest.mark.django_db
-def test_copy_all_periods_to_resource(
+def test_copy_all_periods_to_resource_with_no_date_periods(
     resource,
     resource_factory,
 ):
@@ -235,12 +304,10 @@ def test_copy_all_periods_to_resource(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("replace", [False, True])
 def test_copy_all_periods_to_resource_replace(
     resource,
     resource_factory,
     date_period_factory,
-    replace,
 ):
     create_test_periods(resource)
     resource2 = resource_factory()
@@ -253,136 +320,124 @@ def test_copy_all_periods_to_resource_replace(
         override=True,
     )
 
-    resource.copy_periods_to_resource(resource2, replace=replace)
+    resource.copy_periods_to_resource(resource2, replace=True)
 
-    if replace:
-        assert resource2.date_periods.count() == 1
-        check_opening_hours_same(
-            resource,
-            resource2,
-            start_date=datetime.date(year=2020, month=10, day=12),
-            end_date=datetime.date(year=2020, month=10, day=18),
-        )
-    else:
-        assert resource2.date_periods.count() == 2
-        resource2_opening_hours = resource2.get_daily_opening_hours(
-            datetime.date(year=2020, month=10, day=12),
-            datetime.date(year=2020, month=10, day=18),
-        )
-        assert resource2_opening_hours == {
-            datetime.date(2020, 10, 12): [
-                TimeElement(
-                    start_time=datetime.time(8, 0),
-                    end_time_on_next_day=False,
-                    end_time=datetime.time(16, 0),
-                    resource_state=State.OPEN,
-                    override=False,
-                    full_day=False,
-                )
-            ],
-            datetime.date(2020, 10, 13): [
-                TimeElement(
-                    start_time=None,
-                    end_time_on_next_day=False,
-                    end_time=None,
-                    resource_state=State.CLOSED,
-                    override=True,
-                    full_day=True,
-                )
-            ],
-            datetime.date(2020, 10, 14): [
-                TimeElement(
-                    start_time=None,
-                    end_time_on_next_day=False,
-                    end_time=None,
-                    resource_state=State.CLOSED,
-                    override=True,
-                    full_day=True,
-                )
-            ],
-            datetime.date(2020, 10, 15): [
-                TimeElement(
-                    start_time=None,
-                    end_time_on_next_day=False,
-                    end_time=None,
-                    resource_state=State.CLOSED,
-                    override=True,
-                    full_day=True,
-                )
-            ],
-            datetime.date(2020, 10, 16): [
-                TimeElement(
-                    start_time=datetime.time(8, 0),
-                    end_time_on_next_day=False,
-                    end_time=datetime.time(16, 0),
-                    resource_state=State.OPEN,
-                    override=False,
-                    full_day=False,
-                )
-            ],
-            datetime.date(2020, 10, 18): [
-                TimeElement(
-                    start_time=datetime.time(10, 0),
-                    end_time_on_next_day=False,
-                    end_time=datetime.time(14, 0),
-                    resource_state=State.OPEN,
-                    override=False,
-                    full_day=False,
-                )
-            ],
-        }
+    assert resource2.date_periods.count() == 1
+    check_opening_hours_same(
+        resource,
+        resource2,
+        start_date=datetime.date(year=2020, month=10, day=12),
+        end_date=datetime.date(year=2020, month=10, day=18),
+    )
+
+
+@pytest.mark.django_db
+def test_copy_all_periods_to_resource_with_existing_date_periods(
+    resource,
+    resource_factory,
+    date_period_factory,
+):
+    create_test_periods(resource)
+    resource2 = resource_factory()
+
+    date_period_factory(
+        resource=resource2,
+        resource_state=State.CLOSED,
+        start_date=datetime.date(year=2020, month=10, day=13),
+        end_date=datetime.date(year=2020, month=10, day=15),
+        override=True,
+    )
+
+    resource.copy_periods_to_resource(resource2)
+
+    assert resource2.date_periods.count() == 2
+    resource2_opening_hours = resource2.get_daily_opening_hours(
+        datetime.date(year=2020, month=10, day=12),
+        datetime.date(year=2020, month=10, day=18),
+    )
+    assert resource2_opening_hours == {
+        datetime.date(2020, 10, 12): [
+            TimeElement(
+                start_time=datetime.time(8, 0),
+                end_time_on_next_day=False,
+                end_time=datetime.time(16, 0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ],
+        datetime.date(2020, 10, 13): [
+            TimeElement(
+                start_time=None,
+                end_time_on_next_day=False,
+                end_time=None,
+                resource_state=State.CLOSED,
+                override=True,
+                full_day=True,
+            )
+        ],
+        datetime.date(2020, 10, 14): [
+            TimeElement(
+                start_time=None,
+                end_time_on_next_day=False,
+                end_time=None,
+                resource_state=State.CLOSED,
+                override=True,
+                full_day=True,
+            )
+        ],
+        datetime.date(2020, 10, 15): [
+            TimeElement(
+                start_time=None,
+                end_time_on_next_day=False,
+                end_time=None,
+                resource_state=State.CLOSED,
+                override=True,
+                full_day=True,
+            )
+        ],
+        datetime.date(2020, 10, 16): [
+            TimeElement(
+                start_time=datetime.time(8, 0),
+                end_time_on_next_day=False,
+                end_time=datetime.time(16, 0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ],
+        datetime.date(2020, 10, 18): [
+            TimeElement(
+                start_time=datetime.time(10, 0),
+                end_time_on_next_day=False,
+                end_time=datetime.time(14, 0),
+                resource_state=State.OPEN,
+                override=False,
+                full_day=False,
+            )
+        ],
+    }
 
 
 # API
 
 
 @pytest.mark.django_db
-def test_copy_periods_to_resource_with_period_ids_and_replace(
+def test_resource_api_copy_periods_to_resource_with_period_ids_and_replace(
     admin_client,
     resource_factory,
-    date_period_factory,
+    make_date_period_with_regular_opening_hours,
+    make_date_period_with_summer_opening_hours,
+    make_closed_date_period,
 ):
-    # Create the source resource with two date periods.
+    # Create a source resource with two date periods.
     source_resource = resource_factory()
-    create_test_periods(source_resource)
-    TimeSpanGroupBuilder(
-        date_period_factory(
-            resource=source_resource,
-            resource_state=State.OPEN,
-            start_date=DEFAULT_START_OF_YEAR,
-            end_date=DEFAULT_END_OF_YEAR,
-        )
-    ).with_time_span(
-        start_time=datetime.time(8),
-        end_time=datetime.time(16),
-        weekdays=Weekday.business_days(),
-    ).with_time_span(
-        start_time=datetime.time(10),
-        end_time=datetime.time(14),
-        weekdays=Weekday.weekend(),
-    ).create()
+    make_date_period_with_regular_opening_hours(source_resource)
+    summer_date_period = make_date_period_with_summer_opening_hours(source_resource)
 
-    TimeSpanGroupBuilder(
-        summer_date_period := date_period_factory(
-            resource=source_resource,
-            resource_state=State.OPEN,
-            start_date=start_of_month(6),
-            end_date=end_of_month(8),
-            override=True,
-        )
-    ).with_time_span(
-        start_time=datetime.time(10),
-        end_time=datetime.time(12),
-        weekdays=Weekday.business_days(),
-    ).create()
-
+    # Create the target resource with one date period.
     target_resource = resource_factory()
-    date_period_factory(
-        resource=target_resource,
-        resource_state=State.CLOSED,
-        start_date=DEFAULT_START_OF_YEAR,
-        end_date=DEFAULT_END_OF_YEAR,
-    )
+    make_closed_date_period(target_resource)
 
     # Copy the summer date period from the source resource to the target resource.
     response = _post_to_api(
@@ -415,52 +470,21 @@ def test_copy_periods_to_resource_with_period_ids_and_replace(
 
 
 @pytest.mark.django_db
-def test_copy_periods_to_resource_with_period_ids(
+def test_resource_api_copy_periods_to_resource_with_period_ids(
     admin_client,
     resource_factory,
-    date_period_factory,
+    make_date_period_with_regular_opening_hours,
+    make_date_period_with_summer_opening_hours,
+    make_closed_date_period,
 ):
-    # Create the source resource with two date periods.
+    # Create a source resource with two date periods.
     source_resource = resource_factory()
-    TimeSpanGroupBuilder(
-        first_date_period := date_period_factory(
-            resource=source_resource,
-            resource_state=State.OPEN,
-            start_date=DEFAULT_START_OF_YEAR,
-            end_date=DEFAULT_END_OF_YEAR,
-        )
-    ).with_time_span(
-        start_time=datetime.time(8),
-        end_time=datetime.time(16),
-        weekdays=Weekday.business_days(),
-    ).with_time_span(
-        start_time=datetime.time(10),
-        end_time=datetime.time(14),
-        weekdays=Weekday.weekend(),
-    ).create()
-
-    TimeSpanGroupBuilder(
-        second_date_period := date_period_factory(
-            resource=source_resource,
-            resource_state=State.OPEN,
-            start_date=start_of_month(6),
-            end_date=end_of_month(8),
-            override=True,
-        )
-    ).with_time_span(
-        start_time=datetime.time(10),
-        end_time=datetime.time(12),
-        weekdays=Weekday.business_days(),
-    ).create()
+    first_date_period = make_date_period_with_regular_opening_hours(source_resource)
+    second_date_period = make_date_period_with_summer_opening_hours(source_resource)
 
     # Create the target resource with one date period.
     target_resource = resource_factory()
-    target_resource_date_period = date_period_factory(
-        resource=target_resource,
-        resource_state=State.CLOSED,
-        start_date=datetime.date(year=2020, month=1, day=1),
-        end_date=datetime.date(year=2020, month=12, day=31),
-    )
+    target_resource_date_period = make_closed_date_period(target_resource)
 
     # Copy the second date period to the target resource.
     response = _post_to_api(
@@ -481,6 +505,7 @@ def test_copy_periods_to_resource_with_period_ids(
     )
     assert second_date_period.as_text() in target_resource.date_periods_as_text
     assert target_resource_date_period.as_text() in target_resource.date_periods_as_text
+
     # Paranoia check: assert that the target resource does not have the source resource's first date period.
     assert first_date_period.as_text() not in target_resource.date_periods_as_text
     assert_date_period_opening_hours_not_in_resource_opening_hours(
@@ -496,7 +521,7 @@ def test_copy_periods_to_resource_with_period_ids(
     ],
 )
 @pytest.mark.django_db
-def test_copy_periods_to_resource_with_period_ids_all_missing(
+def test_resource_api_copy_periods_to_resource_with_period_ids_all_missing(
     date_period_ids,
     admin_client,
     resource_factory,
@@ -549,30 +574,18 @@ def test_resource_api_copy_date_periods_parameter_missing(admin_client, resource
 
     response = admin_client.post(url)
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert_response_status_code(response, 400)
 
 
 @pytest.mark.django_db
 def test_resource_api_copy_date_periods_admin_user(admin_client, resource_factory):
     resource1 = resource_factory()
     resource2 = resource_factory()
-
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(admin_client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-
-    response = admin_client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 200)
     check_opening_hours_same(
         resource1,
         resource2,
@@ -587,20 +600,11 @@ def test_resource_api_copy_date_periods_admin_user_one_target_missing(
 ):
     resource1 = resource_factory()
     resource2 = resource_factory()
-
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(admin_client, resource1.id, [resource2.id, 12345])
 
-    data = {
-        "target_resources": ",".join([str(resource2.id), "12345"]),
-    }
-
-    response = admin_client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert_response_status_code(response, 404)
 
 
 @pytest.mark.django_db
@@ -610,22 +614,13 @@ def test_resource_api_copy_date_periods_admin_user_replace(
 ):
     resource1 = resource_factory()
     resource2 = resource_factory()
-
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
-
-    data = {
-        "target_resources": resource2.id,
-        "replace": with_replace,
-    }
-
-    response = admin_client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
+    response = _post_to_api(
+        admin_client, resource1.id, resource2.id, replace=with_replace
     )
 
+    assert_response_status_code(response, 200)
     check_opening_hours_same(
         resource1,
         resource2,
@@ -650,18 +645,9 @@ def test_resource_api_copy_date_periods_admin_user_copy_to_self_prevented(
 
     create_test_periods(resource)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource.id})
+    response = _post_to_api(admin_client, resource.id, target_resources)
 
-    assert resource.date_periods.count() == 1
-
-    data = {
-        "target_resources": target_resources,
-    }
-    response = admin_client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 500, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert_response_status_code(response, 500)
     assert resource.date_periods.count() == 1
 
 
@@ -675,20 +661,11 @@ def test_resource_api_copy_date_periods_no_org(
 
     resource1 = resource_factory()
     resource2 = resource_factory()
-
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 403)
     check_opening_hours_not_same(
         resource1,
         resource2,
@@ -711,17 +688,9 @@ def test_resource_api_copy_date_periods_same_org(
 
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 200)
     check_opening_hours_same(
         resource1,
         resource2,
@@ -745,17 +714,9 @@ def test_resource_api_copy_date_periods_different_from_org(
 
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 200)
     check_opening_hours_same(
         resource1,
         resource2,
@@ -779,17 +740,9 @@ def test_resource_api_copy_date_periods_different_from_org_non_public(
 
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 404)
     check_opening_hours_not_same(
         resource1,
         resource2,
@@ -813,17 +766,9 @@ def test_resource_api_copy_date_periods_different_to_org(
 
     create_test_periods(resource1)
 
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resource1.id})
+    response = _post_to_api(client, resource1.id, resource2.id)
 
-    data = {
-        "target_resources": resource2.id,
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
-
+    assert_response_status_code(response, 403)
     check_opening_hours_not_same(
         resource1,
         resource2,
@@ -841,27 +786,21 @@ def test_resource_api_copy_date_periods_to_multiple(
     organization1 = organization_factory()
     organization1.regular_users.add(user)
 
-    resources = []
-    for i in range(0, 4):
-        resources.append(resource_factory(organization=organization1))
+    # Create multiple resources, use the first one as the source resource.
+    source_resource, *target_resources = resource_factory.create_batch(
+        4, organization=organization1
+    )
+    create_test_periods(source_resource)
 
-    create_test_periods(resources[0])
-
-    url = reverse("resource-copy-date-periods", kwargs={"pk": resources[0].id})
-
-    data = {
-        "target_resources": ",".join([str(r.id) for r in resources[1:]]),
-    }
-    response = client.post(url, QUERY_STRING=urlencode(data))
-
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
+    response = _post_to_api(
+        client, source_resource.id, [r.id for r in target_resources]
     )
 
-    for i in range(1, 4):
+    assert_response_status_code(response, 200)
+    for target_resource in target_resources:
         check_opening_hours_same(
-            resources[0],
-            resources[i],
+            source_resource,
+            target_resource,
             start_date=datetime.date(year=2020, month=10, day=12),
             end_date=datetime.date(year=2020, month=10, day=18),
         )

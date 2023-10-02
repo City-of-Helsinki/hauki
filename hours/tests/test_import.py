@@ -370,7 +370,7 @@ def test_import_tprek(mock_tprek_data):
     for source in mock_kallio["sources"]:
         if source["source"] == "internal":
             assert kallio.extra_data["admin_url"] == (
-                "https://asiointi.hel.fi/tprperhe/TPR/UI/ServicePoint"
+                "https://tpr.hel.fi/tprperhe/TPR/UI/ServicePoint"
                 "/ServicePointEdit/%s" % source["id"]
             )
         else:

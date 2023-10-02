@@ -74,7 +74,7 @@ class TPRekImporter(Importer):
         self.URL_BASE = "https://www.hel.fi/palvelukarttaws/rest/v4/"
         # The urls below are only used for constructing extra links for each unit
         self.ADMIN_URL_BASE = (
-            "https://asiointi.hel.fi/tprperhe/TPR/UI/ServicePoint/ServicePointEdit/"
+            "https://tpr.hel.fi/tprperhe/TPR/UI/ServicePoint/ServicePointEdit/"
         )
         self.CITIZEN_URL_BASE = "https://palvelukartta.hel.fi/fi/unit/"
         self.data_source, _ = DataSource.objects.get_or_create(

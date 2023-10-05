@@ -39,7 +39,7 @@ decorator==5.1.1
     # via ipython
 distlib==0.3.6
     # via virtualenv
-django==3.2.21
+django==3.2.22
     # via
     #   -c requirements.txt
     #   django-extensions

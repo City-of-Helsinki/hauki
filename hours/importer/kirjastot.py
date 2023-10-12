@@ -1,7 +1,9 @@
+import typing
 from collections import defaultdict
 from datetime import date, datetime, time
 from itertools import groupby
 from operator import itemgetter
+from typing import TypedDict
 
 import holidays
 from dateutil.parser import parse
@@ -92,6 +94,44 @@ KIRKANTA_FIXED_GROUPS = {
 }
 
 
+class KirkantaPeriod(TypedDict):
+    id: int
+    library: int
+    name: str
+    validFrom: str
+    validUntil: str
+    isException: bool
+
+
+class AnnotatedKirkantaPeriod(KirkantaPeriod):
+    date: date
+    index: int  # index in the original data
+    weekday: int  # ISO 8601 weekday
+    days: list[dict]  # annotated days for the period
+
+
+class KirkakantaRefs(TypedDict):
+    period: dict[str, KirkantaPeriod]
+
+
+class KirkantaSchedule(TypedDict):
+    date: str  # ISO 8601 date
+    period: int  # period id, references KirkantaPeriod
+    closed: bool
+    times: list[dict]
+
+
+class KirkantaData(TypedDict):
+    schedules: list[KirkantaSchedule]
+
+
+class KirkantaJsonResponse(TypedDict):
+    type: str
+    refs: KirkakantaRefs
+    data: dict
+    total: int
+
+
 @register_importer
 class KirjastotImporter(Importer):
     name = "kirjastot"
@@ -120,7 +160,9 @@ class KirjastotImporter(Importer):
 
         return begin, end
 
-    def get_hours_from_api(self, resource: Resource, start: date, end: date) -> dict:
+    def get_hours_from_api(
+        self, resource: Resource, start: date, end: date
+    ) -> KirkantaJsonResponse:
         """
         Fetch opening hours for Target from kirjastot.fi's v4 API for the
         given date range.
@@ -252,7 +294,7 @@ class KirjastotImporter(Importer):
 
         # first week may be partial, so openings for some weekdays start from the second
         # week, first week pattern is found at the end. move those patterns by one week
-        for (weekday, pattern) in repetition_pattern.items():
+        for weekday, pattern in repetition_pattern.items():
             if weekday < start_weekday:
                 repetition_pattern[weekday] = [pattern[-1]] + pattern[:-1]
 
@@ -265,7 +307,7 @@ class KirjastotImporter(Importer):
             + relativedelta(days=period_start_weekday - 1)
         )
         weeks_to_shift = days_to_shift.weeks
-        for (weekday, pattern) in repetition_pattern.items():
+        for weekday, pattern in repetition_pattern.items():
             repetition_length = len(pattern)
             slice_index = weeks_to_shift % repetition_length
             if slice_index:
@@ -280,9 +322,8 @@ class KirjastotImporter(Importer):
         )
         time_span_groups = []
         for length, patterns in openings_by_repetition_length:
-
             openings_by_week = zip(*patterns)
-            for (rotation_week_num, week_opening_times) in enumerate(openings_by_week):
+            for rotation_week_num, week_opening_times in enumerate(openings_by_week):
                 week_opening_times_by_status = defaultdict(list)
                 for day_in_the_week in week_opening_times:
                     # Opening times may be empty if we have no data for this
@@ -452,13 +493,17 @@ class KirjastotImporter(Importer):
 
         return periods
 
-    def get_kirkanta_periods(self, data: dict) -> dict:
+    def get_kirkanta_periods(
+        self, data: KirkantaJsonResponse
+    ) -> dict[str, AnnotatedKirkantaPeriod]:
         """
         Annotates kirkanta data so that periods contain indexed data for each day for
         their duration. Returned periods may contain empty days or days belonging to
         other periods, since original data may have period overlaps.
         """
-        periods = data.get("refs", {}).get("period", None)
+        periods = typing.cast(
+            data.get("refs", {}).get("period", None), dict[str, AnnotatedKirkantaPeriod]
+        )
         if not periods:
             return {}
 
@@ -503,17 +548,61 @@ class KirjastotImporter(Importer):
             item.resource_state.value if item.resource_state else "",
         )
 
-    def check_library_data(self, library, data, start_date, end_date):
-        """Checks that the daily opening hours match the schedule in the data
-        Raises AssertionError if they don't match"""
+    def _schedule_to_time_elements(
+        self, schedule: KirkantaSchedule, override: bool
+    ) -> list[TimeElement]:
+        if schedule.get("closed") is True:
+            return [
+                TimeElement(
+                    start_time=None,
+                    end_time=None,
+                    end_time_on_next_day=False,
+                    resource_state=State.CLOSED,
+                    override=override,
+                    full_day=True,
+                )
+            ]
+
+        time_elements = []
+        for schedule_time in schedule.get("times"):
+            try:
+                start_time = datetime.strptime(
+                    schedule_time.get("from"), "%H:%M"
+                ).time()
+            except ValueError:
+                start_time = None
+            try:
+                end_time = datetime.strptime(schedule_time.get("to"), "%H:%M").time()
+            except ValueError:
+                end_time = None
+
+            end_time_on_next_day = False
+            if start_time and end_time:
+                if end_time < start_time or (
+                    start_time == time(hour=0, minute=0)
+                    and end_time == time(hour=0, minute=0)
+                ):
+                    end_time_on_next_day = True
+
+            time_elements.append(
+                TimeElement(
+                    start_time=start_time,
+                    end_time=end_time,
+                    end_time_on_next_day=end_time_on_next_day,
+                    resource_state=KIRKANTA_STATUS_MAP[schedule_time["status"]],
+                    override=override,
+                    full_day=False,
+                )
+            )
+
+        return time_elements
+
+    def _get_override_periods_from_kirkanta_data(
+        self, data: KirkantaJsonResponse
+    ) -> list[int]:
         override_periods = []
-        kirkanta_periods = data.get("refs", {}).get("period", None)
-
+        kirkanta_periods = data.get("refs", {}).get("period", {})
         schedules = data.get("data", {}).get("schedules")
-
-        if not schedules:
-            self.logger.info("No schedules found in the incoming data. Skipping.")
-            return
 
         for kirkanta_period in kirkanta_periods.values():
             valid_from = None
@@ -539,56 +628,25 @@ class KirjastotImporter(Importer):
             if kirkanta_period["isException"]:
                 override_periods.append(kirkanta_period["id"])
 
+        return override_periods
+
+    def check_library_data(
+        self, library: Resource, data: KirkantaJsonResponse, start_date, end_date
+    ):
+        """Checks that the daily opening hours match the schedule in the data
+        Raises AssertionError if they don't match"""
+        schedules = data.get("data", {}).get("schedules")
+
+        if not schedules:
+            self.logger.info("No schedules found in the incoming data. Skipping.")
+            return
+
+        override_periods = self._get_override_periods_from_kirkanta_data(data)
         opening_hours = library.get_daily_opening_hours(start_date, end_date)
 
         for schedule in schedules:
-            time_elements = []
-            override = True if schedule.get("period") in override_periods else False
-
-            if schedule.get("closed") is True:
-                time_elements.append(
-                    TimeElement(
-                        start_time=None,
-                        end_time=None,
-                        end_time_on_next_day=False,
-                        resource_state=State.CLOSED,
-                        override=override,
-                        full_day=True,
-                    )
-                )
-            else:
-                for schedule_time in schedule.get("times"):
-                    try:
-                        start_time = datetime.strptime(
-                            schedule_time.get("from"), "%H:%M"
-                        ).time()
-                    except ValueError:
-                        start_time = None
-                    try:
-                        end_time = datetime.strptime(
-                            schedule_time.get("to"), "%H:%M"
-                        ).time()
-                    except ValueError:
-                        end_time = None
-
-                    end_time_on_next_day = False
-                    if start_time and end_time:
-                        if end_time < start_time or (
-                            start_time == time(hour=0, minute=0)
-                            and end_time == time(hour=0, minute=0)
-                        ):
-                            end_time_on_next_day = True
-
-                    time_elements.append(
-                        TimeElement(
-                            start_time=start_time,
-                            end_time=end_time,
-                            end_time_on_next_day=end_time_on_next_day,
-                            resource_state=KIRKANTA_STATUS_MAP[schedule_time["status"]],
-                            override=override,
-                            full_day=False,
-                        )
-                    )
+            override = schedule.get("period") in override_periods
+            time_elements = self._schedule_to_time_elements(schedule, override)
 
             schedule_date = schedule.get("date")
             if not isinstance(schedule_date, date):

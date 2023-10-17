@@ -132,6 +132,18 @@ class KirkantaJsonResponse(TypedDict):
     total: int
 
 
+class KirjastotException(Exception):
+    pass
+
+
+class KirjastotImporterException(KirjastotException):
+    pass
+
+
+class KirjastotValidationError(KirjastotException):
+    pass
+
+
 @register_importer
 class KirjastotImporter(Importer):
     name = "kirjastot"
@@ -502,7 +514,7 @@ class KirjastotImporter(Importer):
         other periods, since original data may have period overlaps.
         """
         periods = typing.cast(
-            data.get("refs", {}).get("period", None), dict[str, AnnotatedKirkantaPeriod]
+            dict[str, AnnotatedKirkantaPeriod], data.get("refs", {}).get("period", None)
         )
         if not periods:
             return {}
@@ -643,25 +655,37 @@ class KirjastotImporter(Importer):
 
         override_periods = self._get_override_periods_from_kirkanta_data(data)
         opening_hours = library.get_daily_opening_hours(start_date, end_date)
+        has_errors = False
 
         for schedule in schedules:
             override = schedule.get("period") in override_periods
-            time_elements = self._schedule_to_time_elements(schedule, override)
+            expected_time_elements = self._schedule_to_time_elements(schedule, override)
 
             schedule_date = schedule.get("date")
             if not isinstance(schedule_date, date):
                 schedule_date = parse(schedule.get("date")).date()
 
-            time_elements = combine_element_time_spans(time_elements, override=override)
+            expected_time_elements = combine_element_time_spans(
+                expected_time_elements, override=override
+            )
 
-            time_elements.sort(key=self._get_times_for_sort)
-            opening_hours[schedule_date].sort(key=self._get_times_for_sort)
+            expected_time_elements.sort(key=self._get_times_for_sort)
+            current_date_opening_hours = sorted(
+                opening_hours[schedule_date], key=self._get_times_for_sort
+            )
 
-            if not time_elements == opening_hours[schedule_date]:
-                raise AssertionError(
-                    f"Library data import failed for date {schedule_date}: "
-                    + f"{opening_hours[schedule_date]} vs. {time_elements}"
+            if not expected_time_elements == opening_hours[schedule_date]:
+                self.logger.error(
+                    f"Invalid data for {schedule_date}. "
+                    f"Expected: {current_date_opening_hours}, got: {expected_time_elements}",
+                    stack_info=True,
                 )
+                has_errors = True
+
+        if has_errors:
+            raise KirjastotValidationError(
+                f"Invalid data for library {library.name} [{library.id}]"
+            )
 
     def do_import(self):
         libraries = Resource.objects.filter(origins__data_source=self.data_source)
@@ -783,6 +807,7 @@ class KirjastotImporter(Importer):
 
         syncher.finish(force=self.options["force"])
 
+        has_errors = False
         for library in libraries:
             if library._has_fixed_periods:
                 self.logger.info(
@@ -792,10 +817,24 @@ class KirjastotImporter(Importer):
                 self.logger.info(
                     'Checking hours for "{}" id:{}...'.format(library.name, library.id)
                 )
-                self.check_library_data(
-                    library, library._kirkanta_data, import_start_date, import_end_date
-                )
-                self.logger.info("Check OK.")
+                try:
+                    self.check_library_data(
+                        library,
+                        library._kirkanta_data,
+                        import_start_date,
+                        import_end_date,
+                    )
+                    self.logger.info("Check OK.")
+                except KirjastotValidationError:
+                    self.logger.error(
+                        f"Library data import failed for library {library.name} [{library.id}]. See logs for details."
+                    )
+                    has_errors = True
+
+        if has_errors:
+            raise KirjastotImporterException(
+                "Library data import failed for some libraries. Rolling back changes."
+            )
 
     @db.transaction.atomic
     def import_openings(self):

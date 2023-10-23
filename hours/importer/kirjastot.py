@@ -9,6 +9,7 @@ import holidays
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from django import db
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from requests import RequestException
@@ -20,6 +21,7 @@ from ..models import (
     Resource,
     TimeElement,
     combine_element_time_spans,
+    get_daily_opening_hours_for_date_periods,
 )
 from ..signals import DeferUpdatingDenormalizedDatePeriodData
 from .base import Importer, register_importer
@@ -27,7 +29,6 @@ from .sync import ModelSyncher
 
 KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
 fi_holidays = holidays.Finland()
-
 
 # List of periods that are known not to be a rotation of x weeks, but need to be
 # handled day-by-day.
@@ -148,13 +149,15 @@ class KirjastotValidationError(KirjastotException):
 class KirjastotImporter(Importer):
     name = "kirjastot"
 
-    def setup(self):
+    def __init__(self, *args, **kwargs):
+        self._errors = []
         self.URL_BASE = "https://api.kirjastot.fi/v4/"
         ds_args = dict(id="kirkanta")
         defaults = dict(name="kirjastot.fi")
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def get_date_range(
@@ -643,19 +646,30 @@ class KirjastotImporter(Importer):
         return override_periods
 
     def check_library_data(
-        self, library: Resource, data: KirkantaJsonResponse, start_date, end_date
-    ):
+        self,
+        periods: list[DatePeriod],
+        data: KirkantaJsonResponse,
+        start_date,
+        end_date,
+        has_fixed_periods: bool,
+    ) -> bool:
         """Checks that the daily opening hours match the schedule in the data
         Raises AssertionError if they don't match"""
+        if has_fixed_periods:
+            self.logger.info("Library has fixed periods, skipping.")
+            return True
+
         schedules = data.get("data", {}).get("schedules")
 
         if not schedules:
             self.logger.info("No schedules found in the incoming data. Skipping.")
-            return
+            return True
 
         override_periods = self._get_override_periods_from_kirkanta_data(data)
-        opening_hours = library.get_daily_opening_hours(start_date, end_date)
-        has_errors = False
+        opening_hours = get_daily_opening_hours_for_date_periods(
+            periods, start_date, end_date
+        )
+        is_ok = True
 
         for schedule in schedules:
             override = schedule.get("period") in override_periods
@@ -674,18 +688,85 @@ class KirjastotImporter(Importer):
                 opening_hours[schedule_date], key=self._get_times_for_sort
             )
 
-            if not expected_time_elements == opening_hours[schedule_date]:
+            if expected_time_elements != current_date_opening_hours:
                 self.logger.error(
-                    f"Invalid data for {schedule_date}. "
-                    f"Expected: {current_date_opening_hours}, got: {expected_time_elements}",
+                    f"Invalid data for {schedule_date}.\n"
+                    f"Expected (Kirkanta): {current_date_opening_hours}\n"
+                    f"Got (database): {expected_time_elements}",
                     stack_info=True,
                 )
-                has_errors = True
+                is_ok = False
 
-        if has_errors:
-            raise KirjastotValidationError(
-                f"Invalid data for library {library.name} [{library.id}]"
+        return is_ok
+
+    def process_kirkanta_period(
+        self, library: Resource, kirkanta_period: AnnotatedKirkantaPeriod
+    ) -> (list[dict], bool):
+        valid_from = None
+        valid_until = None
+        has_fixed_periods = False
+        if kirkanta_period["validFrom"]:
+            valid_from = parse(kirkanta_period["validFrom"]).date()
+        if kirkanta_period["validUntil"]:
+            valid_until = parse(kirkanta_period["validUntil"]).date()
+
+        self.logger.debug(
+            'period #{} "{}": {} - {}'.format(
+                kirkanta_period["id"],
+                kirkanta_period.get("name", ""),
+                valid_from,
+                valid_until,
             )
+        )
+
+        if valid_from is not None and valid_until is not None:
+            time_delta = valid_until - valid_from
+
+            if (
+                time_delta.days < 7
+                or kirkanta_period["id"] in KIRKANTA_LONG_EXCEPTIONAL_PERIODS
+            ):
+                self.logger.debug("Importing as separate days.")
+                periods = self.separate_exceptional_periods(library, kirkanta_period)
+                return periods, has_fixed_periods
+
+        self.logger.debug("Importing as a longer period.")
+
+        override = False
+        if all([d.get("closed", True) for d in kirkanta_period["days"]]):
+            override = True
+            state = State.CLOSED
+        else:
+            state = State.UNDEFINED
+
+        if kirkanta_period["isException"]:
+            override = True
+
+        long_period = {
+            "resource": library,
+            "name": {"fi": kirkanta_period.get("name", "")},
+            "start_date": valid_from,
+            "end_date": valid_until,
+            "resource_state": state,
+            "override": override,
+            "origins": [
+                {
+                    "data_source_id": self.data_source.id,
+                    "origin_id": str(kirkanta_period["id"]),
+                }
+            ],
+            "time_span_groups": self.get_openings(
+                kirkanta_period["days"], period_start=valid_from
+            ),
+        }
+
+        if kirkanta_period["id"] in KIRKANTA_FIXED_GROUPS:
+            long_period["time_span_groups"] = KIRKANTA_FIXED_GROUPS[
+                kirkanta_period["id"]
+            ]
+            has_fixed_periods = True
+
+        return [long_period], has_fixed_periods
 
     def do_import(self):
         libraries = Resource.objects.filter(origins__data_source=self.data_source)
@@ -704,142 +785,84 @@ class KirjastotImporter(Importer):
             start=start_date, back=0
         )
 
-        queryset = (
-            DatePeriod.objects.filter(
-                origins__data_source=self.data_source, resource__in=libraries
-            )
-            .filter(Q(end_date=None) | Q(end_date__gte=import_start_date))
-            .distinct()
-            .prefetch_related("origins", "time_span_groups__time_spans")
-        )
-
-        syncher = ModelSyncher(
-            queryset,
-            data_source=self.data_source,
-            delete_func=self.mark_deleted,
-            check_deleted_func=self.check_deleted,
-        )
-
         for library in libraries:
-            library._has_fixed_periods = False
             self.logger.info(
                 'Importing hours for "{}" id:{}...'.format(library.name, library.id)
             )
+            queryset = (
+                DatePeriod.objects.filter(
+                    origins__data_source=self.data_source, resource=library
+                )
+                .filter(Q(end_date=None) | Q(end_date__gte=import_start_date))
+                .distinct()
+                .prefetch_related("origins", "time_span_groups__time_spans")
+            )
+            syncher = ModelSyncher(
+                queryset,
+                data_source=self.data_source,
+                delete_func=self.mark_deleted,
+                check_deleted_func=self.check_deleted,
+            )
+            has_fixed_periods = False
 
-            library._kirkanta_data = self.get_hours_from_api(
+            kirkanta_data = self.get_hours_from_api(
                 library, import_start_date, import_end_date
             )
-
-            kirkanta_periods = self.get_kirkanta_periods(library._kirkanta_data)
+            kirkanta_periods = self.get_kirkanta_periods(kirkanta_data)
 
             periods = []
             for kirkanta_period in kirkanta_periods.values():
-                valid_from = None
-                valid_until = None
-                if kirkanta_period["validFrom"]:
-                    valid_from = parse(kirkanta_period["validFrom"]).date()
-                if kirkanta_period["validUntil"]:
-                    valid_until = parse(kirkanta_period["validUntil"]).date()
+                processed_periods, found_fixed_periods = self.process_kirkanta_period(
+                    library, kirkanta_period
+                )
+                periods.extend(processed_periods)
+                has_fixed_periods = has_fixed_periods or found_fixed_periods
 
-                self.logger.debug(
-                    'period #{} "{}": {} - {}'.format(
-                        kirkanta_period["id"],
-                        kirkanta_period.get("name", ""),
-                        valid_from,
-                        valid_until,
+            try:
+                with transaction.atomic():
+                    # save_dateperiod does a lot more than just save the period,
+                    # so we need to save them all first and then check them.
+                    saved_periods = []
+                    for period_data in periods:
+                        period = self.save_dateperiod(period_data)
+                        saved_periods.append(period)
+
+                    self.logger.info(
+                        f'Checking hours for "{library.name}" [{library.id}]...'
                     )
-                )
-
-                if valid_from is not None and valid_until is not None:
-                    time_delta = valid_until - valid_from
-
-                    if (
-                        time_delta.days < 7
-                        or kirkanta_period["id"] in KIRKANTA_LONG_EXCEPTIONAL_PERIODS
-                    ):
-                        self.logger.debug("Importing as separate days.")
-                        periods.extend(
-                            self.separate_exceptional_periods(library, kirkanta_period)
-                        )
-                        continue
-
-                self.logger.debug("Importing as a longer period.")
-
-                override = False
-                if all([d.get("closed", True) for d in kirkanta_period["days"]]):
-                    override = True
-                    state = State.CLOSED
-                else:
-                    state = State.UNDEFINED
-
-                if kirkanta_period["isException"]:
-                    override = True
-
-                long_period = {
-                    "resource": library,
-                    "name": {"fi": kirkanta_period.get("name", "")},
-                    "start_date": valid_from,
-                    "end_date": valid_until,
-                    "resource_state": state,
-                    "override": override,
-                    "origins": [
-                        {
-                            "data_source_id": self.data_source.id,
-                            "origin_id": str(kirkanta_period["id"]),
-                        }
-                    ],
-                    "time_span_groups": self.get_openings(
-                        kirkanta_period["days"], period_start=valid_from
-                    ),
-                }
-
-                if kirkanta_period["id"] in KIRKANTA_FIXED_GROUPS:
-                    long_period["time_span_groups"] = KIRKANTA_FIXED_GROUPS[
-                        kirkanta_period["id"]
-                    ]
-                    library._has_fixed_periods = True
-
-                periods.append(long_period)
-
-            for period_data in periods:
-                period = self.save_dateperiod(period_data)
-                syncher.mark(period)
-
-        syncher.finish(force=self.options["force"])
-
-        has_errors = False
-        for library in libraries:
-            if library._has_fixed_periods:
-                self.logger.info(
-                    "Not checking because library has fixed periods in the importer."
-                )
-            else:
-                self.logger.info(
-                    'Checking hours for "{}" id:{}...'.format(library.name, library.id)
-                )
-                try:
-                    self.check_library_data(
-                        library,
-                        library._kirkanta_data,
+                    is_ok = self.check_library_data(
+                        saved_periods,
+                        kirkanta_data,
                         import_start_date,
                         import_end_date,
+                        has_fixed_periods,
                     )
-                    self.logger.info("Check OK.")
-                except KirjastotValidationError:
-                    self.logger.error(
-                        f"Library data import failed for library {library.name} [{library.id}]. See logs for details."
-                    )
-                    has_errors = True
+                    if not is_ok:
+                        raise KirjastotValidationError(
+                            f'Invalid data for library "{library.name}" [{library.id}]'
+                        )
 
-        if has_errors:
-            raise KirjastotImporterException(
-                "Library data import failed for some libraries. Rolling back changes."
-            )
+                    # Validation passed, sync the data, i.e. delete all unsaved periods.
+                    for period in saved_periods:
+                        # Mark the period to not be deleted.
+                        syncher.mark(period)
+                    syncher.finish(force=self.options["force"])
+
+            except KirjastotValidationError as e:
+                self.logger.exception(
+                    f'Library data import failed for library "{library.name}" [{library.id}]. See logs for details.',
+                )
+                self._errors.append(e)
+                continue
 
     @db.transaction.atomic
     def import_openings(self):
         with DeferUpdatingDenormalizedDatePeriodData():
             self.do_import()
+        if self._errors:
+            self.logger.warning(f"Import finished with {len(self._errors)} errors.")
+        else:
+            self.logger.info("Import finished.")
 
     def import_check(self):
         libraries = Resource.objects.filter(origins__data_source=self.data_source)
@@ -864,5 +887,14 @@ class KirjastotImporter(Importer):
             )
             data = self.get_hours_from_api(library, import_start_date, import_end_date)
 
-            self.check_library_data(library, data, import_start_date, import_end_date)
-            self.logger.info("Check OK.")
+            is_ok = self.check_library_data(
+                list(library.date_periods.all()),
+                data,
+                import_start_date,
+                import_end_date,
+                has_fixed_periods=False,
+            )
+            if is_ok:
+                self.logger.info("Check OK.")
+            else:
+                self.logger.warning("Check failed.")

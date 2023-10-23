@@ -3,6 +3,7 @@ import os
 import re
 from collections.abc import Sized
 from itertools import zip_longest
+from typing import Type, TypeVar
 
 import bleach
 import requests
@@ -12,6 +13,8 @@ from model_utils.models import SoftDeletableModel
 from modeltranslation.translator import translator
 
 from hours.models import DataSource, DatePeriod, Resource, Rule, TimeSpan, TimeSpanGroup
+
+M = TypeVar("M", bound=Model)
 
 
 class Importer(object):
@@ -85,7 +88,7 @@ class Importer(object):
         resp.raise_for_status()
         return resp.json()
 
-    def mark_deleted(self, obj: SoftDeletableModel) -> bool:
+    def mark_deleted(self, obj: SoftDeletableModel) -> None:
         # SoftDeletableModel does not return anything when *soft* deleting
         obj.delete()
 
@@ -174,9 +177,9 @@ class Importer(object):
 
     def _update_or_create_object(
         self,
-        klass: type,
+        model: Type[M],
         data: dict,
-    ) -> Model:
+    ) -> M:
         """
         Takes the class and serialized data, creates and/or updates the Model
         object, saves and returns it saved for class-specific processing.
@@ -184,8 +187,8 @@ class Importer(object):
         # look for existing object
         obj_id = self.get_data_ids(data)[0]
         obj = None
-        klass_str = klass.__name__.lower()
-        cache = getattr(self, "%s_cache" % klass_str)
+        model_name = model.__name__.lower()
+        cache = getattr(self, "%s_cache" % model_name)
         if not obj:
             # TODO: if origin_id was found, make a copy of the object and its hours?
             # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
@@ -194,7 +197,7 @@ class Importer(object):
         if obj:
             obj._created = False
         else:
-            obj = klass()
+            obj = model()
             obj._created = True
 
         cache[obj_id] = obj
@@ -226,10 +229,10 @@ class Importer(object):
         # one importer will create an object and another will re-use it
         data_origins = set(
             [
-                klass.origins.field.model.objects.get_or_create(
+                model.origins.field.model.objects.get_or_create(
                     data_source_id=origin["data_source_id"],
                     origin_id=origin["origin_id"],
-                    defaults={klass.origins.field.name: obj},
+                    defaults={model.origins.field.name: obj},
                 )[0]
                 for origin in data.get("origins", [])
             ]
@@ -238,7 +241,7 @@ class Importer(object):
         for origin in data_origins:
             # concurrent runs will move the origin to point to another object
             # This is why the importer is not thread-safe.
-            setattr(origin, klass.origins.field.name, obj)
+            setattr(origin, model.origins.field.name, obj)
         for origin in data_origins.difference(object_origins):
             origin.save()
             obj._changed = True
@@ -249,8 +252,8 @@ class Importer(object):
             try:
                 if (
                     getattr(
-                        klass.origins.field.model.objects.get(id=origin.id),
-                        klass.origins.field.name,
+                        model.origins.field.model.objects.get(id=origin.id),
+                        model.origins.field.name,
                     )
                     == obj
                 ):
@@ -264,7 +267,7 @@ class Importer(object):
                     except KeyError:
                         pass
                     origin.delete()
-            except klass.origins.field.model.DoesNotExist:
+            except model.origins.field.model.DoesNotExist:
                 # another object deleted the origin already
                 pass
             obj._changed = True

@@ -59,6 +59,9 @@ class Importer(object):
             ).prefetch_related("origins", "origins__data_source")
         }
 
+    def setup(self):
+        pass
+
     def get_object_ids(self, obj: Model) -> list:
         return [
             origin.origin_id

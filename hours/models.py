@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from hashlib import md5
 from itertools import chain
 from operator import attrgetter
-from typing import List, Optional, Set, Union
+from typing import Iterable, List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
@@ -242,6 +242,58 @@ def combine_and_apply_override(elements):
     return combine_element_time_spans(elements)
 
 
+def get_daily_opening_hours_for_date_periods(
+    date_periods: Iterable[DatePeriod], start_date, end_date
+) -> dict[datetime.date, list[TimeElement]]:
+    # TODO: This is just an MVP. Things yet to do:
+    #       - Support full_day
+
+    all_daily_opening_hours = defaultdict(list)
+
+    # Need to get one day before the start to handle cases where the previous days
+    # opening hours extend to the next day.
+    start_minus_one_day = start_date - relativedelta(days=1)
+
+    for period in date_periods:
+        # Filter the dates in code instead
+        if period.start_date is not None and period.start_date > end_date:
+            continue
+
+        if period.end_date is not None and period.end_date < start_date:
+            continue
+
+        period_daily_opening_hours = period.get_daily_opening_hours(
+            start_minus_one_day, end_date
+        )
+        for the_date, time_items in period_daily_opening_hours.items():
+            all_daily_opening_hours[the_date].extend(time_items)
+
+    days: list[datetime.date] = list(all_daily_opening_hours.keys())
+    days.sort()
+
+    processed_opening_hours = {}
+    for day in days:
+        previous_day = day - relativedelta(days=1)
+
+        # Add the time spans that might extend from the previous day to the
+        # daily opening hours list for them to be considered in the combining step.
+        for el in processed_opening_hours.get(previous_day, []):
+            if not el.end_time_on_next_day:
+                continue
+
+            all_daily_opening_hours[day].append(el.get_next_day_part())
+
+        processed_opening_hours[day] = combine_and_apply_override(
+            all_daily_opening_hours[day]
+        )
+
+    # Remove the excessive day from the start
+    if start_minus_one_day in processed_opening_hours:
+        del processed_opening_hours[start_minus_one_day]
+
+    return processed_opening_hours
+
+
 class DataSource(SoftDeletableModel, TimeStampedModel):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=255)
@@ -383,55 +435,11 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         )
 
     def get_daily_opening_hours(self, start_date, end_date):
-        # TODO: This is just an MVP. Things yet to do:
-        #       - Support full_day
-
-        all_daily_opening_hours = defaultdict(list)
-
-        # Need to get one day before the start to handle cases where the previous days
-        # opening hours extend to the next day.
-        start_minus_one_day = start_date - relativedelta(days=1)
-
         # We can't filter the date_periods queryset here because we
         # want to allow the callers to use prefetch_related.
-        for period in self.date_periods.all():
-            # Filter the dates in code instead
-            if period.start_date is not None and period.start_date > end_date:
-                continue
-
-            if period.end_date is not None and period.end_date < start_date:
-                continue
-
-            period_daily_opening_hours = period.get_daily_opening_hours(
-                start_minus_one_day, end_date
-            )
-            for the_date, time_items in period_daily_opening_hours.items():
-                all_daily_opening_hours[the_date].extend(time_items)
-
-        days = list(all_daily_opening_hours.keys())
-        days.sort()
-
-        processed_opening_hours = {}
-        for day in days:
-            previous_day = day - relativedelta(days=1)
-
-            # Add the time spans that might extend from the previous day to the
-            # daily opening hours list for them to be considered in the combining step.
-            for el in processed_opening_hours.get(previous_day, []):
-                if not el.end_time_on_next_day:
-                    continue
-
-                all_daily_opening_hours[day].append(el.get_next_day_part())
-
-            processed_opening_hours[day] = combine_and_apply_override(
-                all_daily_opening_hours[day]
-            )
-
-        # Remove the excessive day from the start
-        if start_minus_one_day in processed_opening_hours:
-            del processed_opening_hours[start_minus_one_day]
-
-        return processed_opening_hours
+        return get_daily_opening_hours_for_date_periods(
+            self.date_periods.all(), start_date, end_date
+        )
 
     def _get_parent_data(self, acc=None):
         if acc is None:
@@ -746,7 +754,9 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
             time_span_groups=time_span_groups,
         )
 
-    def get_daily_opening_hours(self, start_date, end_date):
+    def get_daily_opening_hours(
+        self, start_date, end_date
+    ) -> dict[datetime.date, list[TimeElement]]:
         overlap = get_range_overlap(
             start_date, end_date, self.start_date, self.end_date
         )

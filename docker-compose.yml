@@ -30,8 +30,6 @@ services:
         #     - config_dev.env
         volumes:
             - .:/hauki:cached
-            - $HOME/maintenance:/maintenance
-            - $HOME/hauki_logs:/logs
         command: ["start_django_development_server"]
         ports:
             - "127.0.0.1:8000:8000"

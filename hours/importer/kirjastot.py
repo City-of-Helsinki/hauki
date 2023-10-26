@@ -129,7 +129,7 @@ class KirkantaData(TypedDict):
 class KirkantaJsonResponse(TypedDict):
     type: str
     refs: KirkakantaRefs
-    data: dict
+    data: KirkantaData
     total: int
 
 
@@ -612,35 +612,37 @@ class KirjastotImporter(Importer):
 
         return time_elements
 
+    @staticmethod
     def _get_override_periods_from_kirkanta_data(
-        self, data: KirkantaJsonResponse
+        kirkanta_periods: dict[str, KirkantaPeriod], schedules: list[KirkantaSchedule]
     ) -> list[int]:
+        """
+        Returns a list of Kirkanta period ids that should override other date periods.
+        """
         override_periods = []
-        kirkanta_periods = data.get("refs", {}).get("period", {})
-        schedules = data.get("data", {}).get("schedules")
 
         for kirkanta_period in kirkanta_periods.values():
-            valid_from = None
-            valid_until = None
-            if kirkanta_period["validFrom"]:
-                valid_from = parse(kirkanta_period["validFrom"]).date()
-            if kirkanta_period["validUntil"]:
-                valid_until = parse(kirkanta_period["validUntil"]).date()
+            # If it's an exception, it's an override
+            if kirkanta_period["isException"]:
+                override_periods.append(kirkanta_period["id"])
+                continue
 
-            if valid_from is not None and valid_until is not None:
-                time_delta = valid_until - valid_from
-                if time_delta.days < 7:
+            if kirkanta_period["validFrom"] and kirkanta_period["validUntil"]:
+                valid_from = parse(kirkanta_period["validFrom"]).date()
+                valid_until = parse(kirkanta_period["validUntil"]).date()
+                # If the period is shorter than a week, it's an exception
+                period_duration = valid_until - valid_from
+                if period_duration.days < 7:
                     override_periods.append(kirkanta_period["id"])
                     continue
 
+            # Find all schedules for this period
             period_schedules = [
                 i for i in schedules if i.get("period") == kirkanta_period["id"]
             ]
 
+            # If all days are closed, it's an override
             if all([d["closed"] for d in period_schedules]):
-                override_periods.append(kirkanta_period["id"])
-
-            if kirkanta_period["isException"]:
                 override_periods.append(kirkanta_period["id"])
 
         return override_periods
@@ -665,7 +667,9 @@ class KirjastotImporter(Importer):
             self.logger.info("No schedules found in the incoming data. Skipping.")
             return True
 
-        override_periods = self._get_override_periods_from_kirkanta_data(data)
+        override_periods = self._get_override_periods_from_kirkanta_data(
+            data.get("refs", {}).get("period", {}), schedules
+        )
         opening_hours = get_daily_opening_hours_for_date_periods(
             periods, start_date, end_date
         )

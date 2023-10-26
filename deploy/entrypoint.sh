@@ -75,7 +75,7 @@ elif [[ -n "$*" ]]; then
     exec "$@"
 else
     _log_boxed "Starting production server"
-    exec uwsgi -y deploy/uwsgi.yml
+    exec uwsgi --ini deploy/uwsgi.ini
 fi
 
 _log_boxed "Hauki entrypoint finished"

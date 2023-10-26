@@ -1,49 +1,28 @@
-# Dockerfile for Hauki backend
-# Attemps to provide for both local development and server usage
+# ==============================
+FROM registry.access.redhat.com/ubi9/python-39 as appbase
+# ==============================
 
-FROM python:3.9-buster as appbase
-
-RUN useradd -ms /bin/bash -d /hauki hauki
-
+USER root
 WORKDIR /hauki
 
-# Can be used to inquire about running app
-# eg. by running `echo $APP_NAME`
-ENV APP_NAME hauki
-# This is server out by Django itself, but aided
-# by whitenoise by adding cache headers and also delegating
-# much of the work to WSGI-server
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 ENV STATIC_ROOT /srv/static
-# For some reason python output buffering buffers much longer
-# while in Docker. Maybe the buffer is larger?
-ENV PYTHONUNBUFFERED True
 
-# less & netcat-openbsd are there for in-container manual debugging
-RUN apt-get update && apt-get install -y postgresql-client less netcat-openbsd gettext locales
+COPY --chown=default:root requirements.txt .
 
+# nmap-ncat (nc) installed for in-container manual debugging
 # we need the Finnish locale built
-RUN sed -i 's/^# *\(fi_FI.UTF-8\)/\1/' /etc/locale.gen
-RUN locale-gen
-
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir uwsgi
-
-# Sentry CLI for sending events from non-Python processes to Sentry
-# eg. https://docs.sentry.io/cli/send-event/#bash-hook
-RUN curl -sL https://sentry.io/get-cli/ | bash
-
-# Copy requirements files to image for preloading dependencies
-# in their own layer
-COPY requirements.txt requirements-dev.txt ./
-
-# deploy/requirements.txt must reference the base requirements
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Statics are kept inside container image for serving using whitenoise
-ENV DEBUG=True
-RUN mkdir -p /srv/static && python manage.py collectstatic
+RUN dnf update -y && dnf install -y \
+    postgresql \
+    nmap-ncat \
+    gettext \
+    glibc-locale-source \
+    && pip install -U pip \
+    && pip install --no-cache-dir uwsgi \
+    && pip install --no-cache-dir -r requirements.txt \
+    && localedef --inputfile=fi_FI --charmap=UTF-8 fi_FI.UTF-8 \
+    && dnf clean all
 
 # Keep media in its own directory outside home, in case home
 # directory forms some sort of attack route
@@ -51,20 +30,24 @@ RUN mkdir -p /srv/static && python manage.py collectstatic
 # RUN mkdir -p /srv/media && chown hauki:hauki /srv/media
 
 ENTRYPOINT ["deploy/entrypoint.sh"]
+EXPOSE 8000/tcp
 
-# Both production and dev servers listen on port 8000
-EXPOSE 8000
-
-# Next, the development & testing extras
+# ==============================
 FROM appbase as development
+# ==============================
 
+COPY --chown=default:root requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
-USER hauki
+COPY --chown=default:root . .
 
-# And the production image
-FROM appbase as production
+USER default
 
-ENV DEBUG=False
+# ==============================
+FROM appbase AS production
+# ==============================
 
-USER hauki
+COPY --chown=default:root . .
+RUN SECRET_KEY="only-used-for-collectstatic" python manage.py collectstatic --noinput
+
+USER default

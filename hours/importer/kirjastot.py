@@ -142,7 +142,12 @@ class KirjastotImporterException(KirjastotException):
 
 
 class KirjastotValidationError(KirjastotException):
-    pass
+    def __init__(self, msg: str = "", errors=None):
+        self.msg = msg
+        self.errors = errors or []
+
+    def __str__(self):
+        return self.msg
 
 
 @register_importer
@@ -649,14 +654,16 @@ class KirjastotImporter(Importer):
 
     def check_library_data(
         self,
+        library: Resource,
         periods: list[DatePeriod],
         data: KirkantaJsonResponse,
         start_date,
         end_date,
         has_fixed_periods: bool,
+        raise_exception: bool = True,
     ) -> bool:
-        """Checks that the daily opening hours match the schedule in the data
-        Raises AssertionError if they don't match"""
+        """Checks that the daily opening hours from database match the schedule from Kirkanta.
+        Raises KirjastotValidationError if they don't match"""
         if has_fixed_periods:
             self.logger.info("Library has fixed periods, skipping.")
             return True
@@ -667,6 +674,7 @@ class KirjastotImporter(Importer):
             self.logger.info("No schedules found in the incoming data. Skipping.")
             return True
 
+        errors = []
         override_periods = self._get_override_periods_from_kirkanta_data(
             data.get("refs", {}).get("period", {}), schedules
         )
@@ -677,29 +685,47 @@ class KirjastotImporter(Importer):
 
         for schedule in schedules:
             override = schedule.get("period") in override_periods
-            expected_time_elements = self._schedule_to_time_elements(schedule, override)
-
             schedule_date = schedule.get("date")
             if not isinstance(schedule_date, date):
                 schedule_date = parse(schedule.get("date")).date()
 
+            # Opening hours from Kirkanta
+            expected_time_elements = self._schedule_to_time_elements(schedule, override)
             expected_time_elements = combine_element_time_spans(
                 expected_time_elements, override=override
             )
-
             expected_time_elements.sort(key=self._get_times_for_sort)
+
+            # Actual opening hours currently in the database
             current_date_opening_hours = sorted(
                 opening_hours[schedule_date], key=self._get_times_for_sort
             )
 
             if expected_time_elements != current_date_opening_hours:
-                self.logger.error(
-                    f"Invalid data for {schedule_date}.\n"
-                    f"Expected (Kirkanta): {current_date_opening_hours}\n"
-                    f"Got (database): {expected_time_elements}",
-                    stack_info=True,
+                self.logger.warning(
+                    f"Opening hours do not match between Kirkanta and the database\n"
+                    f"Expected (Kirkanta): {expected_time_elements}\n"
+                    f"Got (database): {current_date_opening_hours}\n",
+                )
+
+                errors.append(
+                    {
+                        "detail": "Opening hours do not match between Kirkanta and the database",
+                        "schedule_raw": schedule,
+                        "schedule_date": schedule_date,
+                        "schedule_period": schedule.get("period"),
+                        "override": override,
+                        "kirkanta_opening_hours": expected_time_elements,
+                        "database_opening_hours": current_date_opening_hours,
+                    }
                 )
                 is_ok = False
+
+        if raise_exception and errors:
+            raise KirjastotValidationError(
+                f'Data validation failed for library "{library.name}"',
+                errors=errors,
+            )
 
         return is_ok
 
@@ -832,29 +858,39 @@ class KirjastotImporter(Importer):
                         saved_periods.append(period)
 
                     self.logger.info(
-                        f'Checking hours for "{library.name}" [{library.id}]...'
+                        f'Checking hours for "{library.name}" [ID: {library.id}]...'
                     )
-                    is_ok = self.check_library_data(
+                    self.check_library_data(
+                        library,
                         saved_periods,
                         kirkanta_data,
                         import_start_date,
                         import_end_date,
                         has_fixed_periods,
                     )
-                    if not is_ok:
-                        raise KirjastotValidationError(
-                            f'Invalid data for library "{library.name}" [{library.id}]'
-                        )
-
+                    self.logger.info("Check OK.")
+                    self.logger.info(
+                        f'Syncing hours for "{library.name}" [ID: {library.id}]...'
+                    )
                     # Validation passed, sync the data, i.e. delete all unsaved periods.
                     for period in saved_periods:
                         # Mark the period to not be deleted.
                         syncher.mark(period)
                     syncher.finish(force=self.options["force"])
 
+                    self.logger.info(
+                        f'Imported hours for "{library.name}" [ID: {library.id}]'
+                    )
+
             except KirjastotValidationError as e:
                 self.logger.exception(
-                    f'Library data import failed for library "{library.name}" [{library.id}]. See logs for details.',
+                    f'Library data import failed for library "{library.name}" [ID: {library.id}]\n'
+                    f"Check that the library has correct opening hours in Kirkanta.\n",
+                    extra={
+                        "library.id": library.id,
+                        "library.name": library.name,
+                        "errors": e.errors,
+                    },
                 )
                 self._errors.append(e)
                 continue
@@ -892,11 +928,13 @@ class KirjastotImporter(Importer):
             data = self.get_hours_from_api(library, import_start_date, import_end_date)
 
             is_ok = self.check_library_data(
+                library,
                 list(library.date_periods.all()),
                 data,
                 import_start_date,
                 import_end_date,
                 has_fixed_periods=False,
+                raise_exception=False,
             )
             if is_ok:
                 self.logger.info("Check OK.")

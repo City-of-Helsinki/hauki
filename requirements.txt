@@ -27,7 +27,7 @@ charset-normalizer==3.3.1
     # via requests
 deprecation==2.1.0
     # via django-helusers
-django==3.2.22
+django==3.2.23
     # via
     #   -r requirements.in
     #   django-cors-headers

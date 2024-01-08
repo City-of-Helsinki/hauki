@@ -39,7 +39,6 @@ resources:
     - repository: hauki-pipelines
       type: git
       ref: refs/heads/ansible_automation_update
-
       # Azure DevOps project/repository
       name: hauki/hauki-pipelines
 

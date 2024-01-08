@@ -46,10 +46,9 @@ if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
     echo "Applying database migrations..."
     ./manage.py migrate --noinput
 fi
-if [[ "$INITIAL_DATA" = "true" ]]; then
-    echo "Running imports to get initial data"
-    deploy/run_maintenance.sh
-    ./manage.py hours_import tprek --openings
+if [[ "$INITIAL_TEST_DATA" = "true" ]]; then
+    echo "Apply initial test data"
+    deploy/init_application.sh
 fi
 
 if [[ "$1" = "start_django_development_server" ]]; then

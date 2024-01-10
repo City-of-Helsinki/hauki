@@ -27,7 +27,7 @@ pr:
     - '**/*.md'
     - '.github/'
     - 'pipelines/hauki-api-release.yml'
-    - 'pipelines/hauki-api-test.yml'
+    - 'pipelines/hauki-api-dev.yml'
     - 'docker-compose*'
 
 # By default, use self-hosted agents

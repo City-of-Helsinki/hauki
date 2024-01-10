@@ -42,6 +42,15 @@ fi
 
 _log "Start with \`help\` for instructions"
 
+if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
+    echo "Applying database migrations..."
+    ./manage.py migrate --noinput
+fi
+if [[ "$INITIAL_TEST_DATA" = "true" ]]; then
+    echo "Apply initial test data"
+    deploy/init_application.sh
+fi
+
 if [[ "$1" = "start_django_development_server" ]]; then
     _log_boxed "Running development server"
     exec deploy/dev_start.sh

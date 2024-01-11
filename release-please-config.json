@@ -1,0 +1,11 @@
+{
+  "bootstrap-sha": "9d2bccb9bd30438ee396e4db302f5f87a0daa0cb",
+  "sequential-calls": true,
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "hauki"
+    }
+  },
+  "plugins": ["sentence-case"]
+}

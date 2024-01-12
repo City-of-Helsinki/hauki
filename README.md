@@ -45,7 +45,7 @@ docker compose up dev
 
 and open your browser to http://127.0.0.1:8000/.
 
-Run tests with 
+Run tests with
 
 ```
 docker compose run dev test
@@ -104,7 +104,7 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-Copy the development config file example `config_dev.env.example` to `config_dev.env` 
+Copy the development config file example `config_dev.env.example` to `config_dev.env`
 (feel free to edit the configuration file if you have any settings you wish to change):
 ```
 cp config_dev.env.example config_dev.env
@@ -129,7 +129,7 @@ and open your browser to http://127.0.0.1:8000/.
 #### Pre-commit hooks
 
 Before committing files to the repository it's advisable to use the configured pre-commit hooks (see [`.pre-commit-config.yaml`](./.pre-commit-config.yaml)). The CI pipeline will fail if the files are not formatted correctly.
- 
+
 pre-commit is included in the requirements-dev.txt. After cloning the repository you should install the requirements and then install the hooks by running:
 
 ```
@@ -143,6 +143,14 @@ You can at any time run the following command if you would like to check all of 
 ```
 pre-commit run --all-files
 ```
+
+## Commit message format
+
+New commit messages must adhere to the [Conventional Commits](https://www.conventionalcommits.org/)
+specification, and line length is limited to 72 characters.
+
+When [`pre-commit`](https://pre-commit.com/) is in use, [`commitlint`](https://github.com/conventional-changelog/commitlint)
+checks new commit messages for the correct format.
 
 ## Importing data
 
@@ -167,7 +175,7 @@ Import library opening hours from the kirjastot.fi API for all resources that ha
 python manage.py hours_import kirjastot --openings
 ```
 
-This imports opening hours for the libraries starting from today and ending one year in the future. If you wish to specify another start date, you may use 
+This imports opening hours for the libraries starting from today and ending one year in the future. If you wish to specify another start date, you may use
 
 ```
 python manage.py hours_import kirjastot --openings --date 2021-01-01

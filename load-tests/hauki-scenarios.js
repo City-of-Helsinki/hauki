@@ -9,7 +9,7 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const env = global['__ENV'] || process.env;
 
-const apiUrl = env.API_URL;
+const apiUrl = env.API_URL || 'https://hauki.api.stage.hel.ninja/v1';
 // const authParams = env.AUTH_PARAMS;
 const tprekResourceId = env.HAUKI_RESOURCE || 'tprek:41683';
 

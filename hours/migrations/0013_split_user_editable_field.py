@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("hours", "0012_add_end_time_on_next_day_to_timespan"),
     ]

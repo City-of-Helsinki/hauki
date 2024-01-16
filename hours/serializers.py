@@ -260,7 +260,6 @@ class ResourceSerializer(
             field,
             field_source,
         ) in reverse_relations.items():
-
             # Skip processing for empty data or not-specified field.
             # The field can be defined in validated_data but isn't defined
             # in initial_data (for example, if multipart form data used)

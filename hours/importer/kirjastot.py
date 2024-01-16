@@ -662,8 +662,12 @@ class KirjastotImporter(Importer):
         has_fixed_periods: bool,
         raise_exception: bool = True,
     ) -> bool:
-        """Checks that the daily opening hours from database match the schedule from Kirkanta.
-        Raises KirjastotValidationError if they don't match"""
+        """
+        Checks that the daily opening hours from database
+        match the schedule from Kirkanta.
+
+        Raises KirjastotValidationError if they don't match
+        """
         if has_fixed_periods:
             self.logger.info("Library has fixed periods, skipping.")
             return True
@@ -710,7 +714,8 @@ class KirjastotImporter(Importer):
 
                 errors.append(
                     {
-                        "detail": "Opening hours do not match between Kirkanta and the database",
+                        "detail": "Opening hours do not match "
+                        "between Kirkanta and the database",
                         "schedule_raw": schedule,
                         "schedule_date": schedule_date,
                         "schedule_period": schedule.get("period"),
@@ -884,8 +889,10 @@ class KirjastotImporter(Importer):
 
             except KirjastotValidationError as e:
                 self.logger.exception(
-                    f'Library data import failed for library "{library.name}" [ID: {library.id}]\n'
-                    f"Check that the library has correct opening hours in Kirkanta.\n",
+                    f"Library data import failed "
+                    f'for library "{library.name}" [ID: {library.id}]\n'
+                    f"Check that the library has "
+                    f"correct opening hours in Kirkanta.\n",
                     extra={
                         "library.id": library.id,
                         "library.name": library.name,

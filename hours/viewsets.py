@@ -332,7 +332,8 @@ class ResourceFilterBackend(BaseFilterBackend):
         summary="Is Resource open now?", responses=IsOpenNowSerializer
     ),
     copy_date_periods=extend_schema(
-        summary="Copy all or the selected periods from this resource to other resources",
+        summary="Copy all or the selected periods from this resource to other "
+        "resources",
         request=OpenApiTypes.NONE,
         parameters=[
             OpenApiParameter(

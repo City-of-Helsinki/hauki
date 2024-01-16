@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("hours", "0008_add_soft_deletable_to_timespangroup"),
         ("hours", "0006_signedauthkey"),

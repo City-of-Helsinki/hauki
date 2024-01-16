@@ -517,7 +517,6 @@ def test_invalidate_signature_success_query_params(
 
 @pytest.mark.django_db
 def test_invalidate_signature_no_params(api_client):
-
     # Invalidate the signature
     invalidate_url = reverse("invalidate_hauki_auth_signature")
     response = api_client.post(invalidate_url)

@@ -56,8 +56,8 @@ def _post_to_api(
 @pytest.fixture
 def make_date_period_with_regular_opening_hours(date_period_factory):
     """
-    Factory for creating a date period with regular opening hours. The date period covers the whole year with the
-    following opening hours:
+    Factory for creating a date period with regular opening hours. The date period
+    covers the whole year with the following opening hours:
     - Monday to Friday 8-16
     - Saturday to Sunday 10-14
     """
@@ -88,7 +88,8 @@ def make_date_period_with_regular_opening_hours(date_period_factory):
 @pytest.fixture
 def make_date_period_with_summer_opening_hours(date_period_factory):
     """
-    Factory for creating a date period with summer opening hours. The date period covers the summer with the following
+    Factory for creating a date period with summer opening hours.
+    The date period covers the summer with the following
     opening hours:
     - Monday to Friday 10-12
     """
@@ -116,7 +117,8 @@ def make_date_period_with_summer_opening_hours(date_period_factory):
 @pytest.fixture
 def make_closed_date_period(date_period_factory):
     """
-    Factory for creating a date period with closed state. The date period covers the whole year.
+    Factory for creating a date period with closed state.
+    The date period covers the whole year.
     """
 
     def _make_closed_date_period(resource, **kwargs):
@@ -136,8 +138,9 @@ def assert_all_date_period_opening_hours_in_resource_opening_hours(
     end_date=DEFAULT_END_OF_YEAR,
 ):
     """
-    Assert that all the date period opening hours are found in the resource opening hours,
-    i.e. the date period opening hours are a subset of the resource opening hours.
+    Assert that all the date period opening hours are found
+    in the resource opening hours, i.e. the date period
+    opening hours are a subset of the resource opening hours.
     """
     date_period_opening_hours = date_period.get_daily_opening_hours(
         start_date=start_date, end_date=end_date
@@ -148,9 +151,10 @@ def assert_all_date_period_opening_hours_in_resource_opening_hours(
 
     for date in date_period_opening_hours:
         assert date in resource_opening_hours
-        assert (
-            date_period_opening_hours[date] == resource_opening_hours[date]
-        ), f"Resource opening hours for date {date} should match date period opening hours"
+        assert date_period_opening_hours[date] == resource_opening_hours[date], (
+            f"Resource opening hours for date {date} "
+            f"should match date period opening hours"
+        )
 
 
 def assert_date_period_opening_hours_not_in_resource_opening_hours(
@@ -160,8 +164,9 @@ def assert_date_period_opening_hours_not_in_resource_opening_hours(
     end_date=DEFAULT_END_OF_YEAR,
 ):
     """
-    Assert that none of the opening hours of the date period are found in the opening hours of the resource,
-    i.e. there is no overlap between the two.
+    Assert that none of the opening hours of the date period are
+    found in the opening hours of the resource, i.e. there is
+    no overlap between the two.
     """
     date_period_opening_hours = date_period.get_daily_opening_hours(
         start_date=start_date, end_date=end_date
@@ -172,9 +177,10 @@ def assert_date_period_opening_hours_not_in_resource_opening_hours(
 
     for date in date_period_opening_hours:
         if date in resource_opening_hours:
-            assert (
-                date_period_opening_hours[date] != resource_opening_hours[date]
-            ), f"Resource opening hours for date {date} should not match date period opening hours"
+            assert date_period_opening_hours[date] != resource_opening_hours[date], (
+                f"Resource opening hours for date {date} "
+                f"should not match date period opening hours"
+            )
 
 
 def create_test_periods(resource):
@@ -450,7 +456,8 @@ def test_resource_api_copy_periods_to_resource_with_period_ids(
 
     target_resource.refresh_from_db()
 
-    # Assert that the target resource has its original date period and the source resource's second date period.
+    # Assert that the target resource has its original
+    # date period and the source resource's second date period.
     assert target_resource.date_periods.count() == 2
     assert_all_date_period_opening_hours_in_resource_opening_hours(
         target_resource, second_date_period
@@ -458,7 +465,8 @@ def test_resource_api_copy_periods_to_resource_with_period_ids(
     assert second_date_period.as_text() in target_resource.date_periods_as_text
     assert target_resource_date_period.as_text() in target_resource.date_periods_as_text
 
-    # Paranoia check: assert that the target resource does not have the source resource's first date period.
+    # Paranoia check: assert that the target resource does
+    # not have the source resource's first date period.
     assert first_date_period.as_text() not in target_resource.date_periods_as_text
     assert_date_period_opening_hours_not_in_resource_opening_hours(
         target_resource, first_date_period

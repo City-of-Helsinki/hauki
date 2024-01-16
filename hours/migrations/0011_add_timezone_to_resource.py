@@ -7,7 +7,6 @@ import hours.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("hours", "0010_add_ancestry_fields_to_resource"),
     ]

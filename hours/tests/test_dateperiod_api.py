@@ -24,7 +24,6 @@ def test_list_date_periods_empty(admin_client):
 
 @pytest.mark.django_db
 def test_list_date_periods_one_date_period(admin_client, resource, date_period_factory):
-
     date_period = date_period_factory(
         resource=resource,
         name="Testperiod",

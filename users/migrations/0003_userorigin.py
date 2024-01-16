@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL),
         ("users", "0002_auto_20201005_1851"),

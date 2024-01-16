@@ -458,6 +458,7 @@ def test_get_ancestors_two_grandparents_two_branches(resource_factory):
 #
 #     assert resource.get_ancestors() == {resource, resource2, resource3}
 
+
 #
 # Resource.get_descendants
 #

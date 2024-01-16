@@ -504,7 +504,6 @@ def test_data_source_and_origin_id_exists_true_different_data_source_in_child(
 
 @pytest.mark.django_db
 def test_list_resources_parent_and_child_filter_match(admin_client, resource_factory):
-
     resource_1 = resource_factory()
     resource_2 = resource_factory()
     resource_2.parents.add(resource_1)
@@ -541,7 +540,6 @@ def test_list_resources_parent_and_child_filter_match(admin_client, resource_fac
 def test_list_resources_parent_and_child_filter_no_match(
     admin_client, resource_factory
 ):
-
     resource_1 = resource_factory()
     resource_2 = resource_factory()
     resource_1.parents.add(resource_2)

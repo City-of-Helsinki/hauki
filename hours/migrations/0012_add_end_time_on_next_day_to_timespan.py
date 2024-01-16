@@ -13,7 +13,6 @@ def populate_end_time_on_next_day(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("hours", "0011_add_timezone_to_resource"),
     ]

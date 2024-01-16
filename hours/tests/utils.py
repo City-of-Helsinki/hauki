@@ -4,7 +4,8 @@ from hours.tests.conftest import RuleFactory, TimeSpanFactory, TimeSpanGroupFact
 
 def assert_response_status_code(response, expected_status_code):
     """
-    Assert that the response has the expected status code and print the response data if it doesn't.
+    Assert that the response has the expected status code and print
+    the response data if it doesn't.
     """
     assert response.status_code == expected_status_code, "{} {}".format(
         response.status_code, response.data

@@ -13,7 +13,6 @@ import hours.enums
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [

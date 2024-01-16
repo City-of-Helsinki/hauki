@@ -660,7 +660,6 @@ def test_opening_hours_resource_filter_two_resources(
     resource_factory,
     date_period_factory,
 ):
-
     resource = resource_factory()
     resource2 = resource_factory()
 

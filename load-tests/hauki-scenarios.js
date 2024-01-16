@@ -7,11 +7,11 @@ import { formatDate, getRandomArbitrary } from './helpers/utils.js';
 import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
-const {
-  AUTH_PARAMS: authParams,
-  API_URL: apiUrl,
-  HAUKI_RESOURCE: tprekResourceId,
-} = __ENV;
+const env = global['__ENV'] || process.env;
+
+const apiUrl = env.API_URL;
+// const authParams = env.AUTH_PARAMS;
+const tprekResourceId = env.HAUKI_RESOURCE || 'tprek:41683';
 
 const IDLE_TIME = 10;
 

@@ -146,11 +146,35 @@ pre-commit run --all-files
 
 ## Commit message format
 
-New commit messages must adhere to the [Conventional Commits](https://www.conventionalcommits.org/)
+!!!Note New commit messages must adhere to the [Conventional Commits](https://www.conventionalcommits.org/)
 specification, and line length is limited to 72 characters.
 
 When [`pre-commit`](https://pre-commit.com/) is in use, [`commitlint`](https://github.com/conventional-changelog/commitlint)
 checks new commit messages for the correct format.
+
+## Release
+
+### Publish to Dev environment
+
+#### Review environment
+
+New commit to PR will trigger review pipeline. Review pipeline builds application and deploys a dynamic environment to the Openshift dev. The review environment can be used to verify PR.
+
+#### Dev environment
+
+Deployment to dev environment is handled automatically from master branch. Updates to master branch triggers
+azure pipeline that will run tests, build and deploy to dev environment hosted by red hat openshift.
+Currently azure-pipeline is configured directly from version control, but red hat openshift configuration resides in openshift cluster.
+
+### Release to Test, Stage and Production environments
+
+Release is done by [release-please](https://helsinkisolutionoffice.atlassian.net/wiki/spaces/DD/pages/8278966368/Releases+with+release-please).
+It creates release PR based on commits messages. Merge of the PR will trigger a release pipeline that build and deploys to stage and test environments automatically.
+
+Release-please update the package.json version number automatically and it is included to release PR.
+
+#### Publish to production environments
+Publishing to production requires manual approval in the DevOps release pipeline.
 
 ## Importing data
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.1.0...hauki-v1.1.1) (2024-03-26)
+
+
+### Bug Fixes
+
+* Add missing migration ([2d4a7d4](https://github.com/City-of-Helsinki/hauki/commit/2d4a7d416c5d7d534fd5dd9c9f1c895535a912ee))
+
 ## [1.1.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.0.0...hauki-v1.1.0) (2024-01-15)
 
 

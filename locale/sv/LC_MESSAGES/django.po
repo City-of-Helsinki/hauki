@@ -789,7 +789,7 @@ msgstr ""
 
 #: hours/viewsets.py:707
 msgid ""
-"resource, start_date or end_date GET parameter is required tolist date "
+"resource, start_date or end_date GET parameter is required to list date "
 "periods"
 msgstr ""
 

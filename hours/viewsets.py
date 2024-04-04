@@ -652,9 +652,10 @@ class ResourceViewSet(
         parameters=[
             OpenApiParameter(
                 "resource",
-                OpenApiTypes.UUID,
+                OpenApiTypes.STR,
                 OpenApiParameter.QUERY,
-                description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
+                description="Filter by resource id or multiple resource ids "
+                "(comma-separated)",
             ),
             OpenApiParameter(
                 "data_source",

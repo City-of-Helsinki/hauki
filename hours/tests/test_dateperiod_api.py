@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from hours.enums import RuleContext, RuleSubject, State, Weekday
 from hours.models import DatePeriod
+from hours.tests.utils import assert_response_status_code
 
 
 @pytest.mark.django_db
@@ -104,6 +105,31 @@ def test_list_date_periods_filter_by_resource(
 
     assert len(response.data) == 1
     assert response.data[0]["id"] == date_period.id
+
+
+@pytest.mark.django_db
+def test_list_date_periods_filter_by_data_source(
+    admin_client, resource, data_source_factory, date_period_factory
+):
+    expected_data_source = data_source_factory()
+    expected_date_period = date_period_factory(
+        resource=resource,
+        data_sources=[expected_data_source],
+    )
+    date_period_factory(
+        resource=resource,
+        data_sources=[data_source_factory()],
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(
+        url, data={"resource": resource.id, "data_source": [expected_data_source.id]}
+    )
+
+    assert_response_status_code(response, 200)
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == expected_date_period.id
 
 
 @pytest.mark.django_db

@@ -16,6 +16,7 @@ from hours.authentication import calculate_signature, join_params
 from hours.models import (
     DataSource,
     DatePeriod,
+    PeriodOrigin,
     Resource,
     ResourceOrigin,
     Rule,
@@ -74,11 +75,38 @@ class ResourceOriginFactory(factory.django.DjangoModelFactory):
 
 @register
 class DatePeriodFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = DatePeriod
+
     name = factory.LazyAttribute(lambda x: "DP-" + faker.pystr())
     start_date = factory.LazyAttribute(lambda x: faker.date())
 
+    @factory.post_generation
+    def origins(self, create, extracted, **__):
+        if not create or not extracted:
+            return
+
+        for origin in extracted:
+            self.origins.add(origin)
+
+    @factory.post_generation
+    def data_sources(self, create, extracted, **__):
+        if not create or not extracted:
+            return
+
+        for data_source in extracted:
+            # Create a new origin for each data source, since data sources
+            # are accessed through origins.
+            self.origins.add(PeriodOriginFactory(data_source=data_source, period=self))
+
+
+@register
+class PeriodOriginFactory(factory.django.DjangoModelFactory):
     class Meta:
-        model = DatePeriod
+        model = PeriodOrigin
+
+    origin_id = factory.LazyAttribute(lambda x: "OID-" + faker.pystr())
+    data_source = factory.SubFactory(DataSourceFactory)
 
 
 @register

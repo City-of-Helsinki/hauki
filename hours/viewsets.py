@@ -657,6 +657,12 @@ class ResourceViewSet(
                 description="Filter by resource id or multiple resource ids (comma-separated)",  # noqa
             ),
             OpenApiParameter(
+                "data_source",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by data source",
+            ),
+            OpenApiParameter(
                 "end_date",
                 OpenApiTypes.DATE,
                 OpenApiParameter.QUERY,

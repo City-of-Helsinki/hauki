@@ -121,6 +121,7 @@ class MaybeRelativeNullableDateFilter(Filter):
 
 
 class DatePeriodFilter(filters.FilterSet):
+    data_source = filters.CharFilter(field_name="origins__data_source")
     resource = filters.CharFilter(method="resource_filter")
     start_date = MaybeRelativeNullableDateFilter()
     end_date = MaybeRelativeNullableDateFilter()

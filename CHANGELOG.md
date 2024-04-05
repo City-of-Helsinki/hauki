@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.1.0...hauki-v1.2.0) (2024-04-05)
+
+
+### Features
+
+* Add data source filter to date period list ([91b4910](https://github.com/City-of-Helsinki/hauki/commit/91b4910f5590e82b2fc8c29729d41427f761e4e1))
+
+
+### Bug Fixes
+
+* Add missing migration ([2d4a7d4](https://github.com/City-of-Helsinki/hauki/commit/2d4a7d416c5d7d534fd5dd9c9f1c895535a912ee))
+
+
+### Documentation
+
+* Fix incorrect type for resource parameter ([7693a8d](https://github.com/City-of-Helsinki/hauki/commit/7693a8dc5c93c5d02e17e53128accfc29cdbfa38))
+
 ## [1.1.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.0.0...hauki-v1.1.0) (2024-01-15)
 
 

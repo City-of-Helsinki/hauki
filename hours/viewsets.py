@@ -744,7 +744,7 @@ class DatePeriodViewSet(
         ):
             raise ValidationError(
                 detail=_(
-                    "resource, start_date or end_date GET parameter is required to"
+                    "resource, start_date or end_date GET parameter is required to "
                     "list date periods"
                 )
             )

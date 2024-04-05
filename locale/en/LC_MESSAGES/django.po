@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-21 11:48+0200\n"
+"POT-Creation-Date: 2024-04-05 10:54+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,19 +38,19 @@ msgstr ""
 msgid "Period name"
 msgstr ""
 
-#: hours/admin.py:143 hours/models.py:335
+#: hours/admin.py:143 hours/models.py:380
 msgid "Resource"
 msgstr ""
 
-#: hours/admin.py:148 hours/models.py:634
+#: hours/admin.py:148 hours/models.py:644
 msgid "Start date"
 msgstr ""
 
-#: hours/admin.py:153 hours/models.py:637
+#: hours/admin.py:153 hours/models.py:647
 msgid "End date"
 msgstr ""
 
-#: hours/admin.py:158 hours/models.py:641 hours/models.py:911
+#: hours/admin.py:158 hours/models.py:651 hours/models.py:939
 msgid "Resource state"
 msgstr ""
 
@@ -445,89 +445,89 @@ msgctxt "FrequencyModifier"
 msgid "Odd"
 msgstr ""
 
-#: hours/models.py:254 hours/models.py:281 hours/models.py:630
-#: hours/models.py:887 hours/models.py:1017
+#: hours/models.py:299 hours/models.py:326 hours/models.py:640
+#: hours/models.py:915 hours/models.py:1047
 msgid "Name"
 msgstr ""
 
-#: hours/models.py:255 hours/models.py:283 hours/models.py:632
-#: hours/models.py:889 hours/models.py:1019
+#: hours/models.py:300 hours/models.py:328 hours/models.py:642
+#: hours/models.py:917 hours/models.py:1049
 msgid "Description"
 msgstr ""
 
-#: hours/models.py:257
+#: hours/models.py:302
 msgid "Organizations may be edited by users"
 msgstr ""
 
-#: hours/models.py:260
+#: hours/models.py:305
 msgid "Resources may be edited by users"
 msgstr ""
 
-#: hours/models.py:264
+#: hours/models.py:309
 msgid "Data source"
 msgstr ""
 
-#: hours/models.py:265
+#: hours/models.py:310
 msgid "Data sources"
 msgstr ""
 
-#: hours/models.py:284
+#: hours/models.py:329
 msgid "Street address"
 msgstr ""
 
-#: hours/models.py:287
+#: hours/models.py:332
 msgid "Resource type"
 msgstr ""
 
-#: hours/models.py:293
+#: hours/models.py:338
 msgid "Sub resources"
 msgstr ""
 
-#: hours/models.py:313
+#: hours/models.py:358
 msgid "Extra data"
 msgstr ""
 
-#: hours/models.py:336
+#: hours/models.py:381
 msgid "Resources"
 msgstr ""
 
-#: hours/models.py:381
+#: hours/models.py:426
 msgctxt "periods_as_text_separator"
 msgid ""
 "\n"
 "========================================\n"
 msgstr ""
 
-#: hours/models.py:387
+#: hours/models.py:432
 #, python-brace-format
 msgid "{separator}{date_periods}{separator}"
 msgstr ""
 
-#: hours/models.py:608 hours/models.py:815 users/models.py:38
+#: hours/models.py:618 hours/models.py:843 users/models.py:38
 msgid "Origin ID"
 msgstr ""
 
-#: hours/models.py:612
+#: hours/models.py:622
 msgid "Resource origin"
 msgstr ""
 
-#: hours/models.py:613
+#: hours/models.py:623
 msgid "Resource origins"
 msgstr ""
 
-#: hours/models.py:646
+#: hours/models.py:656
 msgid "Override"
 msgstr ""
 
-#: hours/models.py:652
+#: hours/models.py:662
 msgid "Period"
 msgstr ""
 
-#: hours/models.py:653
+#: hours/models.py:663
 msgid "Periods"
 msgstr ""
 
-#: hours/models.py:698
+#: hours/models.py:723
 msgid ""
 "\n"
 "\n"
@@ -535,11 +535,11 @@ msgid ""
 "\n"
 msgstr ""
 
-#: hours/models.py:708
+#: hours/models.py:734
 msgid "Not specified"
 msgstr ""
 
-#: hours/models.py:721
+#: hours/models.py:747
 #, python-brace-format
 msgid ""
 "{name}{description}Date period: {dates}\n"
@@ -548,210 +548,210 @@ msgid ""
 "{time_span_groups}\n"
 msgstr ""
 
-#: hours/models.py:819
+#: hours/models.py:847
 msgid "Period origin"
 msgstr ""
 
-#: hours/models.py:820
+#: hours/models.py:848
 msgid "Period origins"
 msgstr ""
 
-#: hours/models.py:875
+#: hours/models.py:903
 msgid ""
 "\n"
 "\n"
 " In effect when every one of these match:\n"
 msgstr ""
 
-#: hours/models.py:891
+#: hours/models.py:919
 msgid "Start time"
 msgstr ""
 
-#: hours/models.py:894
+#: hours/models.py:922
 msgid "End time"
 msgstr ""
 
-#: hours/models.py:897
+#: hours/models.py:925
 msgid "Is end time on the next day"
 msgstr ""
 
-#: hours/models.py:899
+#: hours/models.py:927
 msgid "24 hours"
 msgstr ""
 
-#: hours/models.py:903
+#: hours/models.py:931
 msgid "Weekday"
 msgstr ""
 
-#: hours/models.py:917
+#: hours/models.py:945
 msgid "Time span"
 msgstr ""
 
-#: hours/models.py:918
+#: hours/models.py:946
 msgid "Time spans"
 msgstr ""
 
-#: hours/models.py:957
+#: hours/models.py:985
 msgctxt "timespan_as_text"
 msgid "Every day"
 msgstr ""
 
-#: hours/models.py:984
+#: hours/models.py:1012
 msgctxt "timespan_as_text"
 msgid "The whole day"
 msgstr ""
 
-#: hours/models.py:986
+#: hours/models.py:1014
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{start_time}-{end_time}"
 msgstr ""
 
-#: hours/models.py:1003
+#: hours/models.py:1033
 #, python-brace-format
 msgctxt "timespan_as_text"
 msgid "{weekdays} {times} {state}{description}"
 msgstr ""
 
-#: hours/models.py:1022
+#: hours/models.py:1052
 msgid "Context"
 msgstr ""
 
-#: hours/models.py:1027
+#: hours/models.py:1057
 msgid "Subject"
 msgstr ""
 
-#: hours/models.py:1030
+#: hours/models.py:1060
 msgid "Start"
 msgstr ""
 
-#: hours/models.py:1032
+#: hours/models.py:1062
 msgid "Frequency (ordinal)"
 msgstr ""
 
-#: hours/models.py:1036
+#: hours/models.py:1066
 msgid "Frequency (modifier)"
 msgstr ""
 
-#: hours/models.py:1043
+#: hours/models.py:1073
 msgid "Rule"
 msgstr ""
 
-#: hours/models.py:1044
+#: hours/models.py:1074
 msgid "Rules"
 msgstr ""
 
-#: hours/models.py:1074
+#: hours/models.py:1104
 msgctxt "rule_as_text_context"
 msgid "the period"
 msgstr ""
 
-#: hours/models.py:1076
+#: hours/models.py:1106
 #, python-brace-format
 msgctxt "rule_as_text_context"
 msgid "every {context}"
 msgstr ""
 
-#: hours/models.py:1082
+#: hours/models.py:1112
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "{nth} {subject} in {context}"
 msgstr ""
 
-#: hours/models.py:1091
+#: hours/models.py:1121
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "starting from the {nth} {last} {subject}"
 msgstr ""
 
-#: hours/models.py:1094
+#: hours/models.py:1124
 msgctxt "starting_from_the_last"
 msgid "last"
 msgstr ""
 
-#: hours/models.py:1104
+#: hours/models.py:1134
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "Every {nth} {subject} in {context} {starting_from_text}"
 msgstr ""
 
-#: hours/models.py:1115
+#: hours/models.py:1145
 #, python-brace-format
 msgctxt "rule_as_text"
 msgid "On {modifier} {subject}s in {context}"
 msgstr ""
 
-#: hours/models.py:1136
+#: hours/models.py:1166
 msgid ""
 "We cannot start counting from period start in an infinite period. Please "
 "select shorter context for your rule."
 msgstr ""
 
-#: hours/models.py:1141
+#: hours/models.py:1171
 msgid "Subject must be a shorter timespan than context."
 msgstr ""
 
-#: hours/models.py:1145
+#: hours/models.py:1175
 msgid ""
 "You cannot add a rule with both even/odd and another frequency at the same "
 "time."
 msgstr ""
 
-#: hours/models.py:1154
+#: hours/models.py:1184
 msgid ""
 "Rule can only start from zero if starting from zeroth ISO week of the year. "
 "All other rules start counting from 1. Use negative numbers to count from "
 "the end of the context."
 msgstr ""
 
-#: hours/models.py:1162
+#: hours/models.py:1192
 msgid ""
 "Even/odd subjects are not counted starting from a specific time. If you wish "
 "to have an alternating rule starting from a specific time, please use "
 "frequency_ordinal=2 with start=1 or start=2."
 msgstr ""
 
-#: hours/models.py:1429
+#: hours/models.py:1459
 msgid "Signature"
 msgstr ""
 
-#: hours/models.py:1430
+#: hours/models.py:1460
 msgid "Signature created at"
 msgstr ""
 
-#: hours/models.py:1431
+#: hours/models.py:1461
 msgid "Signature valid until"
 msgstr ""
 
-#: hours/models.py:1433
+#: hours/models.py:1463
 msgid "Invalidated time"
 msgstr ""
 
-#: hours/models.py:1437
+#: hours/models.py:1467
 msgid "Signed auth entry"
 msgstr ""
 
-#: hours/models.py:1438
+#: hours/models.py:1468
 msgid "Signed auth entries"
 msgstr ""
 
-#: hours/models.py:1443
+#: hours/models.py:1473
 msgid "Signing key"
 msgstr ""
 
-#: hours/models.py:1444
+#: hours/models.py:1474
 msgid "Key valid after"
 msgstr ""
 
-#: hours/models.py:1446
+#: hours/models.py:1476
 msgid "Key valid until"
 msgstr ""
 
-#: hours/models.py:1450
+#: hours/models.py:1480
 msgid "Signed auth key"
 msgstr ""
 
-#: hours/models.py:1451
+#: hours/models.py:1481
 msgid "Signed auth keys"
 msgstr ""
 
@@ -768,7 +768,7 @@ msgstr ""
 msgid "All data from data source {self.instance.id} is read-only."
 msgstr ""
 
-#: hours/serializers.py:352 hours/serializers.py:363
+#: hours/serializers.py:351 hours/serializers.py:362
 msgid ""
 "Cannot create or edit sub resources of a resource in an organisation the "
 "user is not part of "
@@ -798,33 +798,37 @@ msgstr ""
 msgid "start_date must be before end_date"
 msgstr ""
 
-#: hours/viewsets.py:555
+#: hours/viewsets.py:563
 msgid "target_resources parameter is required"
 msgstr ""
 
-#: hours/viewsets.py:579
+#: hours/viewsets.py:587
 msgid "Resource with the id \"{}\" not found."
 msgstr ""
 
-#: hours/viewsets.py:585
+#: hours/viewsets.py:593
 msgid "Can't copy date periods to self"
 msgstr ""
 
-#: hours/viewsets.py:597
+#: hours/viewsets.py:605
 msgid "No permission to modify resource(s): {}"
 msgstr ""
 
-#: hours/viewsets.py:707
+#: hours/viewsets.py:628
+msgid "Date periods not found: {}"
+msgstr ""
+
+#: hours/viewsets.py:747
 msgid ""
 "resource, start_date or end_date GET parameter is required to list date "
 "periods"
 msgstr ""
 
-#: hours/viewsets.py:757
+#: hours/viewsets.py:797
 msgid "resource GET parameter is required to list rules of resources"
 msgstr ""
 
-#: hours/viewsets.py:799
+#: hours/viewsets.py:839
 msgid "resource GET parameter is required to list time spans of resources"
 msgstr ""
 

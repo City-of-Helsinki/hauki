@@ -48,7 +48,7 @@ if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
 fi
 if [[ "$INITIAL_TEST_DATA" = "true" ]]; then
     echo "Apply initial test data"
-    deploy/init_application.sh
+    ./manage.py create_e2e_test_data
 fi
 
 if [[ "$1" = "start_django_development_server" ]]; then
@@ -64,8 +64,6 @@ elif [[ "$1" = "initial_data" ]]; then
 elif [[ "$1" = "migrate" ]]; then
     _log_boxed "Running migrations"
     ./manage.py migrate
-    _log_boxed "Updating language fields & installing templates"
-    deploy/init_application.sh
 elif [[ "$1" = "test" ]]; then
     _log_boxed "Running flake8"
     flake8

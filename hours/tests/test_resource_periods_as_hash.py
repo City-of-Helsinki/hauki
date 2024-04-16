@@ -6,6 +6,7 @@ from hours.enums import RuleContext, RuleSubject, State, Weekday
 from hours.models import DatePeriod, Rule, TimeSpan
 from hours.tests.conftest import (
     DatePeriodFactory,
+    ResourceFactory,
     RuleFactory,
     TimeSpanFactory,
     TimeSpanGroupFactory,
@@ -18,6 +19,12 @@ NO_DATE_PERIODS_HASH = "d41d8cd98f00b204e9800998ecf8427e"
 @pytest.mark.parametrize("model", [DatePeriod, TimeSpan, Rule])
 def test_hash_input_should_not_include_name_or_description(model):
     instance = model()
+
+    if model == DatePeriod:
+        # DatePeriod needs pk otherwise the calling as_hash_input will fail
+        instance.resource = ResourceFactory()
+        instance.save()
+
     hash_input = instance.as_hash_input()
     instance.name = "Test name"
     assert instance.as_hash_input() == hash_input

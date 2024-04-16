@@ -738,9 +738,9 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
             else:
                 dates = "{start_date} - {end_date}".format(
                     start_date=formats.date_format(start_date) if start_date else "",
-                    end_date=formats.date_format(self.end_date)
-                    if self.end_date
-                    else "",
+                    end_date=(
+                        formats.date_format(self.end_date) if self.end_date else ""
+                    ),
                 )
 
         return _(
@@ -972,9 +972,11 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
                     self.end_time.isoformat() if self.end_time else "*",
                     str(self.end_time_on_next_day),
                     str(self.full_day),
-                    "".join([str(i.value) for i in sorted_weekdays])
-                    if self.weekdays
-                    else "*",
+                    (
+                        "".join([str(i.value) for i in sorted_weekdays])
+                        if self.weekdays
+                        else "*"
+                    ),
                     str(self.resource_state.value),
                 ]
             )
@@ -1012,12 +1014,14 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
             times = pgettext("timespan_as_text", "The whole day")
         else:
             times = pgettext("timespan_as_text", "{start_time}-{end_time}").format(
-                start_time=formats.time_format(self.start_time, "G.i")
-                if self.start_time
-                else "",
-                end_time=formats.time_format(self.end_time, "G.i")
-                if self.end_time
-                else "",
+                start_time=(
+                    formats.time_format(self.start_time, "G.i")
+                    if self.start_time
+                    else ""
+                ),
+                end_time=(
+                    formats.time_format(self.end_time, "G.i") if self.end_time else ""
+                ),
             )
 
         description = ""
@@ -1089,12 +1093,16 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     self.context.value if self.context else "*",
                     self.subject.value if self.subject else "*",
                     str(self.start) if self.start is not None else "*",
-                    str(self.frequency_ordinal)
-                    if self.frequency_ordinal is not None
-                    else "*",
-                    self.frequency_modifier.value
-                    if self.frequency_modifier is not None
-                    else "*",
+                    (
+                        str(self.frequency_ordinal)
+                        if self.frequency_ordinal is not None
+                        else "*"
+                    ),
+                    (
+                        self.frequency_modifier.value
+                        if self.frequency_modifier is not None
+                        else "*"
+                    ),
                 ]
             )
         )
@@ -1121,9 +1129,11 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     "rule_as_text", "starting from the {nth} {last} {subject}"
                 ).format(
                     nth=ordinal(abs(self.start)) if self.start != -1 else "",
-                    last=pgettext("starting_from_the_last", "last")
-                    if self.start < 0
-                    else "",
+                    last=(
+                        pgettext("starting_from_the_last", "last")
+                        if self.start < 0
+                        else ""
+                    ),
                     subject=pgettext(
                         "starting_from_nth_rulesubject", self.subject.value
                     ),
@@ -1133,9 +1143,11 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                 "rule_as_text",
                 "Every {nth} {subject} in {context} {starting_from_text}",
             ).format(
-                nth=ordinal(self.frequency_ordinal)
-                if self.frequency_ordinal != 1
-                else "",
+                nth=(
+                    ordinal(self.frequency_ordinal)
+                    if self.frequency_ordinal != 1
+                    else ""
+                ),
                 subject=self.subject.label.lower(),
                 context=context_text,
                 starting_from_text=starting_from_text,
@@ -1252,9 +1264,9 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     # contain Thu, count starts from zeroth week.
                     return context_set[self.start :: self.frequency_ordinal]
                 return context_set[
-                    self.start
-                    if self.start < 0
-                    else self.start - 1 :: self.frequency_ordinal
+                    (
+                        self.start if self.start < 0 else self.start - 1
+                    ) :: self.frequency_ordinal
                 ]
             except IndexError:
                 return []

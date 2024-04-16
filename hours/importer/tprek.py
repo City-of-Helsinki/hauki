@@ -942,9 +942,11 @@ class TPRekImporter(Importer):
             "resource_type": resource_type,
             "name": name,
             "description": description,
-            "address": self.get_resource_name(data)
-            if resource_type == ResourceType.ENTRANCE
-            else "",
+            "address": (
+                self.get_resource_name(data)
+                if resource_type == ResourceType.ENTRANCE
+                else ""
+            ),
             "parents": parents,
             "extra_data": data,
             "periods": opening_hours,
@@ -1386,14 +1388,16 @@ class TPRekImporter(Importer):
                 subsection_data = {
                     "origins": datum["origins"],
                     "resource_type": ResourceType.SERVICE_AT_UNIT,
-                    "name": name
-                    if not (
-                        name["fi"] == "Aukioloajat"
-                        or name["fi"] == "Aukiolojakso"
-                        or name["fi"] == "Perusaukiolo"
-                        or name["fi"] == "Poikkeusaukiolo"
-                    )
-                    else {"fi": "Alikohde"},
+                    "name": (
+                        name
+                        if not (
+                            name["fi"] == "Aukioloajat"
+                            or name["fi"] == "Aukiolojakso"
+                            or name["fi"] == "Perusaukiolo"
+                            or name["fi"] == "Poikkeusaukiolo"
+                        )
+                        else {"fi": "Alikohde"}
+                    ),
                     "description": datum["description"],
                     "parents": [parent],
                 }

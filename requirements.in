@@ -1,5 +1,5 @@
 bleach
-Django<4
+Django~=4.2
 django-cors-headers
 django-enumfields
 django-environ

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.0...hauki-v1.2.1) (2024-04-22)
+
+
+### Dependencies
+
+* Upgrade django to 4.2 ([56be006](https://github.com/City-of-Helsinki/hauki/commit/56be006b44f7e0a748d7cb34a1ba993173fc7160))
+
 ## [1.2.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.1.0...hauki-v1.2.0) (2024-04-05)
 
 

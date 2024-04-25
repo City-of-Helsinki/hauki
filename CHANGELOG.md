@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.1...hauki-v1.2.2) (2024-04-25)
+
+
+### Dependencies
+
+* Pin drf-spectacular to 0.26.5 ([eced391](https://github.com/City-of-Helsinki/hauki/commit/eced391313978496bb9e8863dde4b007a2a97e36))
+
 ## [1.2.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.0...hauki-v1.2.1) (2024-04-22)
 
 

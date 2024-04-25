@@ -52,7 +52,7 @@ django-environ==0.11.2
     # via -r requirements.in
 django-extra-fields==3.0.2
     # via -r requirements.in
-django-filter==23.5
+django-filter==24.2
     # via -r requirements.in
 django-helusers==0.11.0
     # via -r requirements.in
@@ -76,7 +76,7 @@ djangorestframework==3.15.1
     #   django-extra-fields
     #   django-orghierarchy
     #   drf-spectacular
-drf-spectacular==0.27.2
+drf-spectacular==0.26.5
     # via -r requirements.in
 drf-writable-nested==0.7.0
     # via -r requirements.in
@@ -86,7 +86,7 @@ ecs-logging==2.1.0
     # via elastic-apm
 elastic-apm==6.22.0
     # via -r requirements.in
-exceptiongroup==1.2.0
+exceptiongroup==1.2.1
     # via cattrs
 holidays==0.47
     # via -r requirements.in
@@ -100,7 +100,7 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 packaging==24.0
     # via deprecation
-platformdirs==4.2.0
+platformdirs==4.2.1
     # via requests-cache
 psycopg2==2.9.9
     # via -r requirements.in
@@ -113,10 +113,10 @@ python-dateutil==2.9.0.post0
 python-jose==3.3.0
     # via django-helusers
 pytz==2024.1
-    # via django
+    # via -r requirements.in
 pyyaml==6.0.1
     # via drf-spectacular
-referencing==0.34.0
+referencing==0.35.0
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -150,7 +150,6 @@ typing-extensions==4.11.0
     #   asgiref
     #   cattrs
     #   django-modeltranslation
-    #   drf-spectacular
 tzdata==2024.1
     # via -r requirements.in
 uritemplate==4.1.1

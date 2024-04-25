@@ -12,7 +12,7 @@ django-orghierarchy
 django-simple-history
 django-timezone-field
 djangorestframework
-drf-spectacular
+drf-spectacular<0.27 # 0.27 breaks the schema generation
 drf-writable-nested
 holidays
 psycopg2
@@ -21,3 +21,4 @@ sentry-sdk
 whitenoise
 elastic-apm
 tzdata
+pytz

@@ -664,6 +664,12 @@ class ResourceViewSet(
                 description="Filter by data source",
             ),
             OpenApiParameter(
+                "resource_data_source",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by resource data source",
+            ),
+            OpenApiParameter(
                 "end_date",
                 OpenApiTypes.DATE,
                 OpenApiParameter.QUERY,
@@ -716,13 +722,17 @@ class DatePeriodViewSet(
     filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_queryset(self):
-        queryset = DatePeriod.objects.prefetch_related(
-            "origins",
-            "origins__data_source",
-            "time_span_groups",
-            "time_span_groups__time_spans",
-            "time_span_groups__rules",
-        ).order_by("start_date", "end_date")
+        queryset = (
+            DatePeriod.objects.prefetch_related(
+                "origins",
+                "origins__data_source",
+                "time_span_groups",
+                "time_span_groups__time_spans",
+                "time_span_groups__rules",
+            )
+            .select_related("resource")
+            .order_by("start_date", "end_date")
+        )
 
         # Filter the queryset according to read permissions
         queryset = filter_queryset_by_permission(
@@ -734,6 +744,7 @@ class DatePeriodViewSet(
     def list(self, request, *args, **kwargs):
         if (
             not request.query_params.get("resource")
+            and not request.query_params.get("resource_data_source")
             and not request.query_params.get("start_date")
             and not request.query_params.get("start_date_lte")
             and not request.query_params.get("start_date_gte")

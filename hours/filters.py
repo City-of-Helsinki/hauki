@@ -123,6 +123,8 @@ class MaybeRelativeNullableDateFilter(Filter):
 class DatePeriodFilter(filters.FilterSet):
     data_source = filters.CharFilter(field_name="origins__data_source")
     resource = filters.CharFilter(method="resource_filter")
+    resource_data_source = filters.CharFilter(method="resource_data_source_filter")
+
     start_date = MaybeRelativeNullableDateFilter()
     end_date = MaybeRelativeNullableDateFilter()
     start_date_gte = MaybeRelativeNullableDateFilter(
@@ -157,6 +159,17 @@ class DatePeriodFilter(filters.FilterSet):
             return queryset
 
         return queryset.filter(resource__in=resources)
+
+    def resource_data_source_filter(self, queryset, name, value):
+        if name != "resource_data_source":
+            return queryset
+
+        queryset = queryset.filter(
+            Q(resource__data_sources=value)
+            | Q(resource__ancestry_data_source__contains=[value])
+        )
+
+        return queryset
 
 
 class TimeSpanFilter(filters.FilterSet):

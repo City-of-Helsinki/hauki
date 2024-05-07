@@ -143,12 +143,17 @@ def test_list_date_periods_filter_by_resource_direct_data_source(
     )
     date_period_factory(
         resource=resource_factory(),
+        start_date=datetime.date(year=2024, month=1, day=1),
     )
 
     url = reverse("date_period-list")
 
     response = admin_client.get(
-        url, data={"resource_data_source": expected_data_source.id}
+        url,
+        data={
+            "resource_data_source": expected_data_source.id,
+            "start_date_lte": "2024-01-05",
+        },
     )
 
     assert_response_status_code(response, 200)
@@ -174,15 +179,23 @@ def test_list_date_periods_filter_by_resource_data_source_ancestor(
 
     expected_date_period = date_period_factory(
         resource=resource,
+        start_date=datetime.date(year=2024, month=1, day=1),
+        end_date=datetime.date(year=2024, month=5, day=31),
     )
     date_period_factory(
         resource=resource_factory(),
+        start_date=datetime.date(year=2024, month=1, day=1),
+        end_date=datetime.date(year=2024, month=5, day=31),
     )
 
     url = reverse("date_period-list")
 
     response = admin_client.get(
-        url, data={"resource_data_source": expected_data_source.id}
+        url,
+        data={
+            "resource_data_source": expected_data_source.id,
+            "start_date_gte": "2024-01-01",
+        },
     )
 
     assert_response_status_code(response, 200)

@@ -744,7 +744,6 @@ class DatePeriodViewSet(
     def list(self, request, *args, **kwargs):
         if (
             not request.query_params.get("resource")
-            and not request.query_params.get("resource_data_source")
             and not request.query_params.get("start_date")
             and not request.query_params.get("start_date_lte")
             and not request.query_params.get("start_date_gte")

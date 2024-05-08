@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.2...hauki-v1.3.0) (2024-05-08)
+
+
+### Features
+
+* Add resource_data_source filter to date periods ([822de66](https://github.com/City-of-Helsinki/hauki/commit/822de66eb7360684a82d2f4341042cccccc21137))
+* Enforce date filters with resource data source ([a73d85e](https://github.com/City-of-Helsinki/hauki/commit/a73d85ea4d4b4f40e890803be55c4a102efe8a16))
+
 ## [1.2.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.1...hauki-v1.2.2) (2024-04-25)
 
 

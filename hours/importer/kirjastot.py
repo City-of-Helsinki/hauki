@@ -28,7 +28,7 @@ from .base import Importer, register_importer
 from .sync import ModelSyncher
 
 KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
-fi_holidays = holidays.Finland()
+finnish_holiday_names = holidays.Finland(language="fi")
 
 # List of periods that are known not to be a rotation of x weeks, but need to be
 # handled day-by-day.
@@ -449,7 +449,12 @@ class KirjastotImporter(Importer):
 
         periods = []
         for day in period["days"]:
-            name = day.get("info") if day.get("info") else fi_holidays.get(day["date"])
+            # Use the provided name if it exists, otherwise use the holiday name
+            name = (
+                day.get("info")
+                if day.get("info")
+                else finnish_holiday_names.get(day["date"])
+            )
             sub_period = {
                 "resource": resource,
                 "name": {"fi": name},

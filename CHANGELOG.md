@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.0...hauki-v1.3.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* **kirjastot:** Use finnish translations for holidays ([18a96c9](https://github.com/City-of-Helsinki/hauki/commit/18a96c9df1c2ecc4e2d45a60ba530e53522f5c35))
+
 ## [1.3.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.2.2...hauki-v1.3.0) (2024-05-08)
 
 

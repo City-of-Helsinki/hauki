@@ -30,7 +30,7 @@ charset-normalizer==3.3.2
     # via requests
 deprecation==2.1.0
     # via django-helusers
-django==4.2.11
+django==4.2.13
     # via
     #   -r requirements.in
     #   django-cors-headers
@@ -54,13 +54,13 @@ django-extra-fields==3.0.2
     # via -r requirements.in
 django-filter==24.2
     # via -r requirements.in
-django-helusers==0.11.0
+django-helusers==0.12.0
     # via -r requirements.in
 django-js-asset==2.2.0
     # via django-mptt
-django-model-utils==4.5.0
+django-model-utils==4.5.1
     # via -r requirements.in
-django-modeltranslation==0.18.11
+django-modeltranslation==0.18.13
     # via -r requirements.in
 django-mptt==0.16.0
     # via django-orghierarchy
@@ -84,23 +84,23 @@ ecdsa==0.19.0
     # via python-jose
 ecs-logging==2.1.0
     # via elastic-apm
-elastic-apm==6.22.0
+elastic-apm==6.22.2
     # via -r requirements.in
 exceptiongroup==1.2.1
     # via cattrs
-holidays==0.47
+holidays==0.49
     # via -r requirements.in
 idna==3.7
     # via requests
 inflection==0.5.1
     # via drf-spectacular
-jsonschema==4.21.1
+jsonschema==4.22.0
     # via drf-spectacular
 jsonschema-specifications==2023.12.1
     # via jsonschema
 packaging==24.0
     # via deprecation
-platformdirs==4.2.1
+platformdirs==4.2.2
     # via requests-cache
 psycopg2==2.9.9
     # via -r requirements.in
@@ -116,24 +116,24 @@ pytz==2024.1
     # via -r requirements.in
 pyyaml==6.0.1
     # via drf-spectacular
-referencing==0.35.0
+referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.31.0
+requests==2.32.2
     # via
     #   django-helusers
     #   django-orghierarchy
     #   requests-cache
 requests-cache==1.2.0
     # via -r requirements.in
-rpds-py==0.18.0
+rpds-py==0.18.1
     # via
     #   jsonschema
     #   referencing
 rsa==4.9
     # via python-jose
-sentry-sdk==1.45.0
+sentry-sdk==2.2.1
     # via -r requirements.in
 six==1.16.0
     # via
@@ -166,5 +166,5 @@ webencodings==0.5.1
     # via bleach
 whitenoise==6.6.0
     # via -r requirements.in
-wrapt==1.14.1
+wrapt==1.16.0
     # via elastic-apm

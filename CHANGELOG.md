@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.1...hauki-v1.3.2) (2024-05-24)
+
+
+### Dependencies
+
+* Upgrade dependencies ([1b55384](https://github.com/City-of-Helsinki/hauki/commit/1b553848b37026c5f5660722ca72fb256ed119b9))
+
 ## [1.3.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.0...hauki-v1.3.1) (2024-05-14)
 
 

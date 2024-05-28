@@ -886,7 +886,7 @@ class KirjastotImporter(Importer):
                     for period in saved_periods:
                         # Mark the period to not be deleted.
                         syncher.mark(period)
-                    syncher.finish(force=self.options["force"])
+                    syncher.finish(force=True)
 
                     self.logger.info(
                         f'Imported hours for "{library.name}" [ID: {library.id}]'

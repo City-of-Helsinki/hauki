@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.2...hauki-v1.3.3) (2024-05-29)
+
+
+### Bug Fixes
+
+* **kirjastot:** Force sync finish ([a8707f8](https://github.com/City-of-Helsinki/hauki/commit/a8707f8bbabce826385509b583805a5dc10a9ae4))
+
 ## [1.3.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.1...hauki-v1.3.2) (2024-05-24)
 
 

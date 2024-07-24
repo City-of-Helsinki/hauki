@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
 
     postgres:
@@ -12,9 +10,9 @@ services:
             - "127.0.0.1:5555:5432"
         volumes:
             - postgres-data-volume:/var/lib/postgresql/data
+        container_name: hauki-postgres
 
-    dev:
-        image: hauki_dev
+    django:
         depends_on:
             - postgres
         build:
@@ -23,7 +21,7 @@ services:
             target: development
         environment:
             - DEBUG=true
-            - DATABASE_URL=postgres://hauki:hauki@postgres/hauki
+            - DATABASE_URL=postgres://hauki:hauki@hauki-postgres/hauki
             - WAIT_FOR_IT_ADDRESS=postgres:5432
         # Uncomment this if you want to configure development instance with the external file
         # env_file:
@@ -33,15 +31,14 @@ services:
         command: ["start_django_development_server"]
         ports:
             - "127.0.0.1:8000:8000"
+        container_name: hauki-backend
 
     deploy:
-        image: hauki
         build:
             context: ./
             dockerfile: ./Dockerfile
             target: production
         command: "echo Not running deploy image from compose"
-
 
 volumes:
         postgres-data-volume:

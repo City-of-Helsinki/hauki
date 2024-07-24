@@ -126,7 +126,7 @@ python manage.py runserver
 ```
 and open your browser to http://127.0.0.1:8000/.
 
-#### Pre-commit hooks
+## Pre-commit hooks
 
 Before committing files to the repository it's advisable to use the configured pre-commit hooks (see [`.pre-commit-config.yaml`](./.pre-commit-config.yaml)). The CI pipeline will fail if the files are not formatted correctly.
 
@@ -151,6 +151,17 @@ specification, and line length is limited to 72 characters.
 
 When [`pre-commit`](https://pre-commit.com/) is in use, [`commitlint`](https://github.com/conventional-changelog/commitlint)
 checks new commit messages for the correct format.
+
+## Git blame ignore refs
+
+Project includes a `.git-blame-ignore-revs` file for ignoring certain commits from `git blame`.
+This can be useful for ignoring e.g. formatting commits, so that it is more clear from `git blame`
+where the actual code change came from. Configure your git to use it for this project with the
+following command:
+
+```shell
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ## Release
 

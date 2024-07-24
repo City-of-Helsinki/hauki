@@ -1,5 +1,5 @@
 # ==============================
-FROM registry.access.redhat.com/ubi9/python-39 as appbase
+FROM registry.access.redhat.com/ubi9/python-39 AS appbase
 # ==============================
 
 USER root
@@ -33,7 +33,7 @@ ENTRYPOINT ["deploy/entrypoint.sh"]
 EXPOSE 8000/tcp
 
 # ==============================
-FROM appbase as development
+FROM appbase AS development
 # ==============================
 
 COPY --chown=default:root requirements-dev.txt .

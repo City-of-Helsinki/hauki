@@ -46,6 +46,10 @@ class UserOrigin(models.Model):
                 fields=["data_source", "origin_id"],
                 name="unique_user_origin_identifier_per_data_source",
             ),
+            models.UniqueConstraint(
+                fields=["data_source", "user"],
+                name="unique_user_per_data_source",
+            ),
         ]
 
     def __str__(self):

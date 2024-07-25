@@ -35,7 +35,7 @@ class UserOrigin(models.Model):
     user = models.ForeignKey(User, related_name="origins", on_delete=models.CASCADE)
     data_source = models.ForeignKey("hours.DataSource", on_delete=models.CASCADE)
     origin_id = models.CharField(
-        verbose_name=_("Origin ID"), max_length=100, null=True, blank=True
+        verbose_name=_("Origin ID"), max_length=100, blank=True
     )
 
     class Meta:

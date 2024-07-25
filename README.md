@@ -51,7 +51,7 @@ Run tests with
 docker compose run dev test
 ```
 
-Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/docker-compose.yml#L29 to activate
+Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/compose.yml#L27-L28 to activate
 configuring the dev environment with a local file.
 
 ### Production

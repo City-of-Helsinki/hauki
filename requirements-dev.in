@@ -1,13 +1,10 @@
 -c requirements.txt
 bandit
-black
 django-extensions
 factory_boy
 faker
-flake8
 freezegun
 ipython
-isort
 pip-tools
 pre-commit
 pytest
@@ -16,3 +13,8 @@ pytest-django
 pytest-factoryboy
 requests-mock
 safety
+
+# Keep these tools in sync with .pre-commit-config.yaml
+black==24.4.2
+flake8==7.1.0
+isort==5.13.2

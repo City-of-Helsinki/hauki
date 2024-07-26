@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.4](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.3...hauki-v1.3.4) (2024-07-26)
+
+
+### Bug Fixes
+
+* Remove null=True from UserOrigin.origin_id ([60fe755](https://github.com/City-of-Helsinki/hauki/commit/60fe75567d15c7f56ac53395a92d4ffe0f4fd0cc))
+
+
+### Dependencies
+
+* Bump pre-commit tool versions ([d239a20](https://github.com/City-of-Helsinki/hauki/commit/d239a204a9b336c3d3d01b9709ae1f432885f33d))
+
+
+### Documentation
+
+* **readme:** Add note about .git-blame-ignore-revs ([5e93609](https://github.com/City-of-Helsinki/hauki/commit/5e93609666894f726fea956e006d2d8482c03bc0))
+
 ## [1.3.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.2...hauki-v1.3.3) (2024-05-29)
 
 

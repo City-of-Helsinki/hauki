@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.5](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.4...hauki-v1.3.5) (2024-08-09)
+
+
+### Reverts
+
+* Remove earlier fix for HAUKI-656 ([88d4ce4](https://github.com/City-of-Helsinki/hauki/commit/88d4ce4233cab1cb1d2c17087c83c5cbe162c074))
+
 ## [1.3.4](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.3...hauki-v1.3.4) (2024-07-26)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.5...hauki-v1.3.6) (2024-08-22)
+
+
+### Bug Fixes
+
+* Add constraint for UserOrigin's user and data_source fields ([fc61972](https://github.com/City-of-Helsinki/hauki/commit/fc61972883b03dd7e68d9fdbd7764557c0838a4d))
+
 ## [1.3.5](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.4...hauki-v1.3.5) (2024-08-09)
 
 

@@ -1,5 +1,5 @@
 from django.utils.translation import pgettext_lazy
-from enumfields import Enum
+from enumfields import Enum, IntEnum
 
 
 class State(Enum):
@@ -83,7 +83,7 @@ class ResourceType(Enum):
         ENTRANCE = pgettext_lazy("ResourceType", "Entrance or exit")
 
 
-class Weekday(Enum):
+class Weekday(IntEnum):
     MONDAY = 1
     TUESDAY = 2
     WEDNESDAY = 3

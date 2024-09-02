@@ -356,9 +356,21 @@ class Importer(object):
                 existing_time_spans = existing_group.time_spans.all()
                 existing_rules = existing_group.rules.all()
 
+            def default_getter(o):
+                return (
+                    o.get("weekdays"),
+                    o.get("start_time"),
+                    o.get("end_time_on_next_day"),
+                    o.get("end_time"),
+                    o.get("resource_state"),
+                )
+
+            # Sort imported time spans so they match DB order
+            sorted_time_spans = sorted(datum["time_spans"], key=default_getter)
+
             # if data didn't change, the time spans will be in db order
             for time_span_datum, existing_time_span in zip_longest(
-                datum["time_spans"], existing_time_spans, fillvalue=None
+                sorted_time_spans, existing_time_spans, fillvalue=None
             ):
                 if not time_span_datum:
                     existing_time_span.delete()

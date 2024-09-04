@@ -59,6 +59,7 @@ def test_test_date_periods_as_text_for_tprek_api_with_past_date_periods(
     date_period_factory,
     time_span_group_factory,
     time_span_factory,
+    django_assert_num_queries,
 ):
     data_source = data_source_factory(id="tprek")
 
@@ -87,11 +88,12 @@ def test_test_date_periods_as_text_for_tprek_api_with_past_date_periods(
 
     url = reverse("date_periods_as_text_for_tprek-list")
 
-    with freeze_time("2020-10-17 12:00:00+02:00"):
-        response = admin_client.get(
-            url,
-            content_type="application/json",
-        )
+    with django_assert_num_queries(10):
+        with freeze_time("2020-10-17 12:00:00+02:00"):
+            response = admin_client.get(
+                url,
+                content_type="application/json",
+            )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data

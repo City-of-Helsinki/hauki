@@ -1081,19 +1081,39 @@ class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
     filter_backends = (DjangoFilterBackend, DatePeriodsAsTextForTprekBackend)
     pagination_class = PageSizePageNumberPagination
 
-    def get_queryset(self):
+    def get_queryset(self, time_now=None):
+        if not time_now:
+            time_now = timezone.now()
+        earliest_end_date = (time_now - datetime.timedelta(hours=26)).date()
         queryset = (
             Resource.objects.filter(
                 # Query only resources that have date periods
                 Exists(DatePeriod.objects.filter(resource=OuterRef("pk"))),
             )
+            .only("id", "name", "timezone")
             .prefetch_related(
                 "origins",
                 "origins__data_source",
-                "date_periods",
-                "date_periods__time_span_groups",
-                "date_periods__time_span_groups__time_spans",
-                "date_periods__time_span_groups__rules",
+                Prefetch(
+                    "date_periods",
+                    DatePeriod.objects.filter(
+                        Q(end_date__gte=earliest_end_date) | Q(end_date__isnull=True)
+                    ).prefetch_related(
+                        Prefetch(
+                            "time_span_groups",
+                            TimeSpanGroup.objects.all().prefetch_related(
+                                Prefetch(
+                                    "time_spans",
+                                    TimeSpan.objects.all().defer("name"),
+                                ),
+                                Prefetch(
+                                    "rules",
+                                    Rule.objects.all().defer("name", "description"),
+                                ),
+                            ),
+                        )
+                    ),
+                ),
             )
             .distinct()
             .order_by("id")
@@ -1107,9 +1127,10 @@ class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
         time_now = timezone.now()
+        queryset = self.filter_queryset(self.get_queryset(time_now))
+        page = self.paginate_queryset(queryset)
+
         results = []
 
         for resource in page:

@@ -6,7 +6,7 @@ import pytz
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.http import Http404
 from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
@@ -39,7 +39,7 @@ from rest_framework.response import Response
 from .authentication import HaukiSignedAuthData
 from .enums import State
 from .filters import DatePeriodFilter, TimeSpanFilter, parse_maybe_relative_date_string
-from .models import DatePeriod, Resource, Rule, TimeElement, TimeSpan
+from .models import DatePeriod, Resource, Rule, TimeElement, TimeSpan, TimeSpanGroup
 from .permissions import (
     IsMemberOrAdminOfOrganization,
     ReadOnlyPublic,
@@ -959,7 +959,11 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
     serializer_class = ResourceDailyOpeningHoursSerializer
     pagination_class = PageSizePageNumberPagination
 
-    def get_queryset(self):
+    def get_queryset(self, start_date=None):
+        if not start_date:
+            start_date = timezone.now().date()
+        earliest_end_date = start_date - datetime.timedelta(days=1)
+
         queryset = (
             Resource.objects.filter(
                 # Query only resources that have date periods
@@ -968,10 +972,22 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
             .prefetch_related(
                 "origins",
                 "origins__data_source",
-                "date_periods",
-                "date_periods__time_span_groups",
-                "date_periods__time_span_groups__time_spans",
-                "date_periods__time_span_groups__rules",
+                Prefetch(
+                    "date_periods",
+                    DatePeriod.objects.filter(
+                        Q(end_date__gte=earliest_end_date) | Q(end_date__isnull=True)
+                    )
+                    .defer("name", "description")
+                    .prefetch_related(
+                        Prefetch(
+                            "time_span_groups",
+                            TimeSpanGroup.objects.all().prefetch_related(
+                                Prefetch("time_spans", TimeSpan.objects.all()),
+                                Prefetch("rules", Rule.objects.all()),
+                            ),
+                        )
+                    ),
+                ),
             )
             .distinct()
             .order_by("id")
@@ -985,11 +1001,11 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
         return queryset
 
     def list(self, request, *args, **kwargs):
+        (start_date, end_date) = get_start_and_end_from_params(request)
+
         # TODO: Maybe disallow listing all of the resources and require
         #       data_source or possibly some other filter.
-        queryset = self.filter_queryset(self.get_queryset())
-
-        (start_date, end_date) = get_start_and_end_from_params(request)
+        queryset = self.filter_queryset(self.get_queryset(start_date=start_date))
 
         page = self.paginate_queryset(queryset)
 

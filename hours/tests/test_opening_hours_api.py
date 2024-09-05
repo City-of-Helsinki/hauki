@@ -104,6 +104,7 @@ def test_opening_hours_date_period_with_hours_and_rule(
     time_span_group_factory,
     time_span_factory,
     rule_factory,
+    django_assert_num_queries,
 ):
     period = date_period_factory(
         resource=resource,
@@ -127,12 +128,12 @@ def test_opening_hours_date_period_with_hours_and_rule(
         "start_date": "2020-11-01",
         "end_date": "2020-11-30",
     }
-
-    response = admin_client.get(
-        url,
-        data=data,
-        content_type="application/json",
-    )
+    with django_assert_num_queries(9):
+        response = admin_client.get(
+            url,
+            data=data,
+            content_type="application/json",
+        )
 
     assert response.status_code == 200, "{} {}".format(
         response.status_code, response.data

@@ -1100,7 +1100,6 @@ class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
                     ),
                 ),
             )
-            .distinct()
             .order_by("id")
         )
 

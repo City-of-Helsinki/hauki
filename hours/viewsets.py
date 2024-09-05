@@ -989,7 +989,6 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
                     ),
                 ),
             )
-            .distinct()
             .order_by("id")
         )
 

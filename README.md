@@ -1,6 +1,6 @@
 # hauki
 
-[![Build Status](https://dev.azure.com/City-of-Helsinki/hauki/_apis/build/status/City-of-Helsinki.hauki-experimental?branchName=master)](https://dev.azure.com/City-of-Helsinki/hauki/_build/latest?definitionId=21&branchName=master)
+[![Build Status](https://dev.azure.com/City-of-Helsinki/hauki/_apis/build/status/City-of-Helsinki.hauki-experimental?branchName=master)](https://dev.azure.com/City-of-Helsinki/hauki/_build/latest?definitionId=21&branchName=main)
 
 Django application and REST API for managing opening hours across all services
 
@@ -51,7 +51,7 @@ Run tests with
 docker compose run dev test
 ```
 
-Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/master/compose.yml#L27-L28 to activate
+Also, uncomment line https://github.com/City-of-Helsinki/hauki/blob/main/compose.yml#L27-L28 to activate
 configuring the dev environment with a local file.
 
 ### Production
@@ -173,7 +173,7 @@ New commit to PR will trigger review pipeline. Review pipeline builds applicatio
 
 #### Dev environment
 
-Deployment to dev environment is handled automatically from master branch. Updates to master branch triggers
+Deployment to dev environment is handled automatically from main branch. Updates to main branch triggers
 azure pipeline that will run tests, build and deploy to dev environment hosted by red hat openshift.
 Currently azure-pipeline is configured directly from version control, but red hat openshift configuration resides in openshift cluster.
 

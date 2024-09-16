@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.7](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.6...hauki-v1.3.7) (2024-09-16)
+
+
+### Bug Fixes
+
+* Sort imported time spans before comparing to DB values ([f400aaf](https://github.com/City-of-Helsinki/hauki/commit/f400aaf51bae6bbc9b2e3d1e8e5ddc9eeeec9ccd))
+* Speed up DatePeriodsAsTextForTprek ([16234ca](https://github.com/City-of-Helsinki/hauki/commit/16234cae2aa3b8906e379cb1eb135f6d191977cf))
+* Speed up OpeningHours ([bd8591a](https://github.com/City-of-Helsinki/hauki/commit/bd8591a0e121c37d0ff393ddc8deb286191f9237))
+
+
+### Performance Improvements
+
+* Remove unnecessary qs distinct call ([c3fa71b](https://github.com/City-of-Helsinki/hauki/commit/c3fa71bb9d36d7aba42f9c7d1986a74b6a52f7bf))
+* Remove unnecessary qs distinct call ([d8d9e77](https://github.com/City-of-Helsinki/hauki/commit/d8d9e77cfc8066fe1379e930f41f4643036d1aac))
+
 ## [1.3.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.5...hauki-v1.3.6) (2024-08-22)
 
 

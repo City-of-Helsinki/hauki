@@ -70,7 +70,7 @@ django-simple-history==3.5.0
     # via -r requirements.in
 django-timezone-field==6.1.0
     # via -r requirements.in
-djangorestframework==3.15.1
+djangorestframework==3.15.2
     # via
     #   -r requirements.in
     #   django-extra-fields

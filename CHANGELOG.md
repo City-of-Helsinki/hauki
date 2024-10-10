@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.8](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.7...hauki-v1.3.8) (2024-10-10)
+
+
+### Dependencies
+
+* Bump authlib from 1.3.0 to 1.3.1 ([c2d299f](https://github.com/City-of-Helsinki/hauki/commit/c2d299fb1549476663dfd252e45c1a7b455f3785))
+* Bump django from 4.2.13 to 4.2.16 ([3c502f2](https://github.com/City-of-Helsinki/hauki/commit/3c502f26b1c364c537c9b2d36f4a2aa9024f4d5c))
+* Bump djangorestframework from 3.15.1 to 3.15.2 ([7fc4b44](https://github.com/City-of-Helsinki/hauki/commit/7fc4b441930b40a897039c63263bdcbc1c58db82))
+
 ## [1.3.7](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.6...hauki-v1.3.7) (2024-09-16)
 
 

@@ -133,7 +133,7 @@ rpds-py==0.18.1
     #   referencing
 rsa==4.9
     # via python-jose
-sentry-sdk==2.2.1
+sentry-sdk==2.16.0
     # via -r requirements.in
 six==1.16.0
     # via

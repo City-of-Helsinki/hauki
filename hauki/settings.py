@@ -51,6 +51,7 @@ env = environ.Env(
     SYSTEM_DATA_SOURCE_ID=(str, "hauki"),
     LANGUAGES=(list, ["fi", "sv", "en"]),
     DATABASE_URL=(str, "postgres:///hauki"),
+    DATABASE_PASSWORD=(str, ""),
     TEST_DATABASE_URL=(str, ""),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ""),
     TOKEN_AUTH_SHARED_SECRET=(str, ""),
@@ -99,6 +100,9 @@ DATABASES["default"]["CONN_MAX_AGE"] = env("CONN_MAX_AGE")
 
 if env("TEST_DATABASE_URL"):
     DATABASES["default"]["TEST"] = env.db("TEST_DATABASE_URL")
+
+if env("DATABASE_PASSWORD"):
+    DATABASES["default"]["PASSWORD"] = env("DATABASE_PASSWORD")
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 

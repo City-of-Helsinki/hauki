@@ -34,9 +34,10 @@ def mock_tprek_data(requests_mock, request):
     connections_file_path = os.path.join(
         os.path.dirname(__file__), "fixtures", connections_file_name
     )
-    with open(units_file_path) as units_file, open(
-        connections_file_path
-    ) as connections_file:
+    with (
+        open(units_file_path) as units_file,
+        open(connections_file_path) as connections_file,
+    ):
         units = json.load(units_file)
         connections = json.load(connections_file)
     requests_mock.get(

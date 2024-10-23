@@ -59,8 +59,9 @@ def filter_queryset_by_permission(user, queryset, auth=None):
     ) | (
         Q(
             **{
-                path_to_resource
-                + "ancestry_organization__overlap": [o.id for o in users_organizations]
+                path_to_resource + "ancestry_organization__overlap": [
+                    o.id for o in users_organizations
+                ]
             }
         )
     )

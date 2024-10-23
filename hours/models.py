@@ -1028,9 +1028,7 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         if self.description:
             description = ' "{}"'.format(
                 # Sanitize TPR parsing specific special chars
-                self.description.replace("\n", " ")
-                .replace("/", "")
-                .replace('"', "")
+                self.description.replace("\n", " ").replace("/", "").replace('"', "")
             )
 
         return pgettext(

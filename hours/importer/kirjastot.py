@@ -133,15 +133,15 @@ class KirkantaJsonResponse(TypedDict):
     total: int
 
 
-class KirjastotException(Exception):
+class KirjastotError(Exception):
     pass
 
 
-class KirjastotImporterException(KirjastotException):
+class KirjastotImporterError(KirjastotError):
     pass
 
 
-class KirjastotValidationError(KirjastotException):
+class KirjastotValidationError(KirjastotError):
     def __init__(self, msg: str = "", errors=None):
         self.msg = msg
         self.errors = errors or []

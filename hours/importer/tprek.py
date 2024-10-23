@@ -312,13 +312,7 @@ class TPRekImporter(Importer):
 
     def clean_parsed_subsection_name(self, name: str) -> name:
         # The hours are for a new subsection, remove superfluous words
-        while (
-            name.endswith(" on")
-            or name.endswith(" ovat")
-            or name.endswith(" ja")
-            or name.endswith(" olemme")
-            or name.endswith(" (")
-        ):
+        while name.endswith((" on", " ovat", " ja", " olemme", " (")):
             name = name.rsplit(" ", 1)[0]
         return name
 

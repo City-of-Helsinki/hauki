@@ -85,7 +85,7 @@ BASE_DIR = root()
 env_file_path = os.path.join(BASE_DIR, CONFIG_FILE_NAME)
 if os.path.exists(env_file_path):
     # Logging configuration is not available at this point
-    print(f"Reading config from {env_file_path}")
+    print(f"Reading config from {env_file_path}")  # noqa: T201
     environ.Env.read_env(env_file_path)
 
 DEBUG = env("DEBUG")

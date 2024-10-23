@@ -989,8 +989,9 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         sorted_weekdays = sorted(self.weekdays, key=attrgetter("value"))
 
         weekday_strings = []
-        for k, group in itertools.groupby(
-            sorted_weekdays, lambda w, c=itertools.count(): w.value - next(c)
+        for _k, group in itertools.groupby(
+            sorted_weekdays,
+            lambda w, c=itertools.count(): w.value - next(c),  # noqa: B008
         ):
             consecutive_weekdays = list(group)
             if len(consecutive_weekdays) > 1:
@@ -1028,9 +1029,7 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         if self.description:
             description = ' "{}"'.format(
                 # Sanitize TPR parsing specific special chars
-                self.description.replace("\n", " ")
-                .replace("/", "")
-                .replace('"', "")
+                self.description.replace("\n", " ").replace("/", "").replace('"', "")
             )
 
         return pgettext(

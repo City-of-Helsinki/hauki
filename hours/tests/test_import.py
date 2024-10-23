@@ -34,9 +34,10 @@ def mock_tprek_data(requests_mock, request):
     connections_file_path = os.path.join(
         os.path.dirname(__file__), "fixtures", connections_file_name
     )
-    with open(units_file_path) as units_file, open(
-        connections_file_path
-    ) as connections_file:
+    with (
+        open(units_file_path) as units_file,
+        open(connections_file_path) as connections_file,
+    ):
         units = json.load(units_file)
         connections = json.load(connections_file)
     requests_mock.get(
@@ -48,7 +49,7 @@ def mock_tprek_data(requests_mock, request):
     )
     if merge:
         call_command("hours_import", "tprek", resources=True, merge=True)
-        print("merged specified connections")
+        print("merged specified connections")  # noqa: T201
     else:
         call_command("hours_import", "tprek", resources=True)
     if change == "edit":
@@ -81,11 +82,11 @@ def mock_tprek_data(requests_mock, request):
         )
         if merge:
             call_command("hours_import", "tprek", resources=True, merge=True)
-            print("merged specified connections")
+            print("merged specified connections")  # noqa: T201
         else:
             call_command("hours_import", "tprek", resources=True)
-        print("made a change and rerun")
-        print(change)
+        print("made a change and rerun")  # noqa: T201
+        print(change)  # noqa: T201
     return {
         "merged_specific_connections": merge,
         "made_a_change_and_rerun": change,
@@ -222,8 +223,8 @@ def mock_library_data(requests_mock, request):
         # TODO: should we test for periods edited mid-period so that old dates may
         # hold old data, and only update periods based on current and future dates??
         if change:
-            print("made a change")
-            print(change)
+            print("made a change")  # noqa: T201
+            print(change)  # noqa: T201
         if change == "next_month":
             date = "2020-07-01"
             url_to_mock = (

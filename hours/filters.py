@@ -49,7 +49,7 @@ def parse_maybe_relative_date_string(
     match = re.fullmatch(r"([-+]?)\s*(\d+)([dwmy])", date_string)
 
     if match:
-        RELATIVEDELTA_PARAM_MAP = {
+        relativedelta_param_map = {
             "d": "days",
             "w": "weeks",
             "m": "months",
@@ -57,7 +57,7 @@ def parse_maybe_relative_date_string(
         }
 
         relativedelta_params = {
-            RELATIVEDELTA_PARAM_MAP[match.group(3)]: int(
+            relativedelta_param_map[match.group(3)]: int(
                 match.group(1) + match.group(2)
             )
         }

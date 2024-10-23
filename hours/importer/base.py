@@ -109,7 +109,7 @@ class Importer(object):
         if strip_newlines:
             text = text.replace("\r", "").replace("\n", " ")
         # remove consecutive whitespaces
-        return re.sub(r"\s\s+", " ", text, re.U).strip()
+        return re.sub(r"\s\s+", " ", text, re.U).strip()  # noqa: B034
 
     def _set_field(self, obj: object, field_name: str, val: object):
         """

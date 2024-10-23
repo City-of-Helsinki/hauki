@@ -12,7 +12,7 @@ class TranslatedChoiceNamesMetadata(SimpleMetadata):
             choices = []
             for val in field.enum:
                 choice = {"value": val.value, "display_name": {}}
-                for lang_code, lang_name in settings.LANGUAGES:
+                for lang_code, _lang_name in settings.LANGUAGES:
                     with translation.override(lang_code):
                         choice["display_name"][lang_code] = str(val.label)
 

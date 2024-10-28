@@ -108,6 +108,7 @@ class Importer(object):
         text = text.replace("\u0000", " ")
         if strip_newlines:
             text = text.replace("\r", "").replace("\n", " ")
+        # TODO check this, re.U seems to be erroneously used as count
         # remove consecutive whitespaces
         return re.sub(r"\s\s+", " ", text, re.U).strip()  # noqa: B034
 

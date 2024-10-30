@@ -426,6 +426,7 @@ class Importer(object):
         return period
 
 
+_importers_loaded = False
 importers = {}
 
 
@@ -435,7 +436,8 @@ def register_importer(klass):
 
 
 def get_importers():
-    if importers:
+    global _importers_loaded
+    if _importers_loaded:
         return importers
     module_path = __name__.rpartition(".")[0]
     # Importing the packages will cause their register_importer() methods
@@ -448,4 +450,5 @@ def get_importers():
             continue
         full_path = "%s.%s" % (module_path, module)
         ret = __import__(full_path, locals(), globals())
+    _importers_loaded = True
     return importers

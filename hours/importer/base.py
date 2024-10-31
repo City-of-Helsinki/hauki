@@ -108,9 +108,11 @@ class Importer(object):
         text = text.replace("\u0000", " ")
         if strip_newlines:
             text = text.replace("\r", "").replace("\n", " ")
-        # TODO check this, re.U seems to be erroneously used as count
         # remove consecutive whitespaces
-        return re.sub(r"\s\s+", " ", text, re.U).strip()  # noqa: B034
+        # NOTE: re.U is most likely redundant, but the redundancy is mentioned
+        # only from 3.11 onwards. Keeping it for now.
+        # See: https://docs.python.org/3.11/library/re.html#re.U
+        return re.sub(r"\s\s+", " ", text, flags=re.U).strip()
 
     def _set_field(self, obj: object, field_name: str, val: object):
         """

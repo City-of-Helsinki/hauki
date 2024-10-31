@@ -136,7 +136,7 @@ pre-commit is included in the requirements-dev.txt. After cloning the repository
 pre-commit install
 ```
 
-The pre-commit hook runs isort, black and flake8 checks on the staged files before committing. The badly formatted files are not automatically changed, you have to run black and/or isort yourself.
+The pre-commit hook runs Ruff and other checks on the staged files before committing. The badly formatted files are not automatically changed, you have to run Ruff yourself.
 
 You can at any time run the following command if you would like to check all of the files.
 

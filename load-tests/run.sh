@@ -6,4 +6,4 @@ export API_URL=https://hauki.api.stage.hel.ninja/v1
 
 # export AUTH_PARAMS=$(node ../scripts/generate-auth-params.js)
 
-k6 run "$@" 
+k6 run "$@"

@@ -4,6 +4,7 @@ from typing import Optional
 
 from dateutil.parser import parse
 from dateutil.relativedelta import MO, SU, relativedelta
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.forms import Field
 from django.utils import timezone
@@ -75,10 +76,7 @@ def parse_maybe_relative_date_string(
         return today + relativedelta(**relativedelta_params)
 
     # Try to parse the exact date
-    try:
-        return parse(date_string, fuzzy=False).date()
-    except ValueError:
-        return None
+    return parse(date_string, fuzzy=False).date()
 
 
 class MaybeRelativeDateField(Field):
@@ -95,7 +93,10 @@ class MaybeRelativeDateField(Field):
 
         value = value.strip()
 
-        return parse_maybe_relative_date_string(value, end_date=self.end_date)
+        try:
+            return parse_maybe_relative_date_string(value, end_date=self.end_date)
+        except ValueError:
+            raise DjangoValidationError("Invalid date format")
 
 
 class MaybeRelativeNullableDateFilter(Filter):

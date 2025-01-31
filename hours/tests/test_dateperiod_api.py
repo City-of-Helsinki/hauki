@@ -11,6 +11,18 @@ from hours.tests.utils import assert_response_status_code
 
 
 @pytest.mark.django_db
+def test_invalid_format_returns_400(admin_client):
+    url = reverse("date_period-list")
+
+    response = admin_client.get(url, data={"start_date_lte": "2030-101-01"})
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert response.data["start_date_lte"][0] == "Invalid date format"
+
+
+@pytest.mark.django_db
 def test_list_date_periods_empty(admin_client):
     url = reverse("date_period-list")
 

@@ -2,6 +2,28 @@ import datetime
 
 import pytest
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
+
+
+@pytest.mark.django_db
+def test_opening_hours_invalid_date(admin_client):
+    url = reverse("opening_hours-list")
+
+    data = {
+        "start_date": "2020-101-01",
+        "end_date": "2020-11-30",
+    }
+
+    response = admin_client.get(
+        url,
+        data=data,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400, "{} {}".format(
+        response.status_code, response.data
+    )
+    assert response.data[0] == _("Invalid start_date")
 
 
 @pytest.mark.django_db

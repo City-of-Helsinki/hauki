@@ -85,3 +85,8 @@ from hours.filters import parse_maybe_relative_date_string
 def test_parse_filter_date(input_string, end_date, frozen_date, expected_date):
     with freeze_time(frozen_date):
         assert parse_maybe_relative_date_string(input_string, end_date) == expected_date
+
+
+def test_parse_errors():
+    with pytest.raises(ValueError):
+        parse_maybe_relative_date_string("2020-101-3")

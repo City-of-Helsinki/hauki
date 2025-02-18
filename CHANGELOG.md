@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.9](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.8...hauki-v1.3.9) (2025-02-18)
+
+
+### Bug Fixes
+
+* Handle errors while parsing dates in filters ([37b2d2a](https://github.com/City-of-Helsinki/hauki/commit/37b2d2ae3657366e8884f4ea2d1a79d708f6e59f))
+
+
+### Dependencies
+
+* Bump django from 4.2.16 to 4.2.17 ([368e834](https://github.com/City-of-Helsinki/hauki/commit/368e83448d1b84abd693c3d5d9bb9b3a20d2ab0c))
+* Bump django from 4.2.17 to 4.2.18 ([f82a4dc](https://github.com/City-of-Helsinki/hauki/commit/f82a4dc801faab1acc1fd2c60e18dbfee5d0ac0f))
+* Bump jinja2 from 3.1.4 to 3.1.5 ([3506b86](https://github.com/City-of-Helsinki/hauki/commit/3506b86096bbb985afb5832efaddaa561df62280))
+* Bump virtualenv from 20.26.2 to 20.26.6 ([673c6a2](https://github.com/City-of-Helsinki/hauki/commit/673c6a2928639c5f7d77ea91575aa76894859d0a))
+
 ## [1.3.8](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.7...hauki-v1.3.8) (2024-10-31)
 
 

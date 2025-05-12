@@ -18,7 +18,7 @@ bandit==1.7.8
     # via -r requirements-dev.in
 build==1.2.1
     # via pip-tools
-certifi==2024.2.2
+certifi==2025.4.26
     # via
     #   -c requirements.txt
     #   requests
@@ -237,7 +237,7 @@ typing-extensions==4.11.0
     #   safety
     #   safety-schemas
     #   typer
-urllib3==2.2.1
+urllib3==2.4.0
     # via
     #   -c requirements.txt
     #   requests

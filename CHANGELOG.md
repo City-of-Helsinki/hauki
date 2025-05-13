@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.10](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.9...hauki-v1.3.10) (2025-05-13)
+
+
+### Dependencies
+
+* Bump cryptography from 43.0.1 to 44.0.1 ([4023a0b](https://github.com/City-of-Helsinki/hauki/commit/4023a0b23aa1f7597cdeff5bd810533130d89628))
+* Bump django from 4.2.18 to 4.2.21 ([07085a0](https://github.com/City-of-Helsinki/hauki/commit/07085a083f396670e5825ee8f5b5fb9a0cad72d8))
+* Bump jinja2 from 3.1.5 to 3.1.6 ([654fcde](https://github.com/City-of-Helsinki/hauki/commit/654fcded1065400b81bd8f0ef7821d5175860e11))
+* Bump python-jose from 3.3.0 to 3.4.0 ([309ffd0](https://github.com/City-of-Helsinki/hauki/commit/309ffd04a45ab530211f7fe3939558cda5b9cac8))
+* Fix dev requirements ([634e39e](https://github.com/City-of-Helsinki/hauki/commit/634e39ec6e3518aee330df7bbade0d51acd94b4e))
+
 ## [1.3.9](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.8...hauki-v1.3.9) (2025-02-18)
 
 

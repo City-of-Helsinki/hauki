@@ -174,7 +174,7 @@ pyyaml==6.0.1
     #   -c requirements.txt
     #   bandit
     #   pre-commit
-requests==2.32.2
+requests==2.32.4
     # via
     #   -c requirements.txt
     #   requests-mock

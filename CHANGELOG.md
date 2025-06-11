@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.12](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.11...hauki-v1.3.12) (2025-06-11)
+
+
+### Dependencies
+
+* Bump django from 4.2.22 to 4.2.23 ([6b47128](https://github.com/City-of-Helsinki/hauki/commit/6b47128a855e7fdbb7a2a8a7211c0ab2195e27e2))
+* Bump requests from 2.32.2 to 2.32.4 ([d7d6114](https://github.com/City-of-Helsinki/hauki/commit/d7d611421eedb08a76782c6617a922cb1dcec362))
+
 ## [1.3.11](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.10...hauki-v1.3.11) (2025-06-10)
 
 

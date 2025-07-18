@@ -292,7 +292,7 @@ USE_X_FORWARDED_HOST = env("TRUST_X_FORWARDED_HOST")
 # https://docs.djangoproject.com/en/3.0/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = env("SECURE_PROXY_SSL_HEADER")
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")
 SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
 

@@ -75,6 +75,7 @@ env = environ.Env(
     MAIL_MAILGUN_DOMAIN=(str, ""),
     MAIL_MAILGUN_API=(str, ""),
     RESOURCE_DEFAULT_TIMEZONE=(str, None),
+    HSA_CLOCK_SKEW_LEEWAY_SECONDS=(int, 30),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -393,3 +394,5 @@ if not SECRET_KEY:
             for i in range(64)
         ]
     )
+
+HSA_CLOCK_SKEW_LEEWAY_SECONDS = env("HSA_CLOCK_SKEW_LEEWAY_SECONDS")

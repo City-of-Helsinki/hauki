@@ -1,8 +1,10 @@
 import hashlib
 import hmac
 import urllib.parse
+from datetime import timedelta
 
 from dateutil.parser import parse
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
@@ -135,7 +137,9 @@ def validate_params_and_signature(params) -> bool:
     try:
         created_at = parse(params["hsa_created_at"])
         try:
-            if created_at > timezone.now():
+            if created_at > timezone.now() + timedelta(
+                seconds=settings.HSA_CLOCK_SKEW_LEEWAY_SECONDS
+            ):
                 raise SignatureValidationError(_("Invalid hsa_created_at"))
         except TypeError:
             raise SignatureValidationError(_("Invalid hsa_created_at"))

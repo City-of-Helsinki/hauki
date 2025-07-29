@@ -3,6 +3,8 @@ import urllib.parse
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
+from freezegun import freeze_time
 from pytz import UTC
 from rest_framework.test import APIRequestFactory
 from rest_framework.views import APIView
@@ -71,6 +73,48 @@ def test_get_auth_required_header_invalid_created_at(
 
     assert response.status_code == 403
     assert str(response.data["detail"]) == "Invalid hsa_created_at"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "leeway,expected_response_code,expected_response_data_contains",
+    [(0, 403, "Invalid hsa_created_at"), (1, 200, "You are authenticated")],
+)
+def test_get_auth_required_header_clock_skew_leeway(
+    api_client,
+    data_source,
+    signed_auth_key_factory,
+    leeway,
+    expected_response_code,
+    expected_response_data_contains,
+    settings,
+):
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+    url = reverse("auth_required_test-list")
+
+    now = timezone.now()
+    settings.HSA_CLOCK_SKEW_LEEWAY_SECONDS = leeway
+
+    with freeze_time(now):
+        data = {
+            "hsa_source": data_source.id,
+            "hsa_username": "test_user",
+            "hsa_created_at": (now + datetime.timedelta(seconds=1)).isoformat(),
+            "hsa_valid_until": (
+                now + datetime.timedelta(hours=1, seconds=1)
+            ).isoformat(),
+        }
+
+        source_string = join_params(data)
+        signature = calculate_signature(signed_auth_key.signing_key, source_string)
+
+        authz_string = "haukisigned " + urllib.parse.urlencode(
+            {**data, "hsa_signature": signature}
+        )
+
+        response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+        assert response.status_code == expected_response_code
+        assert expected_response_data_contains in str(response.data)
 
 
 @pytest.mark.django_db

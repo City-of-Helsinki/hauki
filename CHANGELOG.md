@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.12...hauki-v1.4.0) (2025-08-12)
+
+
+### Features
+
+* Support clock skew leeway in hsa_created_at validation ([3a400ef](https://github.com/City-of-Helsinki/hauki/commit/3a400ef5a788acfe80c65f2cf833c89f12d39e7e))
+
 ## [1.3.12](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.11...hauki-v1.3.12) (2025-06-11)
 
 

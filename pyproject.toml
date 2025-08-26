@@ -20,3 +20,8 @@ select = [
     "T20",
 ]
 extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] }
+
+[tool.pip-tools.compile]
+generate-hashes = true
+strip-extras = true
+allow-unsafe = true

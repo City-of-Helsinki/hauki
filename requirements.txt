@@ -140,6 +140,7 @@ django==4.2.23 \
     # via
     #   -r requirements.in
     #   django-cors-headers
+    #   django-enumfields2
     #   django-extra-fields
     #   django-filter
     #   django-helusers
@@ -154,9 +155,9 @@ django-cors-headers==4.3.1 \
     --hash=sha256:0b1fd19297e37417fc9f835d39e45c8c642938ddba1acce0c1753d3edef04f36 \
     --hash=sha256:0bf65ef45e606aff1994d35503e6b677c0b26cafff6506f8fd7187f3be840207
     # via -r requirements.in
-django-enumfields==2.1.1 \
-    --hash=sha256:d32f2151801a5fc13c860276ee99495c2c9345e0a4281d0104276c39ddb22807 \
-    --hash=sha256:f64841732a9c343f5071220e0abcf5f51c9472c06e3c33d7c6a7ec27b6087561
+django-enumfields2==3.0.2 \
+    --hash=sha256:787dd61d132f73ffadbcfd74dc5caa339505f506b1ebb60da9bf0344eacf2115 \
+    --hash=sha256:7ddcbdea6b97428f481f7191b53b110933be355f6d10656d59a4f886488a6cc4
     # via -r requirements.in
 django-environ==0.11.2 \
     --hash=sha256:0ff95ab4344bfeff693836aa978e6840abef2e2f1145adff7735892711590c05 \

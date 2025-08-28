@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from drf_writable_nested import UniqueFieldsMixin, WritableNestedModelSerializer
-from enumfields.drf import EnumField, EnumSupportSerializerMixin
 from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
 from rest_framework import serializers
@@ -188,7 +187,6 @@ class ResourceOriginSerializer(WritableNestedModelSerializer):
 
 class ResourceSerializer(
     TranslationSerializerMixin,
-    EnumSupportSerializerMixin,
     WritableNestedModelSerializer,
 ):
     last_modified_by = UserSerializer(read_only=True)
@@ -367,9 +365,7 @@ class ResourceSerializer(
         return result
 
 
-class ResourceSimpleSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
-):
+class ResourceSimpleSerializer(TranslationSerializerMixin, serializers.ModelSerializer):
     timezone = TimeZoneSerializerField()
     origins = ResourceOriginSerializer(many=True, required=False, allow_null=True)
 
@@ -383,9 +379,7 @@ class ResourceSimpleSerializer(
         ]
 
 
-class TimeSpanCreateSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
-):
+class TimeSpanCreateSerializer(TranslationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = TimeSpan
         fields = [
@@ -421,9 +415,7 @@ class TimeSpanSerializer(TimeSpanCreateSerializer):
     )
 
 
-class RuleCreateSerializer(
-    TranslationSerializerMixin, EnumSupportSerializerMixin, serializers.ModelSerializer
-):
+class RuleCreateSerializer(TranslationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Rule
         fields = [
@@ -448,9 +440,7 @@ class RuleSerializer(RuleCreateSerializer):
     )
 
 
-class TimeSpanGroupSerializer(
-    EnumSupportSerializerMixin, WritableNestedModelSerializer
-):
+class TimeSpanGroupSerializer(WritableNestedModelSerializer):
     period = serializers.PrimaryKeyRelatedField(
         required=False, queryset=DatePeriod.objects.all()
     )
@@ -472,7 +462,6 @@ class PeriodOriginSerializer(serializers.ModelSerializer):
 
 class DatePeriodSerializer(
     TranslationSerializerMixin,
-    EnumSupportSerializerMixin,
     WritableNestedModelSerializer,
 ):
     time_span_groups = TimeSpanGroupSerializer(
@@ -504,7 +493,7 @@ class TimeElementSerializer(serializers.Serializer):
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
     end_time_on_next_day = serializers.BooleanField()
-    resource_state = EnumField(enum=State)
+    resource_state = serializers.ChoiceField(choices=State.choices)
     full_day = serializers.BooleanField()
     periods = serializers.SerializerMethodField()
 

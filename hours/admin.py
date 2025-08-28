@@ -5,6 +5,8 @@ from django_orghierarchy.models import Organization
 from modeltranslation.admin import TranslationAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
+from hours.enums import State
+
 from .models import (
     DataSource,
     DatePeriod,
@@ -153,7 +155,7 @@ class TimeSpanGroupAdmin(admin.ModelAdmin):
     get_end_date.short_description = _("End date")
 
     def get_resource_state(self, obj):
-        return obj.period.resource_state
+        return State(obj.period.resource_state).label
 
     get_resource_state.short_description = _("Resource state")
 

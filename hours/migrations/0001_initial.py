@@ -3,13 +3,10 @@
 import django.contrib.postgres.fields
 import django.db.models.deletion
 import django.utils.timezone
-import enumfields.fields
 import model_utils.fields
 import simple_history.models
 from django.conf import settings
 from django.db import migrations, models
-
-import hours.enums
 
 
 class Migration(migrations.Migration):
@@ -168,9 +165,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_state",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="undefined",
-                        enum=hours.enums.State,
                         max_length=100,
                         verbose_name="Resource state",
                     ),
@@ -271,9 +267,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_type",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="unit",
-                        enum=hours.enums.ResourceType,
                         max_length=100,
                         verbose_name="Resource type",
                     ),
@@ -407,9 +402,8 @@ class Migration(migrations.Migration):
                 (
                     "weekdays",
                     django.contrib.postgres.fields.ArrayField(
-                        base_field=enumfields.fields.EnumIntegerField(
+                        base_field=models.IntegerField(
                             default=None,
-                            enum=hours.enums.Weekday,
                             verbose_name="Weekday",
                         ),
                         blank=True,
@@ -419,9 +413,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_state",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="undefined",
-                        enum=hours.enums.State,
                         max_length=100,
                         verbose_name="Resource state",
                     ),
@@ -511,16 +504,14 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "context",
-                    enumfields.fields.EnumField(
-                        enum=hours.enums.RuleContext,
+                    models.CharField(
                         max_length=100,
                         verbose_name="Context",
                     ),
                 ),
                 (
                     "subject",
-                    enumfields.fields.EnumField(
-                        enum=hours.enums.RuleSubject,
+                    models.CharField(
                         max_length=100,
                         verbose_name="Subject",
                     ),
@@ -537,9 +528,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "frequency_modifier",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         blank=True,
-                        enum=hours.enums.FrequencyModifier,
                         max_length=100,
                         null=True,
                         verbose_name="Frequency (modifier)",
@@ -698,9 +688,8 @@ class Migration(migrations.Migration):
                 (
                     "weekdays",
                     django.contrib.postgres.fields.ArrayField(
-                        base_field=enumfields.fields.EnumIntegerField(
+                        base_field=models.IntegerField(
                             default=None,
-                            enum=hours.enums.Weekday,
                             verbose_name="Weekday",
                         ),
                         blank=True,
@@ -710,9 +699,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_state",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="undefined",
-                        enum=hours.enums.State,
                         max_length=100,
                         verbose_name="Resource state",
                     ),
@@ -823,16 +811,14 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "context",
-                    enumfields.fields.EnumField(
-                        enum=hours.enums.RuleContext,
+                    models.CharField(
                         max_length=100,
                         verbose_name="Context",
                     ),
                 ),
                 (
                     "subject",
-                    enumfields.fields.EnumField(
-                        enum=hours.enums.RuleSubject,
+                    models.CharField(
                         max_length=100,
                         verbose_name="Subject",
                     ),
@@ -849,9 +835,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "frequency_modifier",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         blank=True,
-                        enum=hours.enums.FrequencyModifier,
                         max_length=100,
                         null=True,
                         verbose_name="Frequency (modifier)",
@@ -976,9 +961,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_type",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="unit",
-                        enum=hours.enums.ResourceType,
                         max_length=100,
                         verbose_name="Resource type",
                     ),
@@ -1106,9 +1090,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "resource_state",
-                    enumfields.fields.EnumField(
+                    models.CharField(
                         default="undefined",
-                        enum=hours.enums.State,
                         max_length=100,
                         verbose_name="Resource state",
                     ),

@@ -1,13 +1,12 @@
-from enumfields.drf import EnumField
-from rest_framework.serializers import Serializer
+from rest_framework import serializers
 
 from hours.enums import State
 from hours.metadata import TranslatedChoiceNamesMetadata
 
 
 def test_enum_translation_in_metadata(settings):
-    class DummySerializer(Serializer):
-        resource_state = EnumField(enum=State)
+    class DummySerializer(serializers.Serializer):
+        resource_state = serializers.ChoiceField(choices=State.choices)
 
     metadata = TranslatedChoiceNamesMetadata()
     serializer = DummySerializer()

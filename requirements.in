@@ -1,7 +1,6 @@
 bleach
 Django~=4.2
 django-cors-headers
-django-enumfields2
 django-environ
 django-extra-fields
 django-filter

@@ -521,7 +521,7 @@ class ResourceViewSet(
                         end_time=other_timezone_end_datetime.time(),
                         end_time_on_next_day=other_timezone_start_datetime.date()
                         != other_timezone_end_datetime.date(),
-                        resource_state=opening_hour.resource_state,
+                        resource_state=State(opening_hour.resource_state),
                         override=opening_hour.override,
                         full_day=opening_hour.full_day,
                         name=opening_hour.name,

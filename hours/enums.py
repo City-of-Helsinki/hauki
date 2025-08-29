@@ -1,42 +1,27 @@
-from django.utils.translation import pgettext_lazy
-from enumfields import Enum, IntEnum
+from django.db.models import IntegerChoices, TextChoices
+from django.utils.translation import pgettext_lazy as _
 
 
-class State(Enum):
-    OPEN = "open"
-    CLOSED = "closed"
-    UNDEFINED = "undefined"
-    SELF_SERVICE = "self_service"
-    WITH_KEY = "with_key"
-    WITH_RESERVATION = "with_reservation"
-    OPEN_AND_RESERVABLE = "open_and_reservable"
-    WITH_KEY_AND_RESERVATION = "with_key_and_reservation"
-    ENTER_ONLY = "enter_only"
-    EXIT_ONLY = "exit_only"
-    WEATHER_PERMITTING = "weather_permitting"
-    NOT_IN_USE = "not_in_use"
-    MAINTENANCE = "maintenance"
-    RESERVED = "reserved"
-    BY_APPOINTMENT = "by_appointment"
-    NO_OPENING_HOURS = "no_opening_hours"
-
-    class Labels:
-        OPEN = pgettext_lazy("State", "Open")
-        CLOSED = pgettext_lazy("State", "Closed")
-        UNDEFINED = pgettext_lazy("State", "Undefined")
-        SELF_SERVICE = pgettext_lazy("State", "Self service")
-        WITH_KEY = pgettext_lazy("State", "With key")
-        WITH_RESERVATION = pgettext_lazy("State", "With reservation")
-        OPEN_AND_RESERVABLE = pgettext_lazy("State", "Open and reservable")
-        WITH_KEY_AND_RESERVATION = pgettext_lazy("State", "With key and reservation")
-        ENTER_ONLY = pgettext_lazy("State", "Enter only")
-        EXIT_ONLY = pgettext_lazy("State", "Exit only")
-        WEATHER_PERMITTING = pgettext_lazy("State", "Weather permitting")
-        NOT_IN_USE = pgettext_lazy("State", "Not in use")
-        MAINTENANCE = pgettext_lazy("State", "Maintenance")
-        RESERVED = pgettext_lazy("State", "Reserved")
-        BY_APPOINTMENT = pgettext_lazy("State", "By appointment")
-        NO_OPENING_HOURS = pgettext_lazy("State", "No opening hours")
+class State(TextChoices):
+    OPEN = "open", _("State", "Open")
+    CLOSED = "closed", _("State", "Closed")
+    UNDEFINED = "undefined", _("State", "Undefined")
+    SELF_SERVICE = "self_service", _("State", "Self service")
+    WITH_KEY = "with_key", _("State", "With key")
+    WITH_RESERVATION = "with_reservation", _("State", "With reservation")
+    OPEN_AND_RESERVABLE = "open_and_reservable", _("State", "Open and reservable")
+    WITH_KEY_AND_RESERVATION = (
+        "with_key_and_reservation",
+        _("State", "With key and reservation"),
+    )
+    ENTER_ONLY = "enter_only", _("State", "Enter only")
+    EXIT_ONLY = "exit_only", _("State", "Exit only")
+    WEATHER_PERMITTING = "weather_permitting", _("State", "Weather permitting")
+    NOT_IN_USE = "not_in_use", _("State", "Not in use")
+    MAINTENANCE = "maintenance", _("State", "Maintenance")
+    RESERVED = "reserved", _("State", "Reserved")
+    BY_APPOINTMENT = "by_appointment", _("State", "By appointment")
+    NO_OPENING_HOURS = "no_opening_hours", _("State", "No opening hours")
 
     @classmethod
     def open_states(cls):
@@ -54,52 +39,29 @@ class State(Enum):
         ]
 
 
-class ResourceType(Enum):
-    UNIT = "unit"
-    SUBSECTION = "section"
-    SPECIAL_GROUP = "special_group"
-    CONTACT = "contact"
-    ONLINE_SERVICE = "online_service"
-    SERVICE = "service"
-    SERVICE_CHANNEL = "service_channel"
-    SERVICE_AT_UNIT = "service_at_unit"
-    RESERVABLE = "reservable"
-    BUILDING = "building"
-    AREA = "area"
-    ENTRANCE = "entrance_or_exit"
-
-    class Labels:
-        UNIT = pgettext_lazy("ResourceType", "Unit")
-        SUBSECTION = pgettext_lazy("ResourceType", "Section")
-        SPECIAL_GROUP = pgettext_lazy("ResourceType", "Special group")
-        CONTACT = pgettext_lazy("ResourceType", "Contact email or phone number")
-        ONLINE_SERVICE = pgettext_lazy("ResourceType", "Online service")
-        SERVICE = pgettext_lazy("ResourceType", "Service")
-        SERVICE_CHANNEL = pgettext_lazy("ResourceType", "Service channel")
-        SERVICE_AT_UNIT = pgettext_lazy("ResourceType", "Service at unit")
-        RESERVABLE = pgettext_lazy("ResourceType", "Reservable resource")
-        BUILDING = pgettext_lazy("ResourceType", "Building")
-        AREA = pgettext_lazy("ResourceType", "Area")
-        ENTRANCE = pgettext_lazy("ResourceType", "Entrance or exit")
+class ResourceType(TextChoices):
+    UNIT = "unit", _("ResourceType", "Unit")
+    SUBSECTION = "section", _("ResourceType", "Section")
+    SPECIAL_GROUP = "special_group", _("ResourceType", "Special group")
+    CONTACT = "contact", _("ResourceType", "Contact email or phone number")
+    ONLINE_SERVICE = "online_service", _("ResourceType", "Online service")
+    SERVICE = "service", _("ResourceType", "Service")
+    SERVICE_CHANNEL = "service_channel", _("ResourceType", "Service channel")
+    SERVICE_AT_UNIT = "service_at_unit", _("ResourceType", "Service at unit")
+    RESERVABLE = "reservable", _("ResourceType", "Reservable resource")
+    BUILDING = "building", _("ResourceType", "Building")
+    AREA = "area", _("ResourceType", "Area")
+    ENTRANCE = "entrance_or_exit", _("ResourceType", "Entrance or exit")
 
 
-class Weekday(IntEnum):
-    MONDAY = 1
-    TUESDAY = 2
-    WEDNESDAY = 3
-    THURSDAY = 4
-    FRIDAY = 5
-    SATURDAY = 6
-    SUNDAY = 7
-
-    class Labels:
-        MONDAY = pgettext_lazy("Weekday", "Monday")
-        TUESDAY = pgettext_lazy("Weekday", "Tuesday")
-        WEDNESDAY = pgettext_lazy("Weekday", "Wednesday")
-        THURSDAY = pgettext_lazy("Weekday", "Thursday")
-        FRIDAY = pgettext_lazy("Weekday", "Friday")
-        SATURDAY = pgettext_lazy("Weekday", "Saturday")
-        SUNDAY = pgettext_lazy("Weekday", "Sunday")
+class Weekday(IntegerChoices):
+    MONDAY = 1, _("Weekday", "Monday")
+    TUESDAY = 2, _("Weekday", "Tuesday")
+    WEDNESDAY = 3, _("Weekday", "Wednesday")
+    THURSDAY = 4, _("Weekday", "Thursday")
+    FRIDAY = 5, _("Weekday", "Friday")
+    SATURDAY = 6, _("Weekday", "Saturday")
+    SUNDAY = 7, _("Weekday", "Sunday")
 
     @classmethod
     def business_days(cls):
@@ -116,59 +78,40 @@ class Weekday(IntEnum):
                 return member
 
 
-class RuleContext(Enum):
-    PERIOD = "period"
-    YEAR = "year"
-    MONTH = "month"
-    # WEEK = "week"
+class RuleContext(TextChoices):
+    PERIOD = "period", _("RuleContext", "Period")
+    YEAR = "year", _("RuleContext", "Year")
+    MONTH = "month", _("RuleContext", "Month")
 
-    class Labels:
-        PERIOD = pgettext_lazy("RuleContext", "Period")
-        YEAR = pgettext_lazy("RuleContext", "Year")
-        MONTH = pgettext_lazy("RuleContext", "Month")
-        # WEEK = pgettext_lazy("RuleContext", "Week")
-
-        # Make strings used in the Rule.as_text method findable by makemessages
-        pgettext_lazy("every_rulecontext", "period")
-        pgettext_lazy("every_rulecontext", "year")
-        pgettext_lazy("every_rulecontext", "month")
+    # Make strings used in the Rule.as_text method findable by makemessages
+    _("every_rulecontext", "period")
+    _("every_rulecontext", "year")
+    _("every_rulecontext", "month")
 
 
-class RuleSubject(Enum):
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    MONDAY = "mon"
-    TUESDAY = "tue"
-    WEDNESDAY = "wed"
-    THURSDAY = "thu"
-    FRIDAY = "fri"
-    SATURDAY = "sat"
-    SUNDAY = "sun"
+class RuleSubject(TextChoices):
+    DAY = "day", _("RuleSubject", "Day")
+    WEEK = "week", _("RuleSubject", "Week")
+    MONTH = "month", _("RuleSubject", "Month")
+    MONDAY = "mon", _("RuleSubject", "Monday")
+    TUESDAY = "tue", _("RuleSubject", "Tuesday")
+    WEDNESDAY = "wed", _("RuleSubject", "Wednesday")
+    THURSDAY = "thu", _("RuleSubject", "Thursday")
+    FRIDAY = "fri", _("RuleSubject", "Friday")
+    SATURDAY = "sat", _("RuleSubject", "Saturday")
+    SUNDAY = "sun", _("RuleSubject", "Sunday")
 
-    class Labels:
-        DAY = pgettext_lazy("RuleSubject", "Day")
-        WEEK = pgettext_lazy("RuleSubject", "Week")
-        MONTH = pgettext_lazy("RuleSubject", "Month")
-        MONDAY = pgettext_lazy("RuleSubject", "Monday")
-        TUESDAY = pgettext_lazy("RuleSubject", "Tuesday")
-        WEDNESDAY = pgettext_lazy("RuleSubject", "Wednesday")
-        THURSDAY = pgettext_lazy("RuleSubject", "Thursday")
-        FRIDAY = pgettext_lazy("RuleSubject", "Friday")
-        SATURDAY = pgettext_lazy("RuleSubject", "Saturday")
-        SUNDAY = pgettext_lazy("RuleSubject", "Sunday")
-
-        # Make strings used in the Rule.as_text method findable by makemessages
-        pgettext_lazy("starting_from_nth_rulesubject", "day")
-        pgettext_lazy("starting_from_nth_rulesubject", "week")
-        pgettext_lazy("starting_from_nth_rulesubject", "month")
-        pgettext_lazy("starting_from_nth_rulesubject", "mon")
-        pgettext_lazy("starting_from_nth_rulesubject", "tue")
-        pgettext_lazy("starting_from_nth_rulesubject", "wed")
-        pgettext_lazy("starting_from_nth_rulesubject", "thu")
-        pgettext_lazy("starting_from_nth_rulesubject", "fri")
-        pgettext_lazy("starting_from_nth_rulesubject", "sat")
-        pgettext_lazy("starting_from_nth_rulesubject", "sun")
+    # Make strings used in the Rule.as_text method findable by makemessages
+    _("starting_from_nth_rulesubject", "day")
+    _("starting_from_nth_rulesubject", "week")
+    _("starting_from_nth_rulesubject", "month")
+    _("starting_from_nth_rulesubject", "mon")
+    _("starting_from_nth_rulesubject", "tue")
+    _("starting_from_nth_rulesubject", "wed")
+    _("starting_from_nth_rulesubject", "thu")
+    _("starting_from_nth_rulesubject", "fri")
+    _("starting_from_nth_rulesubject", "sat")
+    _("starting_from_nth_rulesubject", "sun")
 
     def is_singular(self):
         return self in [
@@ -207,10 +150,6 @@ class RuleSubject(Enum):
         return self.weekday_subjects().index(self)
 
 
-class FrequencyModifier(Enum):
-    EVEN = "even"
-    ODD = "odd"
-
-    class Labels:
-        EVEN = pgettext_lazy("FrequencyModifier", "Even")
-        ODD = pgettext_lazy("FrequencyModifier", "Odd")
+class FrequencyModifier(TextChoices):
+    EVEN = "even", _("FrequencyModifier", "Even")
+    ODD = "odd", _("FrequencyModifier", "Odd")

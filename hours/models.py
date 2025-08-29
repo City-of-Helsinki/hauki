@@ -18,10 +18,10 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import formats, translation
+from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext
 from django_orghierarchy.models import Organization
-from enumfields import EnumField, EnumIntegerField
 from model_utils.models import SoftDeletableModel, TimeStampedModel
 from timezone_field import TimeZoneField
 
@@ -327,8 +327,8 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     )
     description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
     address = models.TextField(verbose_name=_("Street address"), null=True, blank=True)
-    resource_type = EnumField(
-        ResourceType,
+    resource_type = models.CharField(
+        choices=ResourceType.choices,
         verbose_name=_("Resource type"),
         max_length=100,
         default=ResourceType.UNIT,
@@ -646,8 +646,8 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     end_date = models.DateField(
         verbose_name=_("End date"), null=True, blank=True, db_index=True
     )
-    resource_state = EnumField(
-        State,
+    resource_state = models.CharField(
+        choices=State.choices,
         verbose_name=_("Resource state"),
         max_length=100,
         default=State.UNDEFINED,
@@ -665,7 +665,10 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
 
     def __str__(self):
-        return f"{self.name}({self.start_date} - {self.end_date} {self.resource_state})"
+        return (
+            f"{self.name}({self.start_date} - {self.end_date} "
+            f"{force_str(State(self.resource_state).label)})"
+        )
 
     def _get_values_for_sort(self) -> tuple:
         """
@@ -688,7 +691,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
                 [
                     self.start_date.isoformat() if self.start_date else "*",
                     self.end_date.isoformat() if self.end_date else "*",
-                    str(self.resource_state.value),
+                    self.resource_state,
                     str(self.override),
                 ]
             )
@@ -718,7 +721,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
             group_strings.append(time_span_group.as_text())
 
         if not group_strings and self.resource_state != State.UNDEFINED:
-            group_strings = [" " + str(self.resource_state)]
+            group_strings = [" " + force_str(State(self.resource_state).label)]
 
         time_span_groups = _("\n\n ---------------------------------------\n\n").join(
             group_strings
@@ -774,7 +777,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
                             start_time=None,
                             end_time=None,
                             end_time_on_next_day=False,
-                            resource_state=self.resource_state,
+                            resource_state=State(self.resource_state),
                             override=self.override,
                             full_day=True,
                             name=self.name,
@@ -813,7 +816,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
                                 start_time=time_span.start_time,
                                 end_time=time_span.end_time,
                                 end_time_on_next_day=time_span.end_time_on_next_day,
-                                resource_state=resource_state,
+                                resource_state=State(resource_state),
                                 override=self.override,
                                 full_day=time_span.full_day,
                                 name=time_span.name,
@@ -926,16 +929,16 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
     )
     full_day = models.BooleanField(verbose_name=_("24 hours"), default=False)
     weekdays = ArrayField(
-        EnumIntegerField(
-            Weekday,
+        models.IntegerField(
+            choices=Weekday.choices,
             verbose_name=_("Weekday"),
             default=None,
         ),
         null=True,
         blank=True,
     )
-    resource_state = EnumField(
-        State,
+    resource_state = models.CharField(
+        choices=State.choices,
         verbose_name=_("Resource state"),
         max_length=100,
         default=State.UNDEFINED,
@@ -954,7 +957,7 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
 
     def __str__(self):
         if self.weekdays:
-            weekdays = ", ".join([str(i) for i in self.weekdays])
+            weekdays = ", ".join([force_str(Weekday(i).label) for i in self.weekdays])
         else:
             weekdays = "[no weekdays]"
 
@@ -963,7 +966,7 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
     def as_hash_input(self) -> str:
         sorted_weekdays = []
         if self.weekdays:
-            sorted_weekdays = sorted(self.weekdays, key=attrgetter("value"))
+            sorted_weekdays = sorted(self.weekdays)
 
         return "[TIME_SPAN:{}]".format(
             "|".join(
@@ -973,11 +976,11 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
                     str(self.end_time_on_next_day),
                     str(self.full_day),
                     (
-                        "".join([str(i.value) for i in sorted_weekdays])
+                        "".join([str(i) for i in sorted_weekdays])
                         if self.weekdays
                         else "*"
                     ),
-                    str(self.resource_state.value),
+                    self.resource_state,
                 ]
             )
         )
@@ -986,20 +989,24 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
         if not self.weekdays:
             return pgettext("timespan_as_text", "Every day")
 
-        sorted_weekdays = sorted(self.weekdays, key=attrgetter("value"))
+        sorted_weekdays = sorted(
+            [Weekday(i) for i in self.weekdays], key=attrgetter("value")
+        )
 
         weekday_strings = []
         for _k, group in itertools.groupby(
             sorted_weekdays,
-            lambda w, c=itertools.count(): w.value - next(c),  # noqa: B008
+            lambda w, c=itertools.count(): w - next(c),  # noqa: B008
         ):
             consecutive_weekdays = list(group)
             if len(consecutive_weekdays) > 1:
                 weekday_strings.append(
-                    str(consecutive_weekdays[0]) + "-" + str(consecutive_weekdays[-1])
+                    str(consecutive_weekdays[0].label)
+                    + "-"
+                    + str(consecutive_weekdays[-1].label)
                 )
             else:
-                weekday_strings.append(str(consecutive_weekdays[0]))
+                weekday_strings.append(str(consecutive_weekdays[0].label))
 
         weekdays_text = ", ".join(weekday_strings)
 
@@ -1007,9 +1014,9 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
 
     def as_text(self) -> str:
         if self.resource_state == State.UNDEFINED:
-            state = self.group.period.resource_state.label
+            state = State(self.group.period.resource_state).label
         else:
-            state = self.resource_state.label
+            state = State(self.resource_state).label
 
         if self.full_day:
             times = pgettext("timespan_as_text", "The whole day")
@@ -1050,13 +1057,13 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         verbose_name=_("Name"), max_length=255, null=True, blank=True
     )
     description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
-    context = EnumField(
-        RuleContext,
+    context = models.CharField(
+        choices=RuleContext.choices,
         verbose_name=_("Context"),
         max_length=100,
     )
-    subject = EnumField(
-        RuleSubject,
+    subject = models.CharField(
+        choices=RuleSubject.choices,
         verbose_name=_("Subject"),
         max_length=100,
     )
@@ -1064,8 +1071,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
     frequency_ordinal = models.PositiveIntegerField(
         verbose_name=_("Frequency (ordinal)"), null=True, blank=True
     )
-    frequency_modifier = EnumField(
-        FrequencyModifier,
+    frequency_modifier = models.CharField(
+        choices=FrequencyModifier.choices,
         verbose_name=_("Frequency (modifier)"),
         max_length=100,
         null=True,
@@ -1089,8 +1096,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         return "[RULE:{}]".format(
             "|".join(
                 [
-                    self.context.value if self.context else "*",
-                    self.subject.value if self.subject else "*",
+                    self.context if self.context else "*",
+                    self.subject if self.subject else "*",
                     str(self.start) if self.start is not None else "*",
                     (
                         str(self.frequency_ordinal)
@@ -1098,7 +1105,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                         else "*"
                     ),
                     (
-                        self.frequency_modifier.value
+                        self.frequency_modifier
                         if self.frequency_modifier is not None
                         else "*"
                     ),
@@ -1111,14 +1118,14 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             context_text = pgettext("rule_as_text_context", "the period")
         else:
             context_text = pgettext("rule_as_text_context", "every {context}").format(
-                context=pgettext("every_rulecontext", self.context.value)
+                context=pgettext("every_rulecontext", self.context)
             )
 
         text = ""
         if self.start and not self.frequency_ordinal and not self.frequency_modifier:
             text = pgettext("rule_as_text", "{nth} {subject} in {context}").format(
                 nth=ordinal(self.start),
-                subject=self.subject.label.lower(),
+                subject=RuleSubject(self.subject).label.lower(),
                 context=context_text,
             )
         elif self.frequency_ordinal:
@@ -1133,9 +1140,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                         if self.start < 0
                         else ""
                     ),
-                    subject=pgettext(
-                        "starting_from_nth_rulesubject", self.subject.value
-                    ),
+                    subject=pgettext("starting_from_nth_rulesubject", self.subject),
                 )
 
             text = pgettext(
@@ -1147,7 +1152,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     if self.frequency_ordinal != 1
                     else ""
                 ),
-                subject=self.subject.label.lower(),
+                subject=RuleSubject(self.subject).label.lower(),
                 context=context_text,
                 starting_from_text=starting_from_text,
             )
@@ -1155,8 +1160,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             text = pgettext(
                 "rule_as_text", "On {modifier} {subject}s in {context}"
             ).format(
-                modifier=self.frequency_modifier.label.lower(),
-                subject=self.subject.label.lower(),
+                modifier=FrequencyModifier(self.frequency_modifier).label.lower(),
+                subject=RuleSubject(self.subject).label.lower(),
                 context=context_text,
             )
         return re.sub(r"\s{2,}", " ", text.rstrip())
@@ -1220,7 +1225,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         if isinstance(item, list):
             item = item[0]
 
-        if self.subject.is_singular():
+        if RuleSubject(self.subject).is_singular():
             return item.day
         if self.subject == RuleSubject.WEEK:
             return item.isocalendar()[1]
@@ -1330,7 +1335,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
             elif self.subject in RuleSubject.weekday_subjects():
                 dates = []
                 for a_date in expand_range(period_start_date, min_end_date):
-                    if a_date.isoweekday() == self.subject.as_isoweekday():
+                    if a_date.isoweekday() == RuleSubject(self.subject).as_isoweekday():
                         dates.append(a_date)
 
                 return [dates]
@@ -1380,7 +1385,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
                     )
                     dates = []
                     for a_date in days_in_year:
-                        if a_date.isoweekday() == self.subject.as_isoweekday():
+                        if (
+                            a_date.isoweekday()
+                            == RuleSubject(self.subject).as_isoweekday()
+                        ):
                             dates.append(a_date)
 
                     result.append(dates)
@@ -1417,7 +1425,10 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
                     dates = []
                     for a_date in days_in_month:
-                        if a_date.isoweekday() == self.subject.as_isoweekday():
+                        if (
+                            a_date.isoweekday()
+                            == RuleSubject(self.subject).as_isoweekday()
+                        ):
                             dates.append(a_date)
 
                     result.append(dates)

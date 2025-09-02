@@ -125,14 +125,16 @@ def test_get_auth_required_header_timezone_missing_created_at(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    naive_now = datetime.datetime.now(tz=None)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat(),
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat()
-        + "-04:00",
+        "hsa_created_at": naive_now.isoformat(),
+        "hsa_valid_until": (
+            naive_now.astimezone(tz=datetime.timezone(-datetime.timedelta(hours=4)))
+            + datetime.timedelta(minutes=10)
+        ).isoformat(),
     }
 
     source_string = join_params(data)
@@ -184,13 +186,13 @@ def test_get_auth_required_header_timezone_missing_valid_until(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    naive_now = datetime.datetime.now(tz=None)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+        "hsa_created_at": naive_now.astimezone(datetime.timezone.utc).isoformat(),
+        "hsa_valid_until": (naive_now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -214,13 +216,13 @@ def test_get_auth_required_header_timezone_missing_created_at_and_valid_until(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    naive_now = datetime.datetime.now(tz=None)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat(),
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+        "hsa_created_at": naive_now.isoformat(),
+        "hsa_valid_until": (naive_now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -244,13 +246,13 @@ def test_get_auth_required_header_authenticated(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -276,13 +278,13 @@ def test_join_user_to_organization(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
         "hsa_organization": org.id,
     }
 
@@ -320,13 +322,13 @@ def test_join_user_to_organization_existing_user(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": user.username,
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
         "hsa_organization": org.id,
     }
 
@@ -366,13 +368,13 @@ def test_join_user_to_organization_existing_user_and_organisation(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": user.username,
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
         "hsa_organization": org.id,
     }
 
@@ -400,13 +402,13 @@ def test_join_user_to_organization_invalid_org(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
         "hsa_organization": "test:2345",
     }
 
@@ -434,14 +436,14 @@ def test_signed_auth_entry_not_invalidated(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
     valid_until = now + datetime.timedelta(minutes=10)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": valid_until.isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": valid_until.isoformat(),
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -478,15 +480,15 @@ def test_invalidate_signature_success_header_params(
 
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     valid_until = now + datetime.timedelta(minutes=10)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": valid_until.isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": valid_until.isoformat(),
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -527,13 +529,13 @@ def test_invalidate_signature_success_query_params(
 
     url = reverse("auth_required_test-list")
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -574,13 +576,13 @@ def test_invalidate_signature_invalid_params(
 ):
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         # hsa_username missing
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -602,13 +604,13 @@ def test_invalidate_signature_missing_timezone(
 ):
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
 
-    now = datetime.datetime.utcnow()
+    naive_now = datetime.datetime.now(tz=None)
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat(),
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+        "hsa_created_at": naive_now.isoformat(),
+        "hsa_valid_until": (naive_now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
@@ -629,13 +631,13 @@ def test_invalidate_signature_missing_timezone(
 def test_authenticate_new_user(api_client, data_source, signed_auth_key_factory):
     signed_auth_key = signed_auth_key_factory(data_source=data_source)
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -663,13 +665,13 @@ def test_authenticate_existing_user_no_existing_data_source(
 
     user = user_factory()
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": user.username,
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -698,13 +700,13 @@ def test_authenticate_existing_user_existing_same_data_source(
     user = user_factory()
     user_origin_factory(user=user, data_source=data_source)
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source.id,
         "hsa_username": user.username,
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)
@@ -740,13 +742,13 @@ def test_authenticate_existing_user_existing_different_data_source(
     user = user_factory()
     user_origin_factory(user=user, data_source=data_source2)
 
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
 
     data = {
         "hsa_source": data_source1.id,
         "hsa_username": user.username,
-        "hsa_created_at": now.isoformat() + "Z",
-        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
     source_string = join_params(data)

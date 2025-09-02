@@ -182,13 +182,13 @@ def hsa_params_factory():
         if not signed_auth_key:
             signed_auth_key = SignedAuthKeyFactory(data_source=data_source)
 
-        now = datetime.datetime.utcnow()
+        now = timezone.now()
 
         data = {
             "hsa_source": data_source.id,
             "hsa_username": user.username if user else username,
-            "hsa_created_at": now.isoformat() + "Z",
-            "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat() + "Z",
+            "hsa_created_at": now.isoformat(),
+            "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
             "hsa_has_organization_rights": str(has_organization_rights),
         }
 

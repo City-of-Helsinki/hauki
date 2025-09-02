@@ -22,6 +22,7 @@ from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext
 from django_orghierarchy.models import Organization
+from model_utils.managers import SoftDeletableManager
 from model_utils.models import SoftDeletableModel, TimeStampedModel
 from timezone_field import TimeZoneField
 
@@ -309,6 +310,8 @@ class DataSource(SoftDeletableModel, TimeStampedModel):
         verbose_name = _("Data source")
         verbose_name_plural = _("Data sources")
 
+    objects = SoftDeletableManager()
+
     def __str__(self):
         return self.id
 
@@ -380,6 +383,8 @@ class Resource(SoftDeletableModel, TimeStampedModel):
         verbose_name = _("Resource")
         verbose_name_plural = _("Resources")
         indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
+
+    objects = SoftDeletableManager()
 
     def __str__(self):
         return str(self.name)
@@ -664,6 +669,8 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
         ordering = ["start_date"]
         indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
 
+    objects = SoftDeletableManager()
+
     def __str__(self):
         return (
             f"{self.name}({self.start_date} - {self.end_date} "
@@ -868,6 +875,8 @@ class TimeSpanGroup(SoftDeletableModel, models.Model):
     def __str__(self):
         return f"{self.period} time spans {self.time_spans.all()}"
 
+    objects = SoftDeletableManager()
+
     def as_hash_input(self) -> str:
         time_span_strings = []
         for time_span in self.time_spans.all():
@@ -954,6 +963,8 @@ class TimeSpan(SoftDeletableModel, TimeStampedModel):
             "end_time",
             "resource_state",
         ]
+
+    objects = SoftDeletableManager()
 
     def __str__(self):
         if self.weekdays:
@@ -1082,6 +1093,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Rule")
         verbose_name_plural = _("Rules")
+
+    objects = SoftDeletableManager()
 
     def __str__(self):
         if self.frequency_modifier:

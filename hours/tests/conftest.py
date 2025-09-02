@@ -77,27 +77,30 @@ class ResourceOriginFactory(factory.django.DjangoModelFactory):
 class DatePeriodFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = DatePeriod
+        skip_postgeneration_save = True
 
     name = factory.LazyAttribute(lambda x: "DP-" + faker.pystr())
     start_date = factory.LazyAttribute(lambda x: faker.date())
 
     @factory.post_generation
-    def origins(self, create, extracted, **__):
+    def origins(obj, create, extracted, **__):  # noqa: N805
         if not create or not extracted:
             return
 
         for origin in extracted:
-            self.origins.add(origin)
+            obj.origins.add(origin)
+        obj.save()
 
     @factory.post_generation
-    def data_sources(self, create, extracted, **__):
+    def data_sources(obj, create, extracted, **__):  # noqa: N805
         if not create or not extracted:
             return
 
         for data_source in extracted:
             # Create a new origin for each data source, since data sources
             # are accessed through origins.
-            self.origins.add(PeriodOriginFactory(data_source=data_source, period=self))
+            obj.origins.add(PeriodOriginFactory(data_source=data_source, period=obj))
+        obj.save()
 
 
 @register

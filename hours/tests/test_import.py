@@ -95,7 +95,6 @@ def mock_tprek_data(requests_mock, request):
     }
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def mock_library_data(requests_mock, request):
     # We should have the same hours whether base period is endless or ends next year

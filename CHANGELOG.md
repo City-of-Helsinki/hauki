@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.0...hauki-v1.4.1) (2025-09-10)
+
+
+### Dependencies
+
+* Bump django from 4.2.23 to 4.2.24 ([f29f375](https://github.com/City-of-Helsinki/hauki/commit/f29f375c216a3ded3b25cd4313f47c2b3ccddd1b))
+* Generate hashes for requirements ([2bff894](https://github.com/City-of-Helsinki/hauki/commit/2bff89419bd174484f0fddffe4d25419a8eccd86))
+* Remove django-enumfields2 ([eb824e1](https://github.com/City-of-Helsinki/hauki/commit/eb824e1e156c0e20817d827d1ffb6cb9c7c34617))
+* Replace django-enumfields with django-enumfields2 ([a76955a](https://github.com/City-of-Helsinki/hauki/commit/a76955a06adc0574fc34ece0d3cd6babeffe6163))
+* Upgrade pip-tools ([f4604f4](https://github.com/City-of-Helsinki/hauki/commit/f4604f41eeb2aa8aa49cd6892b61a454906d546d))
+* Upgrade to python 3.12 ([f0a75d3](https://github.com/City-of-Helsinki/hauki/commit/f0a75d3d3d8aa3c6a10f3b712f6f781e62a97815))
+
 ## [1.4.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.3.12...hauki-v1.4.0) (2025-08-12)
 
 

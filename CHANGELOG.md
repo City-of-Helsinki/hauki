@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.1...hauki-v1.4.2) (2025-09-23)
+
+
+### Dependencies
+
+* Bump authlib from 1.3.1 to 1.6.4 ([95774d3](https://github.com/City-of-Helsinki/hauki/commit/95774d37d3673b9623a3460d6878a1f83477a0aa))
+
 ## [1.4.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.0...hauki-v1.4.1) (2025-09-10)
 
 

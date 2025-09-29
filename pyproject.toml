@@ -23,6 +23,9 @@ select = [
 ]
 extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] }
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "hauki.test_settings"
+
 [tool.pip-tools.compile]
 generate-hashes = true
 strip-extras = true

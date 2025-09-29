@@ -19,7 +19,6 @@ RUN dnf update -y && dnf install -y \
     gettext \
     glibc-locale-source \
     && pip install -U pip setuptools wheel \
-    && pip install --no-cache-dir uwsgi \
     && pip install --no-cache-dir -r requirements.txt \
     && localedef --inputfile=fi_FI --charmap=UTF-8 fi_FI.UTF-8 \
     && dnf clean all

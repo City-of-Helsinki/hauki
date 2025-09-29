@@ -1,5 +1,5 @@
 bleach
-Django~=4.2
+Django~=5.2.7
 django-cors-headers
 django-environ
 django-extra-fields
@@ -14,10 +14,12 @@ djangorestframework
 drf-spectacular<0.27 # 0.27 breaks the schema generation
 drf-writable-nested
 holidays
-psycopg2
+psycopg[c]
 requests-cache
 sentry-sdk
 whitenoise
 elastic-apm
 tzdata
 pytz
+ipython
+uwsgi

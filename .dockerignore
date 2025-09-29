@@ -17,5 +17,4 @@
 #################################################
 !config_dev.env
 !manage.py
-!pytest.ini
 !requirements*

@@ -142,6 +142,8 @@ class RuleFactory(factory.django.DjangoModelFactory):
 class OrganizationFactory(factory.django.DjangoModelFactory):
     id = factory.LazyAttribute(lambda x: str(uuid.uuid4()))
     name = factory.LazyAttribute(lambda x: "ORG-" + faker.pystr())
+    data_source = factory.SubFactory(DataSourceFactory)
+    origin_id = factory.LazyAttribute(lambda x: "OID-" + faker.pystr())
 
     class Meta:
         model = Organization

@@ -146,7 +146,7 @@ class Importer:
         if not skip_fields:
             skip_fields = []
         obj_fields = list(obj._meta.fields)
-        trans_fields = translator.get_options_for_model(type(obj)).fields
+        trans_fields = translator.get_options_for_model(type(obj)).all_fields
         for field_name, lang_fields in trans_fields.items():
             lang_fields = list(lang_fields)
             for lf in lang_fields:

@@ -41,7 +41,7 @@ class TranslationSerializerMixin:
         fields = self._readable_fields
 
         for field in fields:
-            if field.field_name not in translation_options.fields.keys():
+            if field.field_name not in translation_options.all_fields.keys():
                 continue
 
             new_value = {}
@@ -64,7 +64,7 @@ class TranslationSerializerMixin:
         # Add the possibly existing already internalized values to the
         # translated_values variable. Otherwise we would lose the values
         # if to_internal_value is called twice (as is the case with nested serializers).
-        for field_name in translation_options.fields.keys():
+        for field_name in translation_options.all_fields.keys():
             for lang in mt_settings.AVAILABLE_LANGUAGES:
                 translation_field_name = f"{field_name}_{lang}"
                 if translation_field_name in data:
@@ -73,7 +73,7 @@ class TranslationSerializerMixin:
                     )
 
         errors = OrderedDict()
-        for field_name in translation_options.fields.keys():
+        for field_name in translation_options.all_fields.keys():
             if field_name not in data.keys():
                 continue
 

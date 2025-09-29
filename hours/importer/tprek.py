@@ -1,11 +1,11 @@
 import csv
 import re
 from calendar import day_abbr, different_locale, month_name
+from collections.abc import Hashable
 from datetime import date
 from datetime import time as datetime_time
 from itertools import zip_longest
 from pathlib import Path
-from typing import Hashable, Tuple
 
 import pytz
 from django import db
@@ -111,7 +111,7 @@ class TPRekImporter(Importer):
             "connection": Resource.objects.filter(
                 origins__data_source=self.data_source,
                 resource_type__in=set(CONNECTION_TYPE_MAPPING.values())
-                | set((ResourceType.SUBSECTION,)),
+                | {ResourceType.SUBSECTION},
             )
             .distinct()
             .prefetch_related("origins"),
@@ -139,7 +139,7 @@ class TPRekImporter(Importer):
             "connection_opening_hours": DatePeriod.objects.filter(
                 origins__data_source=self.data_source,
                 resource__resource_type__in=set(CONNECTION_TYPE_MAPPING.values())
-                | set((ResourceType.SUBSECTION,)),
+                | {ResourceType.SUBSECTION},
             )
             .exclude(origins__data_source=self.kirjastot_data_source)
             .distinct()
@@ -223,7 +223,7 @@ class TPRekImporter(Importer):
             return self.check_non_public(obj)
         return super().check_deleted(obj)
 
-    def parse_dates(self, start: str, end: str) -> Tuple[date, date]:
+    def parse_dates(self, start: str, end: str) -> tuple[date, date]:
         """
         Parses period start and end dates. If end is given, start string may be
         incomplete.
@@ -252,7 +252,7 @@ class TPRekImporter(Importer):
 
                 end = date(year=year, month=month, day=day)
             except ValueError:
-                self.logger.info("Invalid end date {0}".format(end))
+                self.logger.info(f"Invalid end date {end}")
                 end = None
         if start:
             try:
@@ -292,7 +292,7 @@ class TPRekImporter(Importer):
 
                 start = date(year=year, month=month, day=day)
             except (ValueError, AttributeError):
-                self.logger.info("Invalid start date {0}".format(start))
+                self.logger.info(f"Invalid start date {start}")
                 start = None
         return start, end
 
@@ -458,9 +458,7 @@ class TPRekImporter(Importer):
                     and period["end_date"] == end_date
                 ]:
                     self.logger.info(
-                        "Cannot import another string with same dates: {0}".format(
-                            period_str
-                        )
+                        f"Cannot import another string with same dates: {period_str}"
                     )
                     continue
                 periods.append(
@@ -735,7 +733,7 @@ class TPRekImporter(Importer):
         Takes unit data dict and returns the multilanguage dict for given field.
         """
         return {
-            lang[0]: self.clean_text(data.get("%s_%s" % (field_name, lang[0]), ""))
+            lang[0]: self.clean_text(data.get(f"{field_name}_{lang[0]}", ""))
             for lang in settings.LANGUAGES
         }
 
@@ -746,9 +744,9 @@ class TPRekImporter(Importer):
         address = {}
         for lang in settings.LANGUAGES:
             address[lang[0]] = self.clean_text(
-                data.get("street_address_%s" % lang[0], "")
+                data.get(f"street_address_{lang[0]}", "")
                 + ", "
-                + data.get("address_city_%s" % lang[0], "")
+                + data.get(f"address_city_{lang[0]}", "")
             )
         return address
 
@@ -771,7 +769,7 @@ class TPRekImporter(Importer):
             data_source=self.data_source, origin_id=data["dept_id"]
         )
         if created:
-            self.logger.debug("Created missing organization tprek:%s" % data["dept_id"])
+            self.logger.debug(f"Created missing organization tprek:{data['dept_id']}")
 
         origins = self.get_unit_origins(data)
         description = self.get_multilanguage_string("desc", data)
@@ -872,14 +870,12 @@ class TPRekImporter(Importer):
                 + " "
                 + data.get("phone", "")
                 + " "
-                + data.get("www_%s" % lang[0], "")
+                + data.get(f"www_{lang[0]}", "")
             )
             # Name sometimes contains stuff that better fits description, plus name may
             # be cut short, plus constructed description may be empty anyway
             if not description[lang[0]]:
-                description[lang[0]] = self.clean_text(
-                    data.get("name_%s" % lang[0], "")
-                )
+                description[lang[0]] = self.clean_text(data.get(f"name_{lang[0]}", ""))
         return description
 
     def get_connection_data(self, data: dict) -> dict:
@@ -987,15 +983,14 @@ class TPRekImporter(Importer):
         # or has been recently deleted or added.
         if not resource and not allow_missing_resource:
             self.logger.info(
-                "Cannot import hours yet, resource with given id not found! {0}".format(
-                    resource_id
-                )
+                f"Cannot import hours yet, resource with given id not found!"
+                f" {resource_id}"
             )
             return []
         period_string = data.get("name_fi", "")
         if not period_string:
             self.logger.info(
-                "Error parsing data, Finnish opening hours not found! {0}".format(data)
+                f"Error parsing data, Finnish opening hours not found! {data}"
             )
             return []
         periods = self.parse_period_string(period_string)
@@ -1009,8 +1004,8 @@ class TPRekImporter(Importer):
                 )
             except ValueError as e:
                 self.logger.warning(
-                    'Value error "{}" when parsing'
-                    ' period string "{}". Skipping period.'.format(e, period_string)
+                    f'Value error "{e}" when parsing'
+                    f' period string "{period_string}". Skipping period.'
                 )
                 continue
 
@@ -1112,12 +1107,10 @@ class TPRekImporter(Importer):
                 start_date = period.get("start_date", date.today())
                 end_date = period.get("end_date", None)
 
-                origin_id = "{0}-{1}-{2}".format(connection_id, start_date, end_date)
+                origin_id = f"{connection_id}-{start_date}-{end_date}"
                 counter = 1
                 while origin_id in used_origin_ids:
-                    origin_id = "{0}-{1}-{2}-{3}".format(
-                        connection_id, start_date, end_date, counter
-                    )
+                    origin_id = f"{connection_id}-{start_date}-{end_date}-{counter}"
                     counter += 1
 
                 used_origin_ids.add(origin_id)
@@ -1240,15 +1233,15 @@ class TPRekImporter(Importer):
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )
-        obj_list = getattr(self, "filter_%s_data" % object_type)(obj_list)
-        self.logger.info("%s %ss loaded" % (len(obj_list), object_type))
+        obj_list = getattr(self, f"filter_{object_type}_data")(obj_list)
+        self.logger.info(f"{len(obj_list)} {object_type}s loaded")
         obj_dict = {}
         extra_subsections = {}
         extra_periods = {}
         for idx, data in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                self.logger.info("%s %ss read" % (idx, object_type))
-            object_data = getattr(self, "get_%s_data" % object_type)(data)
+                self.logger.info(f"{idx} {object_type}s read")
+            object_data = getattr(self, f"get_{object_type}_data")(data)
             if not isinstance(object_data, list):
                 # wrap single objects in list, because object_data may also contain
                 # multiple objects
@@ -1292,8 +1285,8 @@ class TPRekImporter(Importer):
                         parents = datum["parents"]
                         origins = datum["origins"]
                         self.logger.info(
-                            "Adding duplicate parent %s and origin %s to object %s"
-                            % (parents, origins, object_data_id)
+                            f"Adding duplicate parent {parents} and origin {origins} to"
+                            f" object {object_data_id}"
                         )
                         obj_dict[object_data_id]["parents"].extend(parents)
                         obj_dict[object_data_id]["origins"].extend(origins)
@@ -1309,7 +1302,7 @@ class TPRekImporter(Importer):
                     ]
         for idx, object_data in enumerate(obj_dict.values()):
             if idx and (idx % 1000) == 0:
-                self.logger.info("%s %ss saved" % (idx, object_type))
+                self.logger.info(f"{idx} {object_type}s saved")
             obj = getattr(self, f"save_{klass_str}")(object_data)
 
             syncher.mark(obj)

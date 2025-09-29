@@ -1,9 +1,6 @@
 from copy import deepcopy
-from typing import TypeVar
 
 from django.db import models
-
-T = TypeVar("T", bound=models.Model)
 
 
 def get_resource_pk_filter(pk):
@@ -18,7 +15,7 @@ def get_resource_pk_filter(pk):
     }
 
 
-def copy_instance(instance: T, field_overrides: dict = None) -> T:
+def copy_instance[T: models.Model](instance: T, field_overrides: dict = None) -> T:
     new_instance = deepcopy(instance)
     new_instance.id = None
     for field_name, field_value in (field_overrides or {}).items():

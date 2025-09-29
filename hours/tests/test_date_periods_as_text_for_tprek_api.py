@@ -39,9 +39,7 @@ def test_test_date_periods_as_text_for_tprek_api_with_hours(
             content_type="application/json",
         )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -95,8 +93,6 @@ def test_test_date_periods_as_text_for_tprek_api_with_past_date_periods(
                 content_type="application/json",
             )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1

@@ -1,6 +1,5 @@
 import datetime
 import re
-from typing import Optional
 
 from dateutil.parser import parse
 from dateutil.relativedelta import MO, SU, relativedelta
@@ -17,7 +16,7 @@ from .utils import get_resource_pk_filter
 
 def parse_maybe_relative_date_string(
     date_string: str, end_date: bool = False
-) -> Optional[datetime.date]:
+) -> datetime.date | None:
     """
     Parses given string as python date.
 
@@ -108,15 +107,15 @@ class MaybeRelativeNullableDateFilter(Filter):
         if self.distinct:
             qs = qs.distinct()
         if self.lookup_expr in ("lte_or_null", "gte_or_null"):
-            range_lookup = "%s__%s" % (
+            range_lookup = "{}__{}".format(
                 self.field_name,
                 self.lookup_expr.split("_or_")[0],
             )
-            null_lookup = "%s__isnull" % self.field_name
+            null_lookup = f"{self.field_name}__isnull"
             q = Q(**{range_lookup: value}) | Q(**{null_lookup: True})
             qs = self.get_method(qs)(q)
         else:
-            lookup = "%s__%s" % (self.field_name, self.lookup_expr)
+            lookup = f"{self.field_name}__{self.lookup_expr}"
             qs = self.get_method(qs)(**{lookup: value})
         return qs
 

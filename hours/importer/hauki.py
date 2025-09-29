@@ -48,7 +48,7 @@ class HaukiImporter(Importer):
         resources = Resource.objects.filter(origins__data_source=self.data_source)
         if self.options.get("single", None):
             resources = resources.filter(origins__origin_id=self.options["single"])
-        self.logger.info("{} Hauki resources found".format(resources.count()))
+        self.logger.info(f"{resources.count()} Hauki resources found")
 
         queryset = DatePeriod.objects.filter(resource__in=resources).prefetch_related(
             "time_span_groups__time_spans"

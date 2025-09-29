@@ -8,9 +8,7 @@ def test_list_resources_empty(admin_client):
 
     response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -23,9 +21,7 @@ def test_list_resources_one_resource(admin_client, resource_factory):
 
     response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
     assert response.data["results"][0]["id"] == resource.id
@@ -40,9 +36,7 @@ def test_list_resources_multiple_resources(admin_client, resource_factory):
 
     response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -64,9 +58,7 @@ def test_list_resources_data_source_filter_none_of_two_match(
 
     response = admin_client.get(url, data={"data_source": data_source.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -86,9 +78,7 @@ def test_list_resources_data_source_filter_one_of_two_match(
 
     response = admin_client.get(url, data={"data_source": data_source.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -113,9 +103,7 @@ def test_list_resources_data_source_filter_two_of_two_match(
 
     response = admin_client.get(url, data={"data_source": data_source.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -135,9 +123,7 @@ def test_list_resources_origin_id_exists_filter_false_all_match(
 
     response = admin_client.get(url, data={"origin_id_exists": False})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -160,9 +146,7 @@ def test_list_resources_origin_id_exists_filter_false_one_matches(
 
     response = admin_client.get(url, data={"origin_id_exists": False})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -186,9 +170,7 @@ def test_list_resources_origin_id_exists_filter_false_none_match(
 
     response = admin_client.get(url, data={"origin_id_exists": False})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -208,9 +190,7 @@ def test_list_resources_origin_id_exists_filter_true_all_match(
 
     response = admin_client.get(url, data={"origin_id_exists": True})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -233,9 +213,7 @@ def test_list_resources_origin_id_exists_filter_true_one_matches(
 
     response = admin_client.get(url, data={"origin_id_exists": True})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -257,9 +235,7 @@ def test_list_resources_origin_id_exists_filter_true_none_match(
 
     response = admin_client.get(url, data={"origin_id_exists": True})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -282,9 +258,7 @@ def test_list_resources_data_source_and_origin_id_exists_filter_none_match(
         url, data={"data_source": data_source2.id, "origin_id_exists": True}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -306,9 +280,7 @@ def test_list_resources_data_source_and_origin_id_exists_filter_all_match(
         url, data={"data_source": data_source.id, "origin_id_exists": True}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -338,9 +310,7 @@ def test_data_source_and_origin_id_exists_two_data_sources(
         url, data={"data_source": data_source.id, "origin_id_exists": True}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 2
 
@@ -369,9 +339,7 @@ def test_data_source_and_origin_id_exists_two_data_sources_on_other(
         url, data={"data_source": data_source.id, "origin_id_exists": True}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -400,9 +368,7 @@ def test_data_source_and_origin_id_exists_false_two_data_sources_on_other(
         url, data={"data_source": data_source.id, "origin_id_exists": False}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -427,9 +393,7 @@ def test_data_source_and_origin_id_exists_false_data_sources_in_parent(
         url, data={"data_source": data_source.id, "origin_id_exists": False}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -459,9 +423,7 @@ def test_data_source_and_origin_id_exists_false_different_data_source_in_child(
         url, data={"data_source": data_source.id, "origin_id_exists": False}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -491,9 +453,7 @@ def test_data_source_and_origin_id_exists_true_different_data_source_in_child(
         url, data={"data_source": data_source.id, "origin_id_exists": True}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -513,9 +473,7 @@ def test_list_resources_parent_and_child_filter_match(admin_client, resource_fac
 
     response = admin_client.get(url, data={"parent": resource_1.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -525,9 +483,7 @@ def test_list_resources_parent_and_child_filter_match(admin_client, resource_fac
 
     response = admin_client.get(url, data={"child": resource_2.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 1
 
@@ -549,17 +505,13 @@ def test_list_resources_parent_and_child_filter_no_match(
 
     response = admin_client.get(url, data={"parent": resource_1.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
     response = admin_client.get(url, data={"child": resource_2.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 0
 
@@ -589,23 +541,11 @@ def test_list_resources_filter_by_multiple_resource_ids(
             "",
             ":",
             str(resources[0].id),
-            "{}:{}".format(
-                resources[2].origins.first().data_source.id,
-                resources[2].origins.first().origin_id,
-            ),
+            f"{resources[2].origins.first().data_source.id}:{resources[2].origins.first().origin_id}",
             f" {resources[5].id} ",
-            "{}:{}".format(
-                resources[8].origins.first().data_source.id,
-                resources[8].origins.first().origin_id,
-            ),
-            "{}:{}".format(
-                resources[9].origins.first().data_source.id,
-                resources[9].origins.first().origin_id,
-            ),
-            "{}:{}".format(
-                resources[9].origins.last().data_source.id,
-                resources[9].origins.last().origin_id,
-            ),
+            f"{resources[8].origins.first().data_source.id}:{resources[8].origins.first().origin_id}",
+            f"{resources[9].origins.first().data_source.id}:{resources[9].origins.first().origin_id}",
+            f"{resources[9].origins.last().data_source.id}:{resources[9].origins.last().origin_id}",
             "nonsensical value",
             "second::::nonsensical",
         ]
@@ -619,8 +559,6 @@ def test_list_resources_filter_by_multiple_resource_ids(
         },
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["count"] == 5

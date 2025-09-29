@@ -191,7 +191,7 @@ def test_get_auth_required_header_timezone_missing_valid_until(
     data = {
         "hsa_source": data_source.id,
         "hsa_username": "test_user",
-        "hsa_created_at": naive_now.astimezone(datetime.timezone.utc).isoformat(),
+        "hsa_created_at": naive_now.astimezone(datetime.UTC).isoformat(),
         "hsa_valid_until": (naive_now + datetime.timedelta(minutes=10)).isoformat(),
     }
 
@@ -877,9 +877,7 @@ def test_auth_data_resource_data_source_id(
     hsa_params = {
         "username": "test_user",
         "data_source": data_source,
-        "resource": "{}:{}".format(
-            resource_origin.data_source.id, resource_origin.origin_id
-        ),
+        "resource": f"{resource_origin.data_source.id}:{resource_origin.origin_id}",
     }
     params = hsa_params_factory(**hsa_params)
 

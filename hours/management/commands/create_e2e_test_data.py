@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from secrets import token_hex
 
 from django.contrib.auth import get_user_model
@@ -28,7 +28,7 @@ class Command(BaseCommand):
         test_signed_auth_key, created = SignedAuthKey.objects.get_or_create(
             data_source=test_data_source,
             defaults={
-                "valid_after": datetime.now(timezone.utc),
+                "valid_after": datetime.now(UTC),
                 "signing_key": token_hex(64),
             },
         )

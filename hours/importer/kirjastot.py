@@ -202,9 +202,7 @@ class KirjastotImporter(Importer):
         except RequestException as e:
             self.logger.warning(
                 "Could not fetch data from the kirjastot.fi API"
-                " for library {}:{}. Error: {}".format(
-                    self.data_source.id, kirkanta_id, str(e)
-                )
+                f" for library {self.data_source.id}:{kirkanta_id}. Error: {str(e)}"
             )
 
         return {}
@@ -555,9 +553,8 @@ class KirjastotImporter(Importer):
             period_id_string = str(period_id)
             if period_id_string not in periods.keys():
                 self.logger.info(
-                    "Period {} not found in periods! Ignoring data {}".format(
-                        period_id_string, days
-                    )
+                    f"Period {period_id_string} not found in periods! "
+                    f"Ignoring data {days}"
                 )
             periods[period_id_string]["days"] = schedules
 
@@ -819,16 +816,14 @@ class KirjastotImporter(Importer):
         if start_date:
             start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
-        self.logger.info("{} libraries found".format(libraries.count()))
+        self.logger.info(f"{libraries.count()} libraries found")
 
         import_start_date, import_end_date = self.get_date_range(
             start=start_date, back=0
         )
 
         for library in libraries:
-            self.logger.info(
-                'Importing hours for "{}" id:{}...'.format(library.name, library.id)
-            )
+            self.logger.info(f'Importing hours for "{library.name}" id:{library.id}...')
             queryset = (
                 DatePeriod.objects.filter(
                     origins__data_source=self.data_source, resource=library
@@ -927,7 +922,7 @@ class KirjastotImporter(Importer):
         if start_date:
             start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
-        self.logger.info("{} libraries found".format(libraries.count()))
+        self.logger.info(f"{libraries.count()} libraries found")
 
         import_start_date, import_end_date = self.get_date_range(
             start=start_date, back=0
@@ -935,7 +930,7 @@ class KirjastotImporter(Importer):
 
         for library in libraries:
             self.logger.info(
-                'Fetching schedule for "{}" id:{}...'.format(library.name, library.id)
+                f'Fetching schedule for "{library.name}" id:{library.id}...'
             )
             data = self.get_hours_from_api(library, import_start_date, import_end_date)
 

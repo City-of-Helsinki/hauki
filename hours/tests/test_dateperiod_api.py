@@ -16,9 +16,7 @@ def test_invalid_format_returns_400(admin_client):
 
     response = admin_client.get(url, data={"start_date_lte": "2030-101-01"})
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
     assert response.data["start_date_lte"][0] == "Invalid date format"
 
 
@@ -28,9 +26,7 @@ def test_list_date_periods_empty(admin_client):
 
     response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 0
 
@@ -48,9 +44,7 @@ def test_list_date_periods_one_date_period(admin_client, resource, date_period_f
 
     response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
     assert response.data[0]["id"] == date_period.id
@@ -77,9 +71,7 @@ def test_list_date_periods_multiple_date_periods(
 
     response = admin_client.get(url, data={"start_date_lte": "2030-01-01"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 2
     assert response.data[0]["id"] == date_period.id
@@ -111,9 +103,7 @@ def test_list_date_periods_filter_by_resource(
 
     response = admin_client.get(url, data={"resource": resource.id})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
     assert response.data[0]["id"] == date_period.id
@@ -236,9 +226,7 @@ def test_list_date_periods_filter_start_date_lte(
 
     response = admin_client.get(url, data={"start_date_lte": "2019-01-01"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
     assert response.data[0]["id"] == date_period2.id
@@ -265,9 +253,7 @@ def test_list_date_periods_filter_end_date_gte(
 
     response = admin_client.get(url, data={"end_date_gte": "2021-01-01"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
     assert response.data[0]["id"] == date_period.id
@@ -293,9 +279,7 @@ def test_create_date_period_no_time_span_groups(resource, admin_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -334,9 +318,7 @@ def test_create_date_period_one_time_span_group_one_time_span(resource, admin_cl
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -394,9 +376,7 @@ def test_create_date_period_one_time_span_group_one_time_span_one_rule(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -447,9 +427,7 @@ def test_update_date_period_no_time_span_groups(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -499,9 +477,7 @@ def test_update_date_period_keep_one_time_span(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -568,9 +544,7 @@ def test_update_date_period_add_one_time_span(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     date_period = DatePeriod.objects.get(pk=response.data["id"])
 
@@ -604,9 +578,7 @@ def test_create_time_span_no_group(admin_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
     assert "group" in response.data
     assert response.data["group"][0].code == "required"
@@ -639,6 +611,4 @@ def test_create_time_span_with_group(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"

@@ -13,9 +13,7 @@ def test_is_open_no_spans(admin_client, resource):
 
     response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is False
     assert response.data["resource"]["id"] == resource.id
@@ -51,9 +49,7 @@ def test_is_open_one_match(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -89,9 +85,7 @@ def test_is_open_full_day_match(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -126,9 +120,7 @@ def test_is_open_unknown_start_match(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -163,9 +155,7 @@ def test_is_open_unknown_end_match(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -200,9 +190,7 @@ def test_is_open_one_non_open(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is False
     assert len(response.data["matching_opening_hours"]) == 0
@@ -244,9 +232,7 @@ def test_is_open_one_matching_and_non_open(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -281,9 +267,7 @@ def test_is_open_one_match_with_other_timezone(
     with freeze_time("2021-01-11 12:00:00+02:00"):
         response = admin_client.get(url, data={"timezone": "UTC"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -329,9 +313,7 @@ def test_is_open_one_match_timezone_day_difference(
     with freeze_time("2021-01-11 23:00:00+00:00"):
         response = admin_client.get(url, data={"timezone": "UTC"})
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
@@ -381,9 +363,7 @@ def test_is_open_one_match_from_previous_day(
     with freeze_time("2021-01-11 02:00:00+02:00"):
         response = admin_client.get(url)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1

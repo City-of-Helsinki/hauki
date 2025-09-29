@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ModelSyncher(object):
+class ModelSyncher:
     def __init__(
         self,
         queryset,
@@ -32,7 +32,7 @@ class ModelSyncher(object):
 
     def mark(self, obj):
         if getattr(obj, "_found", False):
-            raise Exception("Object %s already marked" % obj)
+            raise Exception(f"Object {obj} already marked")
         if obj not in self.obj_dict:
             self.obj_dict[obj] = obj
         else:
@@ -97,9 +97,7 @@ class ModelSyncher(object):
         for obj in delete_list:
             if self.allow_deleting_func:
                 if not self.allow_deleting_func(obj):
-                    raise Exception(
-                        "Deleting %s not allowed by the importer" % str(obj)
-                    )
+                    raise Exception(f"Deleting {str(obj)} not allowed by the importer")
             if self.delete_func:
                 self.delete_func(obj)
                 deleted = True
@@ -107,4 +105,4 @@ class ModelSyncher(object):
                 obj.delete()
                 deleted = True
             if deleted:
-                logger.info("Deleting object %s" % obj)
+                logger.info(f"Deleting object {obj}")

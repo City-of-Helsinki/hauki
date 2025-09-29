@@ -17,8 +17,8 @@ class Command(BaseCommand):
         self.logger = logging.getLogger("hours_import")
         self.imp_list = ", ".join(sorted(self.importers.keys()))
         self.missing_args_message = (
-            "Enter the name of the hours importer module. Valid importers: %s"
-            % self.imp_list
+            f"Enter the name of the hours importer module. "
+            f"Valid importers: {self.imp_list}"
         )
 
     def add_arguments(self, parser):
@@ -76,7 +76,7 @@ class Command(BaseCommand):
 
         for imp in self.importer_types:
             parser.add_argument(
-                "--%s" % imp, dest=imp, action="store_true", help="import %s" % imp
+                f"--{imp}", dest=imp, action="store_true", help=f"import {imp}"
             )
 
     def handle(self, *args, **options):
@@ -85,7 +85,7 @@ class Command(BaseCommand):
         module = options["module"]
         if module not in self.importers:
             raise CommandError(
-                "Importer %s not found. Valid importers: %s" % (module, self.imp_list)
+                f"Importer {module} not found. Valid importers: {self.imp_list}"
             )
         imp_class = self.importers[module]
         importer = imp_class(options)
@@ -95,12 +95,12 @@ class Command(BaseCommand):
         # old_lang = get_language()
         # activate(settings.LANGUAGES[0][0])
         for imp_type in self.importer_types:
-            name = "import_%s" % imp_type
+            name = f"import_{imp_type}"
             method = getattr(importer, name, None)
             if options[imp_type]:
                 if not method:
                     raise CommandError(
-                        "Importer %s does not support importing %s" % (module, imp_type)
+                        f"Importer {module} does not support importing {imp_type}"
                     )
             else:
                 if not options["all"]:

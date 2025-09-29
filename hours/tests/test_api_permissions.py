@@ -21,9 +21,7 @@ def test_get_public_resource_anonymous(resource, api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -36,9 +34,7 @@ def test_get_non_public_resource_anonymous(resource, api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 404, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -55,9 +51,7 @@ def test_get_child_of_non_public_resource_anonymous(
         content_type="application/json",
     )
 
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 404, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -72,9 +66,7 @@ def test_get_non_public_resource_authenticated_no_org(resource, user, api_client
         content_type="application/json",
     )
 
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 404, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -100,9 +92,7 @@ def test_get_non_public_resource_authenticated_has_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -136,9 +126,7 @@ def test_get_non_public_resource_authenticated_parent_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -170,9 +158,7 @@ def test_get_non_public_resource_authenticated_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 404, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 404, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -187,9 +173,7 @@ def test_create_resource_anonymous(api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -206,9 +190,7 @@ def test_create_resource_authenticated_no_org(user, api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -237,9 +219,7 @@ def test_create_resource_authenticated_has_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -279,9 +259,7 @@ def test_create_resource_authenticated_non_editable_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -319,9 +297,7 @@ def test_create_resource_authenticated_editable_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -367,9 +343,7 @@ def test_create_resource_authenticated_previously_used_id(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     new_resource = Resource.objects.get(pk=response.data["id"])
 
@@ -417,9 +391,7 @@ def test_create_resource_authenticated_wrong_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -457,9 +429,7 @@ def test_create_resource_authenticated_unknown_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -495,9 +465,7 @@ def test_create_resource_authenticated_parent_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -532,9 +500,7 @@ def test_create_resource_authenticated_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -566,9 +532,7 @@ def test_create_child_resource_authenticated(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     new_resource = Resource.objects.get(pk=response.data["id"])
 
@@ -610,9 +574,7 @@ def test_create_child_resource_authenticated_parent_has_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -633,9 +595,7 @@ def test_update_resource_anonymous(resource, api_client):
 
     assert resource.name == original_name
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -668,9 +628,7 @@ def test_update_resource_authenticated_no_org_permission(
 
     assert resource.name == original_name
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -701,9 +659,7 @@ def test_update_resource_authenticated_has_org_permission(
 
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert resource.name == "New name"
 
@@ -745,9 +701,7 @@ def test_update_resource_authenticated_non_editable_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -798,9 +752,7 @@ def test_update_resource_data_source_authenticated_non_editable_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -838,9 +790,7 @@ def test_update_resource_authenticated_editable_data_source(
     )
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     assert resource.name == "New name"
 
 
@@ -888,9 +838,7 @@ def test_update_resource_with_data_source_authenticated_editable_data_source(
     )
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     assert resource.origins.all()[0].origin_id == "1"
 
 
@@ -938,9 +886,7 @@ def test_update_resource_data_source_authenticated_editable_data_source(
     )
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     assert resource.origins.count() == 1
     assert resource.origins.all()[0].origin_id == "2"
 
@@ -992,9 +938,7 @@ def test_update_resource_change_data_source_authenticated_editable_data_source(
     )
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     assert resource.origins.count() == 1
     assert resource.origins.all()[0].data_source.id == another_data_source.id
     assert resource.origins.all()[0].origin_id == "2"
@@ -1053,9 +997,7 @@ def test_update_resource_add_data_source_authenticated_editable_data_source(
     )
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     assert resource.origins.count() == 2
 
 
@@ -1105,9 +1047,7 @@ def test_update_resource_authenticated_wrong_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -1154,9 +1094,7 @@ def test_update_resource_authenticated_unknown_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -1193,9 +1131,7 @@ def test_update_resource_authenticated_has_parent_org_permission(
 
     resource = Resource.objects.get(id=resource.id)
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert resource.name == "New name"
 
@@ -1229,9 +1165,7 @@ def test_update_child_resource_authenticated(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     sub_resource = Resource.objects.get(pk=sub_resource.id)
 
@@ -1275,9 +1209,7 @@ def test_update_child_resource_authenticated_parent_has_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -1344,8 +1276,8 @@ def test_get_non_public_resource_hsa_authenticated(
         HTTP_AUTHORIZATION=authz_string,
     )
 
-    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
-        response.status_code, response.data
+    assert response.status_code == 200 if should_succeed else 404, (
+        f"{response.status_code} {response.data}"
     )
 
 
@@ -1417,8 +1349,8 @@ def test_get_child_of_non_public_resource_hsa_authenticated(
         HTTP_AUTHORIZATION=authz_string,
     )
 
-    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
-        response.status_code, response.data
+    assert response.status_code == 200 if should_succeed else 404, (
+        f"{response.status_code} {response.data}"
     )
 
 
@@ -1489,15 +1421,11 @@ def test_create_resource_hsa_authenticated_child_resource_permissions(
     )
 
     if should_succeed:
-        assert response.status_code == 201, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 201, f"{response.status_code} {response.data}"
         child_resource = resource.children.all()[0]
         assert child_resource.name == "New name"
     else:
-        assert response.status_code == 400, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 400, f"{response.status_code} {response.data}"
         assert not resource.children.all()
 
 
@@ -1573,15 +1501,11 @@ def test_create_resource_hsa_authenticated_child_resource_with_different_parents
     )
 
     if should_succeed:
-        assert response.status_code == 201, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 201, f"{response.status_code} {response.data}"
         child_resource = resource.children.all()[0]
         assert child_resource.name == "New name"
     else:
-        assert response.status_code == 400, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 400, f"{response.status_code} {response.data}"
         assert not resource.children.all()
 
 
@@ -1655,15 +1579,11 @@ def test_update_resource_hsa_authenticated_resource_permissions(
     resource = Resource.objects.get(id=resource.id)
 
     if should_succeed:
-        assert response.status_code == 200, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 200, f"{response.status_code} {response.data}"
 
         assert resource.name == "New name"
     else:
-        assert response.status_code == 403, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 403, f"{response.status_code} {response.data}"
 
         assert resource.name == existing_name
 
@@ -1742,15 +1662,11 @@ def test_update_resource_hsa_authenticated_child_resource_permissions(
     child_resource = Resource.objects.get(id=child_resource.id)
 
     if should_succeed:
-        assert response.status_code == 200, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 200, f"{response.status_code} {response.data}"
 
         assert child_resource.name == "New child resource name"
     else:
-        assert response.status_code == 403, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 403, f"{response.status_code} {response.data}"
 
         assert child_resource.name == existing_name
 
@@ -1834,15 +1750,11 @@ def test_update_resource_hsa_authenticated_child_resource_with_different_parents
     child_resource = Resource.objects.get(id=child_resource.id)
 
     if should_succeed:
-        assert response.status_code == 200, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 200, f"{response.status_code} {response.data}"
 
         assert child_resource.name == "New child resource name"
     else:
-        assert response.status_code == 403, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 403, f"{response.status_code} {response.data}"
 
         assert child_resource.name == existing_name
 
@@ -1924,21 +1836,15 @@ def test_update_resource_hsa_authenticated_add_another_parent_to_child(
     child_resource = Resource.objects.get(id=child_resource.id)
 
     if should_succeed:
-        assert response.status_code == 200, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 200, f"{response.status_code} {response.data}"
 
         assert set(child_resource.parents.all()) == {resource, second_parent}
     elif set_hsa_resource:
-        assert response.status_code == 400, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 400, f"{response.status_code} {response.data}"
 
         assert set(child_resource.parents.all()) == {resource}
     else:
-        assert response.status_code == 403, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 403, f"{response.status_code} {response.data}"
 
         assert set(child_resource.parents.all()) == {resource}
 
@@ -2017,15 +1923,11 @@ def test_update_resource_hsa_authenticated_same_org_other_resource_permissions(
     other_resource = Resource.objects.get(id=other_resource.id)
 
     if should_succeed:
-        assert response.status_code == 200, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 200, f"{response.status_code} {response.data}"
 
         assert other_resource.name == "New other resource name"
     else:
-        assert response.status_code == 403, "{} {}".format(
-            response.status_code, response.data
-        )
+        assert response.status_code == 403, f"{response.status_code} {response.data}"
 
         assert other_resource.name == existing_name
 
@@ -2169,9 +2071,7 @@ def test_list_date_periods_public(
         url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 2
 
@@ -2206,9 +2106,7 @@ def test_list_date_periods_one_non_public_unauthenticated(
         url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
 
@@ -2250,9 +2148,7 @@ def test_list_date_periods_one_non_public_authenticated_user_not_in_org(
         url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 1
 
@@ -2295,9 +2191,7 @@ def test_list_date_periods_one_non_public_authenticated_user_in_org(
         url, content_type="application/json", data={"start_date_gte": "1970-01-01"}
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data) == 2
 
@@ -2318,9 +2212,7 @@ def test_create_date_period_anonymous(api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2342,9 +2234,7 @@ def test_create_date_period_authenticated_no_org_in_resource(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2374,9 +2264,7 @@ def test_create_date_period_authenticated_no_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2408,9 +2296,7 @@ def test_create_date_period_authenticated_has_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2444,9 +2330,7 @@ def test_create_date_period_authenticated_has_parent_resource_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2487,9 +2371,7 @@ def test_create_date_period_authenticated_parent_resource_has_different_org(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2512,9 +2394,7 @@ def test_update_date_period_anonymous(resource, date_period_factory, api_client)
 
     assert date_period.name == original_name
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2549,9 +2429,7 @@ def test_update_date_period_authenticated_no_org_permission(
 
     assert date_period.name == original_name
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2585,9 +2463,7 @@ def test_update_date_period_authenticated_has_org_permission(
 
     assert date_period.name == "New name"
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2630,9 +2506,7 @@ def test_update_date_period_authenticated_has_parent_resource_org_permission(
 
     assert date_period.name == "New name"
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2681,9 +2555,7 @@ def test_update_date_period_authenticated_parent_resource_has_different_org(
 
     date_period = DatePeriod.objects.get(id=date_period.id)
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
     assert date_period.name == original_name
 
@@ -2754,8 +2626,8 @@ def test_get_dateperiod_non_public_resource_hsa_authenticated(
         HTTP_AUTHORIZATION=authz_string,
     )
 
-    assert response.status_code == 200 if should_succeed else 404, "{} {}".format(
-        response.status_code, response.data
+    assert response.status_code == 200 if should_succeed else 404, (
+        f"{response.status_code} {response.data}"
     )
 
 
@@ -2881,9 +2753,7 @@ def test_create_rule_anonymous(api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2910,9 +2780,7 @@ def test_create_rule_authenticated_no_org_in_resource(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2953,9 +2821,7 @@ def test_create_rule_authenticated_no_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -2997,9 +2863,7 @@ def test_create_rule_authenticated_has_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3024,9 +2888,7 @@ def test_update_rule_anonymous(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3068,9 +2930,7 @@ def test_update_rule_authenticated_no_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3113,9 +2973,7 @@ def test_update_rule_authenticated_has_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     rule = Rule.objects.get(pk=rule.id)
     assert rule.name == "New name"
@@ -3136,9 +2994,7 @@ def test_create_time_span_anonymous(api_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3163,9 +3019,7 @@ def test_create_time_span_authenticated_no_org_in_resource(
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3204,9 +3058,7 @@ def test_create_time_span_authenticated_no_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3246,9 +3098,7 @@ def test_create_time_span_authenticated_has_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3275,9 +3125,7 @@ def test_update_time_span_anonymous(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3317,9 +3165,7 @@ def test_update_time_span_authenticated_no_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 403, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -3360,9 +3206,7 @@ def test_update_time_span_authenticated_has_org_permission(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     time_span = TimeSpan.objects.get(pk=time_span.id)
     assert time_span.name == "New name"
@@ -3377,9 +3221,7 @@ def test_permission_check_action_anonymous_read(api_client, resource):
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data == {
         "has_permission": True,
@@ -3400,9 +3242,7 @@ def test_permission_check_action_anonymous_update(api_client, resource):
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data == {
         "has_permission": False,
@@ -3451,9 +3291,7 @@ def test_permission_check_action_authenticated_update(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert response.data == {
         "has_permission": expected_value,

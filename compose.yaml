@@ -22,7 +22,7 @@ services:
         environment:
             - DEBUG=true
             - DATABASE_URL=postgres://hauki:hauki@hauki-postgres/hauki
-            - WAIT_FOR_IT_ADDRESS=postgres:5432
+            - WAIT_FOR_IT_ADDRESS=hauki-postgres
         # Uncomment this if you want to configure development instance with the external file
         # env_file:
         #     - config_dev.env

@@ -5,11 +5,11 @@ import itertools
 import re
 from calendar import Calendar, monthrange
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from hashlib import md5
 from itertools import chain
 from operator import attrgetter
-from typing import Iterable, List, Optional, Set, Union
 
 from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
@@ -46,19 +46,19 @@ class TimeElement:
 
     The name, description, and periods attributes are ignored when comparing."""
 
-    start_time: Optional[datetime.time]
+    start_time: datetime.time | None
     end_time_on_next_day: bool
-    end_time: Optional[datetime.time]
+    end_time: datetime.time | None
     resource_state: State = State.UNDEFINED
     override: bool = False
     full_day: bool = False
     name: str = field(default="", compare=False)
     description: str = field(default="", compare=False)
-    periods: Optional[list] = field(default=None, compare=False)
+    periods: list | None = field(default=None, compare=False)
     # TODO: Add rules that matched
     # rules: Optional[list] = field(default=None, compare=False)
 
-    def get_total_period_length(self) -> Optional[int]:
+    def get_total_period_length(self) -> int | None:
         """Total length of the periods in this element
         Returns None if there are no periods or one of the periods are unbounded"""
         if not self.periods:
@@ -70,7 +70,7 @@ class TimeElement:
 
         return sum(period_lengths)
 
-    def get_next_day_part(self) -> Optional[TimeElement]:
+    def get_next_day_part(self) -> TimeElement | None:
         """Get the next day part of this time span
         Returns a new TimeElement with start time set to midnight, or None if
         this time span doesn't pass midnight."""
@@ -834,7 +834,7 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
 
         return result
 
-    def get_period_length(self) -> Optional[int]:
+    def get_period_length(self) -> int | None:
         """Get the length of this period in days
         Returns None if the period is unbounded."""
         if not self.start_date or not self.end_date:
@@ -1228,8 +1228,8 @@ class Rule(SoftDeletableModel, TimeStampedModel):
         return super().clean()
 
     def get_ordinal_for_item(
-        self, item: Union[List[datetime.date], datetime.date]
-    ) -> Union[None, int]:
+        self, item: list[datetime.date] | datetime.date
+    ) -> None | int:
         """Return ordinal for the provided context item"""
         if not item:
             return None
@@ -1302,7 +1302,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
     def get_context_sets(
         self, max_start_date: datetime.date, min_end_date: datetime.date
-    ) -> List:
+    ) -> list:
         """Get context sets defined by the Rules context and subject"""
 
         if self.context == RuleContext.PERIOD:
@@ -1455,7 +1455,7 @@ class Rule(SoftDeletableModel, TimeStampedModel):
 
     def apply_to_date_range(
         self, start_date: datetime.date, end_date: datetime.date
-    ) -> Set[datetime.date]:
+    ) -> set[datetime.date]:
         """Apply rule to the provided date range"""
         max_start_date = start_date
         if self.group.period.start_date:

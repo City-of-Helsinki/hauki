@@ -28,5 +28,5 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             for resource in resources:
-                self.stdout.write("Resource #{} {}".format(resource.id, resource))
+                self.stdout.write(f"Resource #{resource.id} {resource}")
                 resource.update_denormalized_date_periods_data()

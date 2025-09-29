@@ -1,6 +1,5 @@
 import datetime
 from operator import itemgetter
-from typing import Tuple
 
 import pytz
 from dateutil.relativedelta import relativedelta
@@ -181,7 +180,7 @@ class PageSizePageNumberPagination(PageNumberPagination):
     page_size_query_param = "page_size"
 
 
-def get_start_and_end_from_params(request) -> Tuple[datetime.date, datetime.date]:
+def get_start_and_end_from_params(request) -> tuple[datetime.date, datetime.date]:
     if not request.query_params.get("start_date") or not request.query_params.get(
         "end_date"
     ):
@@ -610,18 +609,16 @@ class ResourceViewSet(
         if date_period_ids := request.query_params.get("date_period_ids"):
             date_period_ids = date_period_ids.split(",")
             date_period_diff = set(date_period_ids).difference(
-                set(
-                    [
-                        # Convert to string to make sure we are comparing
-                        # strings to strings
-                        str(val)
-                        for val in list(
-                            resource.date_periods.filter(
-                                id__in=date_period_ids
-                            ).values_list("id", flat=True)
-                        )
-                    ]
-                )
+                {
+                    # Convert to string to make sure we are comparing
+                    # strings to strings
+                    str(val)
+                    for val in list(
+                        resource.date_periods.filter(
+                            id__in=date_period_ids
+                        ).values_list("id", flat=True)
+                    )
+                }
             )
             if date_period_diff:
                 raise NotFound(

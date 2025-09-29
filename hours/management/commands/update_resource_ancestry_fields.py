@@ -16,7 +16,5 @@ class Command(BaseCommand):
             child_resources = Resource.objects.filter(parents__isnull=False).distinct()
 
         for child_resource in child_resources:
-            self.stdout.write(
-                "\nChild #{} {}".format(child_resource.id, child_resource)
-            )
+            self.stdout.write(f"\nChild #{child_resource.id} {child_resource}")
             child_resource.update_ancestry(update_child_ancestry_fields=False)

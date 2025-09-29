@@ -20,9 +20,7 @@ def test_opening_hours_invalid_date(admin_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 400, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
     assert response.data[0] == _("Invalid start_date")
 
 
@@ -41,9 +39,7 @@ def test_opening_hours_empty(admin_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
 
 @pytest.mark.django_db
@@ -70,9 +66,7 @@ def test_opening_hours_date_period_no_opening_hours(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -109,9 +103,7 @@ def test_opening_hours_date_period_with_hours(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -157,9 +149,7 @@ def test_opening_hours_date_period_with_hours_and_rule(
             content_type="application/json",
         )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -193,9 +183,7 @@ def test_opening_hours_two_resources_one_date_period(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -236,9 +224,7 @@ def test_opening_hours_two_resources_two_date_periods(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -269,9 +255,7 @@ def test_opening_hours_date_period_start_date_empty(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -302,9 +286,7 @@ def test_opening_hours_date_period_end_date_empty(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -335,9 +317,7 @@ def test_opening_hours_date_period_start_and_end_date_empty(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -374,9 +354,7 @@ def test_opening_hours_date_period_with_hours_start_and_end_date_empty(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -421,9 +399,7 @@ def test_opening_hours_date_period_with_hours_and_rule_start_and_end_date_empty(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     assert len(response.data["results"]) == 1
     assert response.data["results"][0]["resource"]["name"]["fi"] == resource.name_fi
@@ -483,9 +459,7 @@ def test_opening_hours_data_source_filter_two_resources(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -543,9 +517,7 @@ def test_opening_hours_data_source_filter_two_resources_different_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -603,9 +575,7 @@ def test_opening_hours_data_source_filter_child_has_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -668,9 +638,7 @@ def test_opening_hours_data_source_filter_child_doesnt_have_data_source(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -714,9 +682,7 @@ def test_opening_hours_resource_filter_two_resources(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 
@@ -734,9 +700,7 @@ def test_opening_hours_resource_filter_two_resources(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     resource_names = {i["resource"]["name"]["fi"] for i in response.data["results"]}
 

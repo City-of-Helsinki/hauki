@@ -294,8 +294,8 @@ USE_X_FORWARDED_HOST = env("TRUST_X_FORWARDED_HOST")
 SECURE_PROXY_SSL_HEADER = env("SECURE_PROXY_SSL_HEADER")
 
 CORS_ALLOW_ALL_ORIGINS = True
-CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")
-SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
+CSRF_COOKIE_NAME = f"{env('COOKIE_PREFIX')}-csrftoken"
+SESSION_COOKIE_NAME = f"{env('COOKIE_PREFIX')}-sessionid"
 
 # DRF Settings
 # https://www.django-rest-framework.org/api-guide/settings/

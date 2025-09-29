@@ -112,9 +112,8 @@ def mock_library_data(requests_mock, request):
         # Call the library importer for Kallio
         date = "2020-06-01"
         url_to_mock = (
-            "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+            f"https://api.kirjastot.fi/v4/library/{kallio_kirkanta_id}/?with=schedules"
             "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
-            % kallio_kirkanta_id
         )
         test_file_path = os.path.join(
             os.path.dirname(__file__), "fixtures", test_file_name
@@ -227,9 +226,8 @@ def mock_library_data(requests_mock, request):
         if change == "next_month":
             date = "2020-07-01"
             url_to_mock = (
-                "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+                f"https://api.kirjastot.fi/v4/library/{kallio_kirkanta_id}/?with=schedules"
                 "&refs=period&period.start=2020-07-01&period.end=2021-07-01"
-                % kallio_kirkanta_id
             )
 
         # Calling the import twice checks idempotency, even if no change was made
@@ -250,9 +248,8 @@ def mock_library_data(requests_mock, request):
         if change == "next_month":
             date = "2020-06-01"
             url_to_mock = (
-                "https://api.kirjastot.fi/v4/library/%s/?with=schedules"
+                f"https://api.kirjastot.fi/v4/library/{kallio_kirkanta_id}/?with=schedules"
                 "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
-                % kallio_kirkanta_id
             )
             test_file_path = os.path.join(
                 os.path.dirname(__file__), "fixtures", test_file_name
@@ -358,11 +355,11 @@ def test_import_tprek(mock_tprek_data):
     assert oodi.description_fi == mock_oodi["desc_fi"]
     assert oodi.description_sv == mock_oodi["desc_sv"]
     assert oodi.description_en == mock_oodi["desc_en"]
-    assert kallio.organization_id == "tprek:%s" % mock_kallio["dept_id"]
+    assert kallio.organization_id == f"tprek:{mock_kallio['dept_id']}"
     assert kallio.resource_type == ResourceType.UNIT
     assert (
         kallio.extra_data["citizen_url"]
-        == "https://palvelukartta.hel.fi/fi/unit/%s" % mock_kallio["id"]
+        == f"https://palvelukartta.hel.fi/fi/unit/{mock_kallio['id']}"
     )
     origins = {x.data_source_id: x for x in kallio.origins.all()}
     assert "tprek" in origins
@@ -371,7 +368,7 @@ def test_import_tprek(mock_tprek_data):
         if source["source"] == "internal":
             assert kallio.extra_data["admin_url"] == (
                 "https://tpr.hel.fi/tprperhe/TPR/UI/ServicePoint"
-                "/ServicePointEdit/%s" % source["id"]
+                f"/ServicePointEdit/{source['id']}"
             )
         else:
             assert source["source"] in origins

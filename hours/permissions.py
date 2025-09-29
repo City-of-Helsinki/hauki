@@ -44,9 +44,7 @@ def filter_queryset_by_permission(user, queryset, auth=None):
     path_to_resource = get_path_to_resource(queryset.model)
 
     if path_to_resource is None:
-        raise NotImplementedError(
-            "Permissions not defined for class {0}".format(queryset.model)
-        )
+        raise NotImplementedError(f"Permissions not defined for class {queryset.model}")
 
     is_public = Q(**{path_to_resource + "is_public": True}) & (
         Q(**{path_to_resource + "ancestry_is_public__isnull": True})
@@ -107,7 +105,7 @@ class ReadOnlyPublic(BasePermission):
 
         if path_to_resource is None:
             raise NotImplementedError(
-                "Permissions not defined for class {0}".format(obj.__class__)
+                f"Permissions not defined for class {obj.__class__}"
             )
 
         resource_is_public = deep_getattr(obj, path_to_resource + "is_public")
@@ -153,7 +151,7 @@ class IsMemberOrAdminOfOrganization(BasePermission):
 
         if path_to_resource is None:
             raise NotImplementedError(
-                "Permissions not defined for class {0}".format(obj.__class__)
+                f"Permissions not defined for class {obj.__class__}"
             )
 
         if path_to_resource == "":

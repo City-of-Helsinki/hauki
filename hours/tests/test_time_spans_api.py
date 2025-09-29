@@ -52,9 +52,7 @@ def test_create_time_span_direct(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     names = {i for i in response.data.get("name").items()}
     assert names == {
@@ -114,9 +112,7 @@ def test_create_time_span_nested_using_api_endpoint(
         content_type="application/json",
     )
 
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
     names = {
         i
@@ -233,8 +229,6 @@ def test_create_time_span_same_day_end_time(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
 
     assert response.data["end_time_on_next_day"] == (not same_day_time)

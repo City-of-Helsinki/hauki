@@ -601,7 +601,7 @@ def test_resource_api_copy_date_periods_admin_user_copy_to_self_prevented(
             data_source=data_source,
             origin_id="12345",
         )
-        target_resources = "{}:{}".format(data_source.id, resource_origin.origin_id)
+        target_resources = f"{data_source.id}:{resource_origin.origin_id}"
 
     create_test_periods(resource)
 

@@ -3,7 +3,7 @@ import os
 import re
 from collections.abc import Sized
 from itertools import zip_longest
-from typing import Type, TypeVar
+from typing import TypeVar
 
 import bleach
 import requests
@@ -17,9 +17,9 @@ from hours.models import DataSource, DatePeriod, Resource, Rule, TimeSpan, TimeS
 M = TypeVar("M", bound=Model)
 
 
-class Importer(object):
+class Importer:
     def __init__(self, options):
-        self.logger = logging.getLogger("%s_importer" % self.name)
+        self.logger = logging.getLogger(f"{self.name}_importer")
         self.options = options
         self.setup()
 
@@ -77,16 +77,16 @@ class Importer(object):
         ]
 
     def get_url(self, resource_name: str, res_id: str = None) -> str:
-        url = "%s%s/" % (self.URL_BASE, resource_name)
+        url = f"{self.URL_BASE}{resource_name}/"
         if res_id is not None:
-            url = "%s%s/" % (url, res_id)
+            url = f"{url}{res_id}/"
         return url
 
     def api_get(
         self, resource_name: str, res_id: str = None, params: dict = None
     ) -> dict:
         url = self.get_url(resource_name, res_id)
-        self.logger.info("Fetching URL %s with params %s " % (url, params))
+        self.logger.info(f"Fetching URL {url} with params {params} ")
         resp = requests.get(url, params)
         resp.raise_for_status()
         return resp.json()
@@ -119,7 +119,7 @@ class Importer(object):
         Sets the field_name field of obj to val, if changed.
         """
         if not hasattr(obj, field_name):
-            self.logger.debug("'%s' not there!" % field_name)
+            self.logger.debug(f"'{field_name}' not there!")
             self.logger.debug(vars(obj))
 
         obj_val = getattr(obj, field_name, None)
@@ -130,9 +130,7 @@ class Importer(object):
         if getattr(field, "max_length", None) and isinstance(val, Sized):
             if len(val) > field.max_length:
                 raise Exception(
-                    "field '%s' too long (max. %d): %s" % field_name,
-                    field.max_length,
-                    val,
+                    f"field '{field_name}' too long (max. {field.max_length:d}): {val}"
                 )
 
         setattr(obj, field_name, val)
@@ -183,7 +181,7 @@ class Importer(object):
 
     def _update_or_create_object(
         self,
-        model: Type[M],
+        model: type[M],
         data: dict,
     ) -> M:
         """
@@ -194,7 +192,7 @@ class Importer(object):
         obj_id = self.get_data_ids(data)[0]
         obj = None
         model_name = model.__name__.lower()
-        cache = getattr(self, "%s_cache" % model_name)
+        cache = getattr(self, f"{model_name}_cache")
         if not obj:
             # TODO: if origin_id was found, make a copy of the object and its hours?
             # - puhelinnumero jakautuu osiin => kaikille osille sama aukiolo
@@ -217,14 +215,14 @@ class Importer(object):
         # required fields are filled, so the object may be saved now
         if obj._created:
             obj.save()
-            self.logger.info("%s created" % obj)
+            self.logger.info(f"{obj} created")
 
         # Update object origins only after the object has been saved
         data_sources = {origin["data_source_id"] for origin in data.get("origins", [])}
         for data_source in data_sources:
             data_source, created = DataSource.objects.get_or_create(id=data_source)
             if created:
-                self.logger.debug("Created missing data source %s" % data_source)
+                self.logger.debug(f"Created missing data source {data_source}")
         # we must refetch origins from db since the importer may have deleted some
         # object_origins = set(
         #    klass.origins.field.model.objects.filter(**{klass.origins.field.name: obj})
@@ -233,16 +231,14 @@ class Importer(object):
 
         # TODO: get_or_create makes the importer not thread-safe,
         # one importer will create an object and another will re-use it
-        data_origins = set(
-            [
-                model.origins.field.model.objects.get_or_create(
-                    data_source_id=origin["data_source_id"],
-                    origin_id=origin["origin_id"],
-                    defaults={model.origins.field.name: obj},
-                )[0]
-                for origin in data.get("origins", [])
-            ]
-        )
+        data_origins = {
+            model.origins.field.model.objects.get_or_create(
+                data_source_id=origin["data_source_id"],
+                origin_id=origin["origin_id"],
+                defaults={model.origins.field.name: obj},
+            )[0]
+            for origin in data.get("origins", [])
+        }
         # Any existing origins referring to other objects must be updated
         for origin in data_origins:
             # concurrent runs will move the origin to point to another object
@@ -311,7 +307,7 @@ class Importer(object):
         if obj._changed:
             if not obj._created:
                 self.logger.info(
-                    "%s changed: %s" % (obj, ", ".join(obj._changed_fields))
+                    "{} changed: {}".format(obj, ", ".join(obj._changed_fields))
                 )
             # Child ancestry should be updated after they get parents.
             # At this point, obj will not yet have children to update.
@@ -422,7 +418,7 @@ class Importer(object):
         if period._changed:
             if not period._created:
                 self.logger.info(
-                    "%s changed: %s" % (period, ", ".join(period._changed_fields))
+                    "{} changed: {}".format(period, ", ".join(period._changed_fields))
                 )
             period.save()
 
@@ -451,7 +447,7 @@ def get_importers():
             continue
         if module in ("__init__", "base"):
             continue
-        full_path = "%s.%s" % (module_path, module)
+        full_path = f"{module_path}.{module}"
         ret = __import__(full_path, locals(), globals())
     _importers_loaded = True
     return importers

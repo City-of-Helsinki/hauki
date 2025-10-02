@@ -22,8 +22,8 @@ The OpenAPI schema is served from [http://127.0.0.1:8000/openapi/](http://127.0.
 
 OR
 
-* PostgreSQL (>= 10)
-* Python (>= 3.9)
+* PostgreSQL (>= 17)
+* Python (>= 3.12)
 
 ## Docker Installation
 

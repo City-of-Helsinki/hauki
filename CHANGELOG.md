@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.2...hauki-v1.4.3) (2025-10-03)
+
+
+### Dependencies
+
+* Bump postgresql to 17 ([0f07a98](https://github.com/City-of-Helsinki/hauki/commit/0f07a9820217200f3a4a6c145b2116b72f7df446))
+* Update Django to 5.2 ([732d49b](https://github.com/City-of-Helsinki/hauki/commit/732d49bf9d72083aee6583a7294d3739df24f840))
+
+
+### Documentation
+
+* Update python and postgres version in README ([9920af4](https://github.com/City-of-Helsinki/hauki/commit/9920af489c17d97cf6c292ae51517047a4417d0e))
+
 ## [1.4.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.1...hauki-v1.4.2) (2025-09-23)
 
 

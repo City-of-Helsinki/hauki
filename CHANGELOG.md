@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.3...hauki-v1.5.0) (2025-10-10)
+
+
+### Features
+
+* **sentry:** Update sentry configuration ([d1e866c](https://github.com/City-of-Helsinki/hauki/commit/d1e866c6a5765a6ac6791ac6c77d51b520f1a803))
+
+
+### Dependencies
+
+* Bump sentry-sdk from 2.39.0 to 2.40.0 ([0be5814](https://github.com/City-of-Helsinki/hauki/commit/0be581410b1ac373d9c8188b60730741590c6e55))
+
 ## [1.4.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.2...hauki-v1.4.3) (2025-10-03)
 
 

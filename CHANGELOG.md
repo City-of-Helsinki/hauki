@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.5.0...hauki-v1.5.1) (2025-10-22)
+
+
+### Bug Fixes
+
+* Add missing uwsgi configuration for sentry ([69b1278](https://github.com/City-of-Helsinki/hauki/commit/69b12785e48e13fd055ed108b89897a6a346be97))
+
 ## [1.5.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.4.3...hauki-v1.5.0) (2025-10-10)
 
 

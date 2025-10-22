@@ -16,7 +16,7 @@ drf-writable-nested
 holidays
 psycopg[c]
 requests-cache
-sentry-sdk
+sentry-sdk[django]
 whitenoise
 elastic-apm
 tzdata

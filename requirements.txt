@@ -34,9 +34,9 @@ cattrs==25.2.0 \
     --hash=sha256:539d7eedee7d2f0706e4e109182ad096d608ba84633c32c75ef3458f1d11e8f1 \
     --hash=sha256:f46c918e955db0177be6aa559068390f71988e877c603ae2e56c71827165cc06
     # via requests-cache
-certifi==2025.8.3 \
-    --hash=sha256:e564105f78ded564e3ae7c923924435e1daa7463faeab5bb932bc53ffae63407 \
-    --hash=sha256:f6c12493cfb1b06ba2ff328595af9350c65d6644968e5d3a2ffd78699af217a5
+certifi==2025.10.5 \
+    --hash=sha256:0f212c2744a9bb6de0c56639a6f68afe01ecd92d91f14ae897c4fe7bbeeef0de \
+    --hash=sha256:47c09d31ccf2acf0be3f701ea53595ee7e0b8fa08801c6624be771df09ae7b43
     # via
     #   elastic-apm
     #   requests
@@ -147,6 +147,7 @@ django==5.2.7 \
     #   django-timezone-field
     #   djangorestframework
     #   drf-spectacular
+    #   sentry-sdk
 django-cors-headers==4.9.0 \
     --hash=sha256:15c7f20727f90044dcee2216a9fd7303741a864865f0c3657e28b7056f61b449 \
     --hash=sha256:fe5d7cb59fdc2c8c646ce84b727ac2bca8912a247e6e68e1fb507372178e59e8
@@ -577,9 +578,9 @@ rsa==4.9.1 \
     --hash=sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762 \
     --hash=sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75
     # via python-jose
-sentry-sdk==2.40.0 \
-    --hash=sha256:b9c4672fb2cafabcc28586ab8fd0ceeff9b2352afcf2b936e13d5ba06d141b9f \
-    --hash=sha256:d5f6ae0f27ea73e7b09c70ad7d42242326eb44765e87a15d8c5aab96b80013e6
+sentry-sdk==2.42.1 \
+    --hash=sha256:8598cc6edcfe74cb8074ba6a7c15338cdee93d63d3eb9b9943b4b568354ad5b6 \
+    --hash=sha256:f8716b50c927d3beb41bc88439dc6bcd872237b596df5b14613e2ade104aee02
     # via -r requirements.in
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
@@ -632,8 +633,8 @@ urllib3==2.5.0 \
     #   requests
     #   requests-cache
     #   sentry-sdk
-uwsgi==2.0.30 \
-    --hash=sha256:c12aa652124f062ac216077da59f6d247bd7ef938234445881552e58afb1eb5f
+uwsgi==2.0.31 \
+    --hash=sha256:e8f8b350ccc106ff93a65247b9136f529c14bf96b936ac5b264c6ff9d0c76257
     # via -r requirements.in
 wcwidth==0.2.14 \
     --hash=sha256:4d478375d31bc5395a3c55c40ccdf3354688364cd61c4f6adacaa9215d0b3605 \

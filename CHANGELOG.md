@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.5.1...hauki-v1.6.0) (2025-11-10)
+
+
+### Features
+
+* Allow dynamic sentry trace ignore paths ([c7746b3](https://github.com/City-of-Helsinki/hauki/commit/c7746b322490a7df510671d05e3a98e245d3ef4c))
+
+
+### Dependencies
+
+* Bump django from 5.2.7 to 5.2.8 ([5422415](https://github.com/City-of-Helsinki/hauki/commit/5422415a40b328f618f505c0dd6851a35e1f9020))
+* Bump pip from 25.2 to 25.3 ([263b75a](https://github.com/City-of-Helsinki/hauki/commit/263b75a439c73aafd4c1c45c7c019425ecf19bf1))
+
 ## [1.5.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.5.0...hauki-v1.5.1) (2025-10-22)
 
 

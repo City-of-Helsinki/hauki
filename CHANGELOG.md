@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.6.0...hauki-v1.7.0) (2025-11-11)
+
+
+### Features
+
+* Enable sentry logging for uWSGI ([08cc5c7](https://github.com/City-of-Helsinki/hauki/commit/08cc5c7e81ea77aac4f29cf4d0ffbe72ea330856))
+
 ## [1.6.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.5.1...hauki-v1.6.0) (2025-11-10)
 
 

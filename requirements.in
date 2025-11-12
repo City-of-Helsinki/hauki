@@ -1,10 +1,11 @@
-bleach
 Django~=5.2.8
+bleach
 django-cors-headers
 django-environ
 django-extra-fields
 django-filter
 django-helusers
+django-logger-extra@https://github.com/City-of-Helsinki/django-logger-extra/archive/refs/tags/v0.1.0.zip
 django-model-utils
 django-modeltranslation
 django-orghierarchy
@@ -13,13 +14,13 @@ django-timezone-field
 djangorestframework
 drf-spectacular<0.27 # 0.27 breaks the schema generation
 drf-writable-nested
+elastic-apm
 holidays
+ipython
 psycopg[c]
+pytz
 requests-cache
 sentry-sdk[django]
-whitenoise
-elastic-apm
 tzdata
-pytz
-ipython
 uwsgi
+whitenoise

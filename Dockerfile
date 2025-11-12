@@ -2,6 +2,9 @@
 FROM registry.access.redhat.com/ubi9/python-312 AS appbase
 # ==============================
 
+# Branch or tag used to pull python-uwsgi-common.
+ARG UWSGI_COMMON_REF=main
+
 USER root
 WORKDIR /hauki
 
@@ -25,6 +28,15 @@ RUN dnf update -y && dnf install -y \
     && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
     && mv sentry_plugin.so /usr/local/lib/uwsgi/plugins/ \
     && dnf clean all
+
+# Build and copy specific python-uwsgi-common files.
+ADD https://github.com/City-of-Helsinki/python-uwsgi-common/archive/${UWSGI_COMMON_REF}.tar.gz /usr/src/
+RUN mkdir -p /usr/src/python-uwsgi-common && \
+    tar --strip-components=1 -xzf /usr/src/${UWSGI_COMMON_REF}.tar.gz -C /usr/src/python-uwsgi-common && \
+    cp /usr/src/python-uwsgi-common/uwsgi-base.ini /hauki/ && \
+    uwsgi --build-plugin /usr/src/python-uwsgi-common && \
+    rm -rf /usr/src/${UWSGI_COMMON_REF}.tar.gz && \
+    rm -rf /usr/src/python-uwsgi-common
 
 # Keep media in its own directory outside home, in case home
 # directory forms some sort of attack route

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.7.0...hauki-v1.8.0) (2025-11-13)
+
+
+### Features
+
+* Change logging format to json ([1061e76](https://github.com/City-of-Helsinki/hauki/commit/1061e76d42a0070f716c5c582dbe20fcf16621ef))
+
 ## [1.7.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.6.0...hauki-v1.7.0) (2025-11-11)
 
 

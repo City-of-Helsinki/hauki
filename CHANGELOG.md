@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.8.0...hauki-v1.9.0) (2025-11-22)
+
+
+### Features
+
+* Allow Sentry uWSGI-plugin to be optional ([4aa1987](https://github.com/City-of-Helsinki/hauki/commit/4aa1987378fdd1b6ec3119b8c216e00cdedb93d1))
+
 ## [1.8.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.7.0...hauki-v1.8.0) (2025-11-13)
 
 

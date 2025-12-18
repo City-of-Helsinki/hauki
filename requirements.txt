@@ -172,8 +172,9 @@ django-js-asset==3.1.2 \
     --hash=sha256:1fc7584199ed1941ed7c8e7b87ca5524bb0f2ba941561d2a104e88ee9f07bedd \
     --hash=sha256:b5ffe376aebbd73b7af886d675ac9f43ca63b39540190fa8409c9f8e79145f68
     # via django-mptt
-django-logger-extra @ https://github.com/City-of-Helsinki/django-logger-extra/archive/refs/tags/v0.1.0.zip \
-    --hash=sha256:90dc28c88cb26e9684873cf1951568abfa2cda454837fe342b2bf482847bf380
+django-logger-extra==1.1.1 \
+    --hash=sha256:111532cc8d9f57175e2ba36ef4c303f5ef95f80200290472619de65809063ccf \
+    --hash=sha256:8404f1f4d5aaf84af05fdaef6dc1094c1181347c90f3245075e47e001e72de71
     # via -r requirements.in
 django-model-utils==4.5.1 \
     --hash=sha256:1220f22d9a467d53a1e0f4cda4857df0b2f757edf9a29955c42461988caa648a \

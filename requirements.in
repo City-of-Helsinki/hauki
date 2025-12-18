@@ -5,7 +5,7 @@ django-environ
 django-extra-fields
 django-filter
 django-helusers
-django-logger-extra@https://github.com/City-of-Helsinki/django-logger-extra/archive/refs/tags/v0.1.0.zip
+django-logger-extra
 django-model-utils
 django-modeltranslation
 django-orghierarchy

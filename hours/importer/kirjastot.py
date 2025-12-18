@@ -562,8 +562,8 @@ class KirjastotImporter(Importer):
 
     def _get_times_for_sort(self, item: TimeElement) -> tuple:
         return (
-            item.start_time if item.start_time else "",
-            item.end_time if item.end_time else "",
+            item.start_time if item.start_time else time.min,
+            item.end_time if item.end_time else time.min,
             # Resource state is included to sort items with the same start
             # and end times. Can't use Enum so we use the value instead.
             # The order of the states is not important here.

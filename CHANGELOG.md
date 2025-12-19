@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.9.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.0...hauki-v1.9.1) (2025-12-19)
+
+
+### Bug Fixes
+
+* **kirjastot:** Always use datetime.time for sorting ([9fe6f32](https://github.com/City-of-Helsinki/hauki/commit/9fe6f32ce716ea262cf92c0ecbeac40d80bcc2e5))
+
+
+### Dependencies
+
+* Bump django-logger-extra from 0.1.0 to 1.1.1 ([a74e242](https://github.com/City-of-Helsinki/hauki/commit/a74e2420b57b31bee079399a6d9219747f887cdc))
+
 ## [1.9.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.8.0...hauki-v1.9.0) (2025-12-04)
 
 

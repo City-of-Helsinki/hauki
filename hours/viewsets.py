@@ -396,6 +396,26 @@ class ResourceViewSet(
     def get_object(self, check_permission=True):
         queryset = self.filter_queryset(self.get_queryset())
 
+        # For actions that need opening hours data, prefetch related objects
+        # to avoid N+1 query problems
+        if self.action in ["is_open_now", "opening_hours"]:
+            queryset = queryset.prefetch_related(
+                Prefetch(
+                    "date_periods",
+                    DatePeriod.objects.all()
+                    .defer("name", "description")
+                    .prefetch_related(
+                        Prefetch(
+                            "time_span_groups",
+                            TimeSpanGroup.objects.all().prefetch_related(
+                                Prefetch("time_spans", TimeSpan.objects.all()),
+                                Prefetch("rules", Rule.objects.all()),
+                            ),
+                        )
+                    ),
+                )
+            )
+
         # Perform the lookup filtering.
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         pk = self.kwargs.get(lookup_url_kwarg, None)

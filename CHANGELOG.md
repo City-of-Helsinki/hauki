@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.4](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.3...hauki-v1.9.4) (2026-01-28)
+
+
+### Dependencies
+
+* Bump filelock from 3.20.1 to 3.20.3 ([6ccb1b8](https://github.com/City-of-Helsinki/hauki/commit/6ccb1b8f915d44e8e7c71294f894d9da3bc99b6a))
+* Bump wheel from 0.45.1 to 0.46.2 ([a8588d0](https://github.com/City-of-Helsinki/hauki/commit/a8588d09bd4858067bc7e91cc6a20d40fb248681))
+
 ## [1.9.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.2...hauki-v1.9.3) (2026-01-13)
 
 

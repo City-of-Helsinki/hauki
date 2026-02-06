@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.9.5](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.4...hauki-v1.9.5) (2026-02-06)
+
+
+### Dependencies
+
+* Bump django from 5.2.9 to 5.2.11 ([8a386ca](https://github.com/City-of-Helsinki/hauki/commit/8a386ca541fa6fb011902c6a307ac1c3bc4c3e49))
+* Bump pip from 25.3 to 26.0 ([e03655d](https://github.com/City-of-Helsinki/hauki/commit/e03655d1bda39332a80a5960719ceed98d51aa13))
+* Bump pip-tools ([ebc3020](https://github.com/City-of-Helsinki/hauki/commit/ebc30200277714bd7cffef3b1591971b7453992c))
+* Bump pyasn1 from 0.6.1 to 0.6.2 ([d4ec384](https://github.com/City-of-Helsinki/hauki/commit/d4ec3842c097ad6ee95417e692cd48da7500f1ca))
+
 ## [1.9.4](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.3...hauki-v1.9.4) (2026-01-28)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.5...hauki-v1.9.6) (2026-02-11)
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.2 to 46.0.5 ([a996253](https://github.com/City-of-Helsinki/hauki/commit/a996253be58909b1c516d45050346fa3c07b39c5))
+
 ## [1.9.5](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.4...hauki-v1.9.5) (2026-02-06)
 
 

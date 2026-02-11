@@ -1012,6 +1012,8 @@ def test_update_resource_authenticated_wrong_data_source(
     user_origin_factory,
     api_client,
 ):
+    """Test that PATCH allows changing to a different data source.
+    The validation for matching data source is skipped for PUT/PATCH requests."""
     user_origin_factory(data_source=data_source, user=user)
     resource_origin_factory(data_source=data_source, resource=resource)
     organization = organization_factory(
@@ -1046,8 +1048,12 @@ def test_update_resource_authenticated_wrong_data_source(
         data=json.dumps(data, cls=DjangoJSONEncoder),
         content_type="application/json",
     )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
 
-    assert response.status_code == 400, f"{response.status_code} {response.data}"
+    resource.refresh_from_db()
+    assert resource.origins.count() == 1
+    assert resource.origins.first().data_source.id == another_data_source.id
+    assert resource.origins.first().origin_id == "1"
 
 
 @pytest.mark.django_db

@@ -148,7 +148,8 @@ class DataSourceSerializer(
 
     def validate(self, attrs):
         """Validate that the data_source exists and corresponds to the user
-        data source"""
+        data source in the case of POST requests and that the data source
+        is user-editable."""
         result = super().validate(attrs)
 
         try:
@@ -158,11 +159,18 @@ class DataSourceSerializer(
                 detail=_(f"Data source {result['id']} does not exist.")
             )
 
-        user = self.context["request"].user
-        if self.instance not in [origin.data_source for origin in user.origins.all()]:
-            raise ValidationError(
-                detail=_("Cannot add origin_ids for a different data source.")
-            )
+        request = self.context.get("request")
+        user = request.user if request else None
+        request_method = request.method if request else None
+        # Only allow adding origins for the same data source,
+        # except when updating an existing data source
+        if request_method not in ["PUT", "PATCH"]:
+            if self.instance not in [
+                origin.data_source for origin in user.origins.all()
+            ]:
+                raise ValidationError(
+                    detail=_("Cannot add origin_ids for a different data source.")
+                )
 
         # Data from some data sources is read-only
         if not (self.instance.user_editable_resources):

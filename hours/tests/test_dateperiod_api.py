@@ -135,6 +135,45 @@ def test_list_date_periods_filter_by_data_source(
 
 
 @pytest.mark.django_db
+def test_list_date_periods_filter_by_multiple_data_sources(
+    admin_client, resource, data_source_factory, date_period_factory
+):
+    data_source_1 = data_source_factory()
+    data_source_2 = data_source_factory()
+
+    date_period_1 = date_period_factory(
+        resource=resource,
+        data_sources=[data_source_1],
+    )
+
+    date_period_2 = date_period_factory(
+        resource=resource,
+        data_sources=[data_source_2],
+    )
+
+    date_period_factory(
+        resource=resource,
+        data_sources=[data_source_factory()],
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(
+        url,
+        data={
+            "resource": resource.id,
+            "data_source": f"{data_source_1.id},{data_source_2.id}",
+        },
+    )
+
+    assert_response_status_code(response, 200)
+    assert len(response.data) == 2
+    returned_ids = [item["id"] for item in response.data]
+    assert date_period_1.id in returned_ids
+    assert date_period_2.id in returned_ids
+
+
+@pytest.mark.django_db
 def test_list_date_periods_filter_by_resource_direct_data_source(
     admin_client, resource, data_source_factory, date_period_factory, resource_factory
 ):
@@ -174,13 +213,17 @@ def test_list_date_periods_filter_by_resource_data_source_ancestor(
 ):
     expected_data_source = data_source_factory()
     resource.data_sources.add(expected_data_source)
-    resource_origin_factory(resource=resource, data_source=expected_data_source)
     child_resource = resource_factory()
-
     child_resource.parents.add(resource)
+    resource.save()
 
     expected_date_period = date_period_factory(
         resource=resource,
+        start_date=datetime.date(year=2024, month=1, day=1),
+        end_date=datetime.date(year=2024, month=5, day=31),
+    )
+    child_date_period = date_period_factory(
+        resource=child_resource,
         start_date=datetime.date(year=2024, month=1, day=1),
         end_date=datetime.date(year=2024, month=5, day=31),
     )
@@ -202,7 +245,58 @@ def test_list_date_periods_filter_by_resource_data_source_ancestor(
 
     assert_response_status_code(response, 200)
     assert len(response.data) == 2
-    assert response.data[0]["id"] == expected_date_period.id
+    returned_ids = [item["id"] for item in response.data]
+    assert expected_date_period.id in returned_ids
+    assert child_date_period.id in returned_ids
+
+
+@pytest.mark.django_db
+def test_list_date_periods_filter_by_multiple_resource_data_sources(
+    admin_client,
+    resource,
+    data_source_factory,
+    date_period_factory,
+    resource_factory,
+):
+    data_source_1 = data_source_factory()
+    data_source_2 = data_source_factory()
+
+    resource_1 = resource
+    resource_1.data_sources.add(data_source_1)
+    date_period_1 = date_period_factory(
+        resource=resource_1,
+        start_date=datetime.date(year=2024, month=1, day=1),
+    )
+
+    resource_2 = resource_factory()
+    resource_2.data_sources.add(data_source_2)
+    date_period_2 = date_period_factory(
+        resource=resource_2,
+        start_date=datetime.date(year=2024, month=1, day=1),
+    )
+
+    resource_3 = resource_factory()
+    resource_3.data_sources.add(data_source_factory())
+    date_period_factory(
+        resource=resource_3,
+        start_date=datetime.date(year=2024, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+
+    response = admin_client.get(
+        url,
+        data={
+            "resource_data_source": f"{data_source_1.id},{data_source_2.id}",
+            "start_date": "2024-01-01",
+        },
+    )
+
+    assert_response_status_code(response, 200)
+    assert len(response.data) == 2
+    returned_ids = [item["id"] for item in response.data]
+    assert date_period_1.id in returned_ids
+    assert date_period_2.id in returned_ids
 
 
 @pytest.mark.django_db

@@ -14,6 +14,10 @@ from .models import DatePeriod, Resource, Rule, TimeSpan
 from .utils import get_resource_pk_filter
 
 
+def convert_csv_string_to_list(csv_string: str) -> list[str]:
+    return [item.strip() for item in csv_string.split(",")]
+
+
 def parse_maybe_relative_date_string(
     date_string: str, end_date: bool = False
 ) -> datetime.date | None:
@@ -121,7 +125,7 @@ class MaybeRelativeNullableDateFilter(Filter):
 
 
 class DatePeriodFilter(filters.FilterSet):
-    data_source = filters.CharFilter(field_name="origins__data_source")
+    data_source = filters.CharFilter(method="data_source_filter")
     resource = filters.CharFilter(method="resource_filter")
     resource_data_source = filters.CharFilter(method="resource_data_source_filter")
 
@@ -144,11 +148,29 @@ class DatePeriodFilter(filters.FilterSet):
         model = DatePeriod
         fields = ["resource"]
 
+    def data_source_filter(self, queryset, name, value):
+        if name != "data_source":
+            return queryset
+
+        data_sources = convert_csv_string_to_list(value)
+        q_objects = []
+        for data_source in data_sources:
+            q_objects.append(Q(origins__data_source=data_source))
+
+        query_q = Q()
+        for q in q_objects:
+            query_q |= q
+
+        matching_ids = DatePeriod.objects.filter(query_q).values_list("id", flat=True)
+        queryset = queryset.filter(id__in=matching_ids)
+
+        return queryset
+
     def resource_filter(self, queryset, name, value):
         if name != "resource":
             return queryset
 
-        filters = map(get_resource_pk_filter, value.split(","))
+        filters = map(get_resource_pk_filter, convert_csv_string_to_list(value))
         q_objects = [Q(**filter) for filter in filters]
         query_q = Q()
         for q in q_objects:
@@ -164,10 +186,20 @@ class DatePeriodFilter(filters.FilterSet):
         if name != "resource_data_source":
             return queryset
 
-        queryset = queryset.filter(
-            Q(resource__data_sources=value)
-            | Q(resource__ancestry_data_source__contains=[value])
-        )
+        data_sources = convert_csv_string_to_list(value)
+        q_objects = []
+        for data_source in data_sources:
+            q_objects.append(
+                Q(resource__data_sources=data_source)
+                | Q(resource__ancestry_data_source__contains=[data_source])
+            )
+
+        query_q = Q()
+        for q in q_objects:
+            query_q |= q
+
+        matching_ids = DatePeriod.objects.filter(query_q).values_list("id", flat=True)
+        queryset = queryset.filter(id__in=matching_ids)
 
         return queryset
 
@@ -183,7 +215,7 @@ class TimeSpanFilter(filters.FilterSet):
         if name != "resource":
             return queryset
 
-        filters = map(get_resource_pk_filter, value.split(","))
+        filters = map(get_resource_pk_filter, convert_csv_string_to_list(value))
         q_objects = [Q(**filter) for filter in filters]
         query_q = Q()
         for q in q_objects:

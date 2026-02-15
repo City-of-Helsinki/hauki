@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.6...hauki-v1.10.0) (2026-02-15)
+
+
+### Features
+
+* Add support for multiple data sources in DatePeriod filters ([3958411](https://github.com/City-of-Helsinki/hauki/commit/39584118321b06e09445ebb8adfd1e79e6df17dd))
+
 ## [1.9.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.5...hauki-v1.9.6) (2026-02-11)
 
 

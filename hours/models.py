@@ -17,6 +17,8 @@ from django.contrib.humanize.templatetags.humanize import ordinal
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F
+from django.db.models.expressions import OrderBy
 from django.utils import formats, translation
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
@@ -662,11 +664,27 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     )
     data_sources = models.ManyToManyField(DataSource, through="PeriodOrigin")
     is_public = models.BooleanField(default=True)
+    order = models.IntegerField(
+        verbose_name=_("Order"),
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_(
+            "Optional ordering value. When set, date periods with a lower "
+            "order value appear first. Periods without an order value are "
+            "sorted after those with one."
+        ),
+    )
 
     class Meta:
         verbose_name = _("Period")
         verbose_name_plural = _("Periods")
-        ordering = ["start_date"]
+        ordering = [
+            OrderBy(F("order"), nulls_last=True),
+            "start_date",
+            "end_date",
+            "id",
+        ]
         indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
 
     objects = SoftDeletableManager()
@@ -680,17 +698,22 @@ class DatePeriod(SoftDeletableModel, TimeStampedModel):
     def _get_values_for_sort(self) -> tuple:
         """
         Priorities for sorting DatePeriods:
-        1. Sort by start date. First periods with missing start date and then start
-        dates in ascending order.
-        2. Sort by end date. If two periods have the same start date (or missing start
-        date) then sort by the end date: first periods with missing end dates and then
-        in ascending order.
-        3. Use ID of the DatePeriod
+        1. Sort by the explicit order value. Periods with an order value
+        come first (ascending). Periods without an order value (None) sort
+        after all explicitly ordered periods.
+        2. Sort by start date. First periods with missing start date and
+        then start dates in ascending order.
+        3. Sort by end date. If two periods have the same start date (or
+        missing start date) then sort by the end date: first periods with
+        missing end dates and then in ascending order.
+        4. Use ID of the DatePeriod
         """
+        # (0, value) sorts before (1, 0), matching DB nulls_last behaviour
+        order_key = (0, self.order) if self.order is not None else (1, 0)
         start_date = self.start_date or datetime.date.min
         end_date = self.end_date or datetime.date.min
 
-        return start_date, end_date, self.pk
+        return order_key, start_date, end_date, self.pk
 
     def as_hash_input(self) -> str:
         data = "[DATE_PERIOD:{}]".format(

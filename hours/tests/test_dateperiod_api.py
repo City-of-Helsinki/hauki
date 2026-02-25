@@ -706,3 +706,214 @@ def test_create_time_span_with_group(
     )
 
     assert response.status_code == 201, f"{response.status_code} {response.data}"
+
+
+@pytest.mark.django_db
+def test_date_period_order_field_in_response(
+    admin_client, resource, date_period_factory
+):
+    date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+        order=5,
+    )
+
+    url = reverse("date_period-list")
+    response = admin_client.get(url, data={"resource": resource.id})
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert len(response.data) == 1
+    assert response.data[0]["order"] == 5
+
+
+@pytest.mark.django_db
+def test_date_period_order_field_null_by_default(
+    admin_client, resource, date_period_factory
+):
+    date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+    response = admin_client.get(url, data={"resource": resource.id})
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert len(response.data) == 1
+    assert response.data[0]["order"] is None
+
+
+@pytest.mark.django_db
+def test_create_date_period_with_order(admin_client, resource):
+    url = reverse("date_period-list")
+
+    data = {
+        "resource": resource.id,
+        "name": "Ordered period",
+        "start_date": "2020-01-01",
+        "end_date": "2020-12-31",
+        "resource_state": "undefined",
+        "override": False,
+        "order": 3,
+    }
+
+    response = admin_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
+    assert response.data["order"] == 3
+
+    date_period = DatePeriod.objects.get(pk=response.data["id"])
+    assert date_period.order == 3
+
+
+@pytest.mark.django_db
+def test_update_date_period_order(admin_client, resource, date_period_factory):
+    date_period = date_period_factory(
+        resource=resource,
+        name="Testperiod",
+        start_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.pk})
+
+    response = admin_client.patch(
+        url,
+        data=json.dumps({"order": 10}, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert response.data["order"] == 10
+
+    date_period.refresh_from_db()
+    assert date_period.order == 10
+
+
+@pytest.mark.django_db
+def test_date_periods_ordered_by_order_field_before_start_date(
+    admin_client, resource, date_period_factory
+):
+    dp_no_order_early = date_period_factory(
+        resource=resource,
+        name="No order, early start",
+        start_date=datetime.date(year=2020, month=1, day=1),
+    )
+    dp_order_2 = date_period_factory(
+        resource=resource,
+        name="Order 2",
+        start_date=datetime.date(year=2021, month=1, day=1),
+        order=2,
+    )
+
+    dp_order_1 = date_period_factory(
+        resource=resource,
+        name="Order 1",
+        start_date=datetime.date(year=2022, month=1, day=1),
+        order=1,
+    )
+
+    dp_no_order_late = date_period_factory(
+        resource=resource,
+        name="No order, late start",
+        start_date=datetime.date(year=2023, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+    response = admin_client.get(url, data={"resource": resource.id})
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert len(response.data) == 4
+
+    returned_ids = [item["id"] for item in response.data]
+
+    # Periods with an explicit order come first (ascending by order),
+    # then periods without an order, sorted by start_date.
+    assert returned_ids.index(dp_order_1.id) < returned_ids.index(dp_order_2.id)
+    assert returned_ids.index(dp_order_2.id) < returned_ids.index(dp_no_order_early.id)
+    assert returned_ids.index(dp_no_order_early.id) < returned_ids.index(
+        dp_no_order_late.id
+    )
+
+
+@pytest.mark.django_db
+def test_date_periods_api_ordering_by_order_field(
+    admin_client, resource, date_period_factory
+):
+    dp_b = date_period_factory(
+        resource=resource,
+        name="Order 2",
+        start_date=datetime.date(year=2020, month=6, day=1),
+        order=2,
+    )
+
+    dp_a = date_period_factory(
+        resource=resource,
+        name="Order 1",
+        start_date=datetime.date(year=2020, month=6, day=1),
+        order=1,
+    )
+
+    url = reverse("date_period-list")
+    response = admin_client.get(
+        url, data={"resource": resource.id, "ordering": "order"}
+    )
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert len(response.data) == 2
+    assert response.data[0]["id"] == dp_a.id
+    assert response.data[1]["id"] == dp_b.id
+
+
+@pytest.mark.django_db
+def test_date_periods_api_ordering_by_order_field_with_nulls(
+    admin_client, resource, date_period_factory
+):
+    dp_no_order_early = date_period_factory(
+        resource=resource,
+        name="No order, early start",
+        start_date=datetime.date(year=2020, month=1, day=1),
+    )
+
+    dp_order_2 = date_period_factory(
+        resource=resource,
+        name="Order 2",
+        start_date=datetime.date(year=2021, month=1, day=1),
+        order=2,
+    )
+
+    dp_order_1 = date_period_factory(
+        resource=resource,
+        name="Order 1",
+        start_date=datetime.date(year=2022, month=1, day=1),
+        order=1,
+    )
+
+    dp_no_order_late = date_period_factory(
+        resource=resource,
+        name="No order, late start",
+        start_date=datetime.date(year=2023, month=1, day=1),
+    )
+
+    url = reverse("date_period-list")
+    response = admin_client.get(
+        url, data={"resource": resource.id, "ordering": "order"}
+    )
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+    assert len(response.data) == 4
+
+    returned_ids = [item["id"] for item in response.data]
+
+    # Periods with an explicit order come first (ascending by order),
+    # then periods without an order, sorted by start_date.
+    assert returned_ids.index(dp_order_1.id) < returned_ids.index(dp_order_2.id)
+    assert returned_ids.index(dp_order_2.id) < returned_ids.index(dp_no_order_early.id)
+    assert returned_ids.index(dp_no_order_early.id) < returned_ids.index(
+        dp_no_order_late.id
+    )

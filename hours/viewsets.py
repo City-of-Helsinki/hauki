@@ -5,7 +5,8 @@ import pytz
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Prefetch, Q
+from django.db.models import Exists, F, OuterRef, Prefetch, Q
+from django.db.models.expressions import OrderBy
 from django.http import Http404
 from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
@@ -59,6 +60,40 @@ from .serializers import (
 )
 from .signals import DeferUpdatingDenormalizedDatePeriodData
 from .utils import get_resource_pk_filter
+
+# Fields that must always sort NULLs last, even when the client
+# explicitly requests ordering by them via ?ordering=<field>.
+_NULLS_LAST_FIELDS = {"order"}
+
+
+class NullsLastOrderingFilter(OrderingFilter):
+    """Custom OrderingFilter that enforces nulls_last=True for every
+    field listed in _NULLS_LAST_FIELDS, regardless of the sort
+    direction requested by the client.
+
+    Without this, DRF's default OrderingFilter would emit plain
+    ``ORDER BY "order"`` SQL, which places NULL values first on
+    PostgreSQL – the opposite of the default queryset ordering and
+    the Django-admin ordering.
+    """
+
+    def filter_queryset(self, request, queryset, view):
+        ordering = self.get_ordering(request, queryset, view)
+        if not ordering:
+            return queryset
+
+        resolved = []
+        for term in ordering:
+            descending = term.startswith("-")
+            field = term.lstrip("-")
+            if field in _NULLS_LAST_FIELDS:
+                resolved.append(
+                    OrderBy(F(field), descending=descending, nulls_last=True)
+                )
+            else:
+                resolved.append(term)
+
+        return queryset.order_by(*resolved)
 
 
 class OnCreateOrgMembershipCheck:
@@ -716,7 +751,7 @@ class DatePeriodViewSet(
     serializer_class = DatePeriodSerializer
     permission_classes = [ReadOnlyPublic | IsMemberOrAdminOfOrganization]
     filterset_class = DatePeriodFilter
-    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filter_backends = (DjangoFilterBackend, NullsLastOrderingFilter)
 
     def get_queryset(self):
         queryset = (
@@ -728,7 +763,7 @@ class DatePeriodViewSet(
                 "time_span_groups__rules",
             )
             .select_related("resource")
-            .order_by("start_date", "end_date")
+            .order_by(F("order").asc(nulls_last=True), "start_date", "end_date", "id")
         )
 
         # Filter the queryset according to read permissions

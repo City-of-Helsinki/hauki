@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.db.models import F
+from django.db.models.expressions import OrderBy
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
@@ -171,8 +173,18 @@ class DatePeriodAdmin(HaukiModelAdmin):
         "override",
     )
     list_filter = ("start_date", "end_date", "resource_state", "override")
-    ordering = ("start_date", "end_date")
     raw_id_fields = ("resource",)
+
+    def get_ordering(self, request):
+        # Use nulls_last for the nullable "order" field so that date
+        # periods without an explicit order appear at the end of the
+        # list, consistent with the REST API behavior.
+        return (
+            OrderBy(F("order"), nulls_last=True),
+            "start_date",
+            "end_date",
+            "id",
+        )
 
 
 class SignedAuthKeyAdmin(admin.ModelAdmin):

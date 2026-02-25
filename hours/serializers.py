@@ -480,6 +480,7 @@ class DatePeriodSerializer(
             "end_date",
             "resource_state",
             "override",
+            "order",
             "origins",
             "created",
             "modified",

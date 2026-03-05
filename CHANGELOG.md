@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.10.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.6...hauki-v1.10.0) (2026-03-05)
+
+
+### Features
+
+* Add order field for DatePeriod sorting ([06f2aaa](https://github.com/City-of-Helsinki/hauki/commit/06f2aaac7cbead1339fa8b4e514d3dbbba4ba5ce))
+* Add support for multiple data sources in DatePeriod filters ([3958411](https://github.com/City-of-Helsinki/hauki/commit/39584118321b06e09445ebb8adfd1e79e6df17dd))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.6 to 1.6.7 ([e37f27b](https://github.com/City-of-Helsinki/hauki/commit/e37f27b16c1d5a04a34f2515e2c6cf36778583a9))
+* Bump django from 5.2.11 to 5.2.12 ([acd12d9](https://github.com/City-of-Helsinki/hauki/commit/acd12d9b15341e599ec43f1ac4cc69fdc751be10))
+* Bump nltk from 3.9.2 to 3.9.3 ([48eafae](https://github.com/City-of-Helsinki/hauki/commit/48eafae946d864bbbbc070c4bdf6df9172f16ced))
+
 ## [1.9.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.5...hauki-v1.9.6) (2026-02-11)
 
 

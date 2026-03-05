@@ -23,6 +23,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from hauki.views import readiness
 from hours.api import APIRouter
 from hours.views import invalidate_hauki_auth_signature
 
@@ -32,6 +33,7 @@ router = APIRouter()
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("readiness/", readiness, name="readiness"),
     path("v1/", include(router.urls)),
     path("openapi/", SpectacularAPIView.as_view(), name="schema"),
     path("api_docs/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),

@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
+from drf_spectacular.utils import extend_schema_field
 from drf_writable_nested import UniqueFieldsMixin, WritableNestedModelSerializer
 from modeltranslation import settings as mt_settings
 from modeltranslation.translator import NotRegistered, translator
@@ -29,7 +30,55 @@ from .models import (
 )
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            lang: {"type": "string", "nullable": True}
+            for lang in mt_settings.AVAILABLE_LANGUAGES
+        },
+    }
+)
+class TranslatedField(serializers.CharField):
+    """A CharField that is rendered as a multilingual object in the OpenAPI schema.
+
+    The actual transformation of the value is handled by TranslationSerializerMixin;
+    this class only exists to carry the correct drf-spectacular schema annotation.
+    """
+
+
 class TranslationSerializerMixin:
+    def get_fields(self):
+        fields = super().get_fields()
+        try:
+            translation_options = translator.get_options_for_model(self.Meta.model)
+        except (NotRegistered, AttributeError):
+            return fields
+
+        for field_name in translation_options.all_fields.keys():
+            if field_name not in fields:
+                continue
+            original = fields[field_name]
+            if isinstance(original, serializers.CharField) and not isinstance(
+                original, TranslatedField
+            ):
+                translated = TranslatedField(
+                    required=original.required,
+                    allow_null=original.allow_null,
+                    allow_blank=getattr(original, "allow_blank", True),
+                    read_only=original.read_only,
+                    write_only=original.write_only,
+                    default=original.default,
+                    source=original.source,
+                    label=original.label,
+                    help_text=original.help_text,
+                    style=original.style,
+                    max_length=getattr(original, "max_length", None),
+                    min_length=getattr(original, "min_length", None),
+                )
+                fields[field_name] = translated
+        return fields
+
     def to_representation(self, instance):
         result = super().to_representation(instance)
 

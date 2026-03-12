@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.0...hauki-v1.10.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* Update Swagger docs to reflect multilingual name and description ([ff85fcc](https://github.com/City-of-Helsinki/hauki/commit/ff85fcc4849ea280ec7ca3d36fd36a3784a0f108))
+
 ## [1.10.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.9.6...hauki-v1.10.0) (2026-03-05)
 
 

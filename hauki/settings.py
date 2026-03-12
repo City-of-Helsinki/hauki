@@ -5,6 +5,7 @@ Django settings for hauki project.
 import logging
 import os
 import subprocess
+from datetime import datetime
 
 import environ
 import sentry_sdk
@@ -86,6 +87,10 @@ env = environ.Env(
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = root()
+
+# For readiness endpoint
+APP_BUILD_TIME = datetime.fromtimestamp(os.path.getmtime(__file__))
+
 
 # Django environ has a nasty habit of complanining at level
 # WARN about env file not being preset. Here we pre-empt it.
@@ -194,6 +199,7 @@ INSTALLED_APPS = [
 
 SENTRY_TRACES_SAMPLE_RATE = env.float("SENTRY_TRACES_SAMPLE_RATE")
 SENTRY_TRACES_IGNORE_PATHS = env.list("SENTRY_TRACES_IGNORE_PATHS")
+SENTRY_RELEASE = env.str("SENTRY_RELEASE")
 
 
 def sentry_traces_sampler(sampling_context: SamplingContext) -> float:
@@ -214,7 +220,7 @@ if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env.str("SENTRY_DSN"),
         environment=env.str("SENTRY_ENVIRONMENT"),
-        release=env.str("SENTRY_RELEASE"),
+        release=SENTRY_RELEASE,
         integrations=[DjangoIntegration()],
         traces_sampler=sentry_traces_sampler,
         profile_session_sample_rate=env.str("SENTRY_PROFILE_SESSION_SAMPLE_RATE"),

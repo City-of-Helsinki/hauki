@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.1...hauki-v1.10.2) (2026-03-18)
+
+
+### Dependencies
+
+* Bump authlib from 1.6.7 to 1.6.9 ([a833200](https://github.com/City-of-Helsinki/hauki/commit/a8332007676059235bd8717afdcc31cd72e5fcf5))
+* Bump pyasn1 from 0.6.2 to 0.6.3 ([64b0936](https://github.com/City-of-Helsinki/hauki/commit/64b09366831f8dbaaa7629a75e1a1e729bfe9316))
+
 ## [1.10.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.0...hauki-v1.10.1) (2026-03-12)
 
 

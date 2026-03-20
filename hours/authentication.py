@@ -233,9 +233,17 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
         hsa_auth_data.resource = None
         if params.get("hsa_resource"):
+            hsa_resource_value = params["hsa_resource"]
+            if ":" not in hsa_resource_value:
+                raise exceptions.AuthenticationFailed(
+                    _(
+                        "Invalid hsa_resource format. "
+                        "Expected '<data_source>:<origin_id>'."
+                    )
+                )
             try:
                 resource = Resource.objects.get(
-                    **get_resource_pk_filter(params["hsa_resource"])
+                    **get_resource_pk_filter(hsa_resource_value)
                 )
                 resource_data_source_ids = [ds.id for ds in resource.data_sources.all()]
                 if resource.ancestry_data_source:

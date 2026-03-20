@@ -201,9 +201,15 @@ def hsa_params_factory():
             data["hsa_organization"] = str(organization.id)
 
         if resource:
-            data["hsa_resource"] = (
-                str(resource.id) if isinstance(resource, Resource) else resource
-            )
+            if isinstance(resource, Resource):
+                try:
+                    origin = resource.origins.get(data_source=data_source)
+                    data["hsa_resource"] = f"{origin.data_source_id}:{origin.origin_id}"
+                except ResourceOrigin.DoesNotExist:
+                    # No matching origin for this data source; fall back to pk
+                    data["hsa_resource"] = str(resource.pk)
+            else:
+                data["hsa_resource"] = resource
 
         source_string = join_params(data)
         signature = calculate_signature(signed_auth_key.signing_key, source_string)

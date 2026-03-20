@@ -911,12 +911,12 @@ def test_auth_data_resource_different_data_source(
     data_source2 = data_source_factory()
 
     resource = resource_factory()
-    resource_origin_factory(resource=resource, data_source=data_source2)
+    origin = resource_origin_factory(resource=resource, data_source=data_source2)
 
     hsa_params = {
         "username": "test_user",
         "data_source": data_source,
-        "resource": resource,
+        "resource": f"{origin.data_source_id}:{origin.origin_id}",
     }
     params = hsa_params_factory(**hsa_params)
 
@@ -951,6 +951,7 @@ def test_auth_data_child_resource(
 
     resource2 = resource_factory()
     resource2.parents.add(resource)
+    resource_origin_factory(resource=resource2, data_source=data_source)
 
     hsa_params = {
         "username": "test_user",

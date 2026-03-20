@@ -7,6 +7,7 @@ import os
 import subprocess
 
 import environ
+import helusers.defaults
 import sentry_sdk
 from corsheaders.defaults import default_headers
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
@@ -82,6 +83,10 @@ env = environ.Env(
     MAIL_MAILGUN_API=(str, ""),
     RESOURCE_DEFAULT_TIMEZONE=(str, None),
     HSA_CLOCK_SKEW_LEEWAY_SECONDS=(int, 30),
+    HELUSERS_PASSWORD_LOGIN_DISABLED=(bool, False),
+    SOCIAL_AUTH_TUNNISTAMO_KEY=(str, ""),
+    SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
+    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, ""),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -183,6 +188,7 @@ INSTALLED_APPS = [
     "django_orghierarchy",
     "timezone_field",
     "mptt",
+    "social_django",  # For django-admin Keycloak login
     # Apps within this repository
     "users",
     "hours",
@@ -221,6 +227,18 @@ if env("SENTRY_DSN"):
         profile_lifecycle="trace",
     )
 
+AUTHENTICATION_BACKENDS = [
+    "helusers.tunnistamo_oidc.TunnistamoOIDCAuth",
+    "helusers.auth.HelusersModelBackend",
+]
+
+HELUSERS_PASSWORD_LOGIN_DISABLED = env("HELUSERS_PASSWORD_LOGIN_DISABLED")
+SESSION_SERIALIZER = "helusers.sessions.TunnistamoOIDCSerializer"
+
+SOCIAL_AUTH_PIPELINE = helusers.defaults.SOCIAL_AUTH_PIPELINE
+SOCIAL_AUTH_TUNNISTAMO_KEY = env("SOCIAL_AUTH_TUNNISTAMO_KEY")
+SOCIAL_AUTH_TUNNISTAMO_SECRET = env("SOCIAL_AUTH_TUNNISTAMO_SECRET")
+SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = env("SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT")
 
 MIDDLEWARE = [
     # CorsMiddleware should be placed as high as possible and above WhiteNoiseMiddleware

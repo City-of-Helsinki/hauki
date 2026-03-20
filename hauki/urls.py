@@ -32,6 +32,8 @@ router = APIRouter()
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("pysocial/", include("social_django.urls", namespace="social")),
+    path("helauth/", include("helusers.urls")),
     path("v1/", include(router.urls)),
     path("openapi/", SpectacularAPIView.as_view(), name="schema"),
     path("api_docs/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),

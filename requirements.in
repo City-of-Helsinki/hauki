@@ -21,6 +21,7 @@ psycopg[c]
 pytz
 requests-cache
 sentry-sdk[django]
+social-auth-app-django
 tzdata
 uwsgi
 whitenoise

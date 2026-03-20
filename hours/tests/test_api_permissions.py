@@ -343,11 +343,72 @@ def test_create_resource_authenticated_previously_used_id(
         content_type="application/json",
     )
 
-    assert response.status_code == 201, f"{response.status_code} {response.data}"
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    assert "resource" in response.data
+    assert str(response.data["resource"]["id"]) == str(resource.id)
 
-    new_resource = Resource.objects.get(pk=response.data["id"])
 
-    assert new_resource.origins.all()[0].origin_id == "1"
+@pytest.mark.django_db
+def test_create_resource_authenticated_previously_used_id_not_accessible(
+    resource_factory,
+    resource_origin_factory,
+    organization_factory,
+    data_source,
+    data_source_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    """A 409 Conflict must not leak data about a resource the caller cannot read.
+
+    The existing resource is non-public and belongs to a different organisation.
+    The caller only has create rights for the data source / origin pair, so the
+    ``resource`` key must be absent from the Conflict payload entirely.
+    """
+    other_data_source = data_source_factory()
+    other_org = organization_factory(
+        origin_id=99999,
+        data_source=other_data_source,
+        name="Other organization",
+    )
+    # Existing resource: non-public, in an org the requesting user cannot access.
+    existing_resource = resource_factory(is_public=False, organization=other_org)
+    resource_origin_factory(
+        resource=existing_resource, data_source=data_source, origin_id="secret-1"
+    )
+
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("resource-list")
+    data = {
+        "name": "Test name",
+        "organization": organization.id,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "secret-1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    # The "resource" key must be absent – the caller has no read access to it.
+    assert "resource" not in response.data
 
 
 @pytest.mark.django_db

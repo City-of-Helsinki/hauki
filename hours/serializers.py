@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from drf_spectacular.utils import extend_schema_field
@@ -17,6 +18,7 @@ from users.serializers import UserSerializer
 
 from .authentication import HaukiSignedAuthData
 from .enums import State
+from .exceptions import Conflict
 from .fields import TimezoneRetainingDateTimeField
 from .models import (
     DataSource,
@@ -28,6 +30,7 @@ from .models import (
     TimeSpan,
     TimeSpanGroup,
 )
+from .permissions import filter_queryset_by_permission
 
 
 @extend_schema_field(
@@ -352,10 +355,122 @@ class ResourceSerializer(
                 m2m_manager = getattr(instance, field_source)
                 m2m_manager.add(*new_related_instances)
 
+    def _check_duplicate_origins(self, origins):
+        """Single-query duplicate-origin guard; raises Conflict on the first match.
+
+        Fetches all potentially conflicting ResourceOrigins in one query, then
+        iterates the request-supplied origins in order so the conflict is always
+        raised for the first duplicate rather than an arbitrary one.
+        """
+        duplicate_filter = Q()
+        for origin in origins:
+            duplicate_filter |= Q(
+                data_source_id=origin["data_source"]["id"],
+                origin_id=origin["origin_id"],
+            )
+        existing_origins_by_pair = {
+            (eo.data_source_id, eo.origin_id): eo
+            for eo in ResourceOrigin.objects.select_related("resource").filter(
+                duplicate_filter
+            )
+        }
+
+        request = self.context.get("request")
+        for origin in origins:
+            ds_id = origin["data_source"]["id"]
+            origin_id = origin["origin_id"]
+            existing_origin = existing_origins_by_pair.get((ds_id, origin_id))
+            if existing_origin is None:
+                continue
+
+            # Only include the full resource payload when the requesting user
+            # is actually allowed to read that resource.  Without this check
+            # the conflict path would leak data from non-public resources in
+            # organisations the caller cannot access.
+            existing_resource = existing_origin.resource
+            conflict_detail = {
+                "message": _(
+                    "Resource with origin %(ds_id)s:%(origin_id)s already exists."
+                )
+                % {"ds_id": ds_id, "origin_id": origin_id},
+            }
+            if (
+                request is not None
+                and filter_queryset_by_permission(
+                    request.user,
+                    Resource.objects.filter(pk=existing_resource.pk),
+                    auth=request.auth,
+                ).exists()
+            ):
+                conflict_detail["resource"] = ResourceSerializer(
+                    existing_resource, context=self.context
+                ).data
+            raise Conflict(detail=conflict_detail)
+
+    def _validate_parent_permissions(self, user, auth, parents):
+        """Validate that the user may create/edit sub-resources under *parents*.
+
+        Raises ``ValidationError`` when the caller lacks the required rights.
+        Returns ``True`` when the HaukiSignedAuth authorized-resource path
+        grants unconditional access (signals ``validate`` to return early),
+        ``False`` otherwise.
+        """
+        if isinstance(auth, HaukiSignedAuthData):
+            # A special case for users signed in using the HaukiSignedAuthentication
+            authorized_resource = auth.resource
+            if authorized_resource:
+                resource_ancestors = set(parents)
+                for parent in parents:
+                    resource_ancestors.update(parent.get_ancestors())
+                #             authorized_resource
+                #                      |
+                #                      |
+                #                      |
+                #    parent A       parent B
+                # not authorized   authorized
+                #        |             |
+                #        +------+------+
+                #               |
+                #           resource
+                authorized_ancestors = authorized_resource.get_ancestors()
+                authorized_descendants = authorized_resource.get_descendants()
+                if not resource_ancestors.difference(
+                    authorized_ancestors
+                    | {authorized_resource}
+                    | authorized_descendants
+                ):
+                    # Parents allowed only if no extra parents found
+                    # in the ancestor chain
+                    return True
+            if not auth.has_organization_rights:
+                raise ValidationError(
+                    detail=_(
+                        "Cannot create or edit sub resources of a resource "
+                        "in an organisation the user is not part of "
+                    )
+                )
+
+        users_organizations = user.get_all_organizations()
+        if not all(parent.organization in users_organizations for parent in parents):
+            raise ValidationError(
+                detail=_(
+                    "Cannot create or edit sub resources of a resource "
+                    "in an organisation the user is not part of "
+                )
+            )
+        return False
+
     def validate(self, attrs):
         """Validate that the user is a member or admin of all of the
         immediate parent resources organizations"""
         result = super().validate(attrs)
+
+        # When creating a new resource, reject origins that already belong to
+        # another resource by returning HTTP 409 Conflict.
+        if self.instance is None:
+            origins = result.get("origins") or []
+            if origins:
+                self._check_duplicate_origins(origins)
 
         if not self.context.get("request"):
             return result
@@ -365,51 +480,8 @@ class ResourceSerializer(
         parents = result.get("parents")
 
         if not user.is_superuser and parents:
-            if isinstance(auth, HaukiSignedAuthData):
-                # A special case for users signed in using the HaukiSignedAuthentication
-                authorized_resource = auth.resource
-                if authorized_resource:
-                    resource_ancestors = set(parents)
-                    for parent in parents:
-                        resource_ancestors.update(parent.get_ancestors())
-                    #             authorized_resource
-                    #                      |
-                    #                      |
-                    #                      |
-                    #    parent A       parent B
-                    # not authorized   authorized
-                    #        |             |
-                    #        +------+------+
-                    #               |
-                    #           resource
-                    authorized_ancestors = authorized_resource.get_ancestors()
-                    authorized_descendants = authorized_resource.get_descendants()
-                    if not resource_ancestors.difference(
-                        authorized_ancestors
-                        | {authorized_resource}
-                        | authorized_descendants
-                    ):
-                        # Parents allowed only if no extra parents found
-                        # in the ancestor chain
-                        return result
-                if not auth.has_organization_rights:
-                    raise ValidationError(
-                        detail=_(
-                            "Cannot create or edit sub resources of a resource "
-                            "in an organisation the user is not part of "
-                        )
-                    )
-
-            users_organizations = user.get_all_organizations()
-            if not all(
-                [parent.organization in users_organizations for parent in parents]
-            ):
-                raise ValidationError(
-                    detail=_(
-                        "Cannot create or edit sub resources of a resource "
-                        "in an organisation the user is not part of "
-                    )
-                )
+            if self._validate_parent_permissions(user, auth, parents):
+                return result
 
         return result
 

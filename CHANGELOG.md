@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.2...hauki-v1.10.3) (2026-03-23)
+
+
+### Bug Fixes
+
+* **auth:** Enforce &lt;data_source&gt;:<origin_id> format for hsa_resource ([ac78947](https://github.com/City-of-Helsinki/hauki/commit/ac789473d8ccf258de02a699c5bdd50fb5e9a256))
+* Return 409 Conflict on duplicate resource origin ([8c99ed7](https://github.com/City-of-Helsinki/hauki/commit/8c99ed7f362321975d2a40c86121f54013d507fc))
+
 ## [1.10.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.1...hauki-v1.10.2) (2026-03-18)
 
 

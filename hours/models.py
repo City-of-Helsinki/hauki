@@ -881,8 +881,8 @@ class PeriodOrigin(models.Model):
         verbose_name_plural = _("Period origins")
         constraints = [
             models.UniqueConstraint(
-                fields=["data_source", "origin_id"],
-                name="unique_period_identifier_per_data_source",
+                fields=["data_source", "origin_id", "period"],
+                name="unique_period_origin_per_period",
             ),
         ]
 

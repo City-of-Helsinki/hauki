@@ -237,7 +237,64 @@ class ResourceOriginSerializer(WritableNestedModelSerializer):
         fields = ["data_source", "origin_id"]
 
 
+class WritableNestedOriginsMixin:
+    """Mixin providing a reusable helper for saving reverse-relation instances."""
+
+    def _save_reverse_relation_field(
+        self,
+        instance,
+        related_field,
+        field,
+        field_name: str,
+        field_source: str,
+        instances,
+        related_data,
+    ) -> None:
+        """Save *instances* paired with *related_data* under *instance*.
+
+        Builds ``save_kwargs``, iterates the pairs, collects validation errors
+        and raises ``ValidationError`` if any are found.  Wires up many-to-many
+        relations via the manager when required.
+        """
+        save_kwargs = self._get_save_kwargs(field_name)
+        if isinstance(related_field, GenericRelation):
+            save_kwargs.update(
+                self._get_generic_lookup(instance, related_field),
+            )
+        elif not related_field.many_to_many:
+            save_kwargs[related_field.name] = instance
+
+        new_related_instances = []
+        errors = []
+        for obj, data in zip(instances, related_data):
+            serializer = self._get_serializer_for_field(
+                field,
+                instance=obj,
+                data=data,
+            )
+            try:
+                serializer.is_valid(raise_exception=True)
+                related_instance = serializer.save(**save_kwargs)
+                data["pk"] = related_instance.pk
+                new_related_instances.append(related_instance)
+                errors.append({})
+            except ValidationError as exc:
+                errors.append(exc.detail)
+
+        if any(errors):
+            if related_field.one_to_one:
+                raise ValidationError({field_name: errors[0]})
+            else:
+                raise ValidationError({field_name: errors})
+
+        if related_field.many_to_many:
+            # Add m2m instances to through model via add
+            m2m_manager = getattr(instance, field_source)
+            m2m_manager.add(*new_related_instances)
+
+
 class ResourceSerializer(
+    WritableNestedOriginsMixin,
     TranslationSerializerMixin,
     WritableNestedModelSerializer,
 ):
@@ -319,41 +376,15 @@ class ResourceSerializer(
 
             instances = self._prefetch_related_instances(field, related_data)
 
-            save_kwargs = self._get_save_kwargs(field_name)
-            if isinstance(related_field, GenericRelation):
-                save_kwargs.update(
-                    self._get_generic_lookup(instance, related_field),
-                )
-            elif not related_field.many_to_many:
-                save_kwargs[related_field.name] = instance
-
-            new_related_instances = []
-            errors = []
-            for obj, data in zip(instances, related_data):
-                serializer = self._get_serializer_for_field(
-                    field,
-                    instance=obj,
-                    data=data,
-                )
-                try:
-                    serializer.is_valid(raise_exception=True)
-                    related_instance = serializer.save(**save_kwargs)
-                    data["pk"] = related_instance.pk
-                    new_related_instances.append(related_instance)
-                    errors.append({})
-                except ValidationError as exc:
-                    errors.append(exc.detail)
-
-            if any(errors):
-                if related_field.one_to_one:
-                    raise ValidationError({field_name: errors[0]})
-                else:
-                    raise ValidationError({field_name: errors})
-
-            if related_field.many_to_many:
-                # Add m2m instances to through model via add
-                m2m_manager = getattr(instance, field_source)
-                m2m_manager.add(*new_related_instances)
+            self._save_reverse_relation_field(
+                instance,
+                related_field,
+                field,
+                field_name,
+                field_source,
+                instances,
+                related_data,
+            )
 
     def _check_duplicate_origins(self, origins):
         """Single-query duplicate-origin guard; raises Conflict on the first match.
@@ -386,7 +417,7 @@ class ResourceSerializer(
             # Only include the full resource payload when the requesting user
             # is actually allowed to read that resource.  Without this check
             # the conflict path would leak data from non-public resources in
-            # organisations the caller cannot access.
+            # organizations the caller cannot access.
             existing_resource = existing_origin.resource
             conflict_detail = {
                 "message": _(
@@ -573,7 +604,7 @@ class TimeSpanGroupSerializer(WritableNestedModelSerializer):
         fields = "__all__"
 
 
-class PeriodOriginSerializer(serializers.ModelSerializer):
+class PeriodOriginSerializer(WritableNestedModelSerializer):
     data_source = DataSourceSerializer()
 
     class Meta:
@@ -582,6 +613,7 @@ class PeriodOriginSerializer(serializers.ModelSerializer):
 
 
 class DatePeriodSerializer(
+    WritableNestedOriginsMixin,
     TranslationSerializerMixin,
     WritableNestedModelSerializer,
 ):
@@ -607,6 +639,156 @@ class DatePeriodSerializer(
             "modified",
             "time_span_groups",
         ]
+
+    def _prefetch_related_instances(self, field, related_data):
+        """
+        Override WritableNestedModelSerializer behavior for period origins.
+
+        Re-uses existing PeriodOrigin instances identified by
+        (data_source_id, origin_id, period), enabling origins to be updated
+        in place without unique-constraint violations.
+
+        On create (``self.instance is None``) always returns ``None`` entries
+        so new rows are created.  On update the lookup is scoped to the period
+        being modified, so origins on other periods are never matched.
+
+        For all other related fields the parent behavior is preserved.
+
+        Note: drf-writable-nested passes the *child* serializer here (not the
+        ListSerializer), so we check ``isinstance(field, PeriodOriginSerializer)``.
+        """
+        if not isinstance(field, PeriodOriginSerializer):
+            return super()._prefetch_related_instances(field, related_data)
+
+        # On create there are no existing rows to look up.
+        if self.instance is None or not related_data:
+            return [None] * len(related_data)
+
+        # Fetch all candidate rows in a single query instead of one
+        # PeriodOrigin.objects.get() per entry (N+1), then map by
+        # (data_source_id, origin_id) for O(1) lookup while preserving order.
+        candidate_filter = Q()
+        for datum in related_data:
+            candidate_filter |= Q(
+                data_source_id=datum["data_source"]["id"],
+                origin_id=datum["origin_id"],
+            )
+        existing_by_pair = {
+            (eo.data_source_id, eo.origin_id): eo
+            for eo in PeriodOrigin.objects.filter(
+                candidate_filter, period=self.instance
+            )
+        }
+
+        return [
+            existing_by_pair.get((datum["data_source"]["id"], datum["origin_id"]))
+            for datum in related_data
+        ]
+
+    def update_or_create_reverse_relations(self, instance, reverse_relations):
+        origins_item = reverse_relations.pop("origins", None)
+
+        # Parent handles time_span_groups and any other reverse relations normally
+        # (including deletion of removed time_span_groups on full PUT/PATCH).
+        super().update_or_create_reverse_relations(instance, reverse_relations)
+
+        if origins_item is None:
+            return
+
+        related_field, field, field_source = origins_item
+        related_data = self.get_initial().get("origins", None)
+        if related_data is None:
+            return
+
+        instances = self._prefetch_related_instances(field, related_data)
+
+        self._save_reverse_relation_field(
+            instance,
+            related_field,
+            field,
+            "origins",
+            field_source,
+            instances,
+            related_data,
+        )
+
+    def _check_duplicate_origins(self, origins, resource=None):
+        """Single-query duplicate-origin guard; raises Conflict on the first match.
+
+        Fetches all potentially conflicting PeriodOrigins in one query, then
+        iterates the request-supplied origins in order so the conflict is always
+        raised for the first duplicate rather than an arbitrary one.
+
+        Origins that already exist on DatePeriods of *the same resource* are
+        explicitly allowed — only cross-resource duplicates are rejected.
+        """
+        duplicate_filter = Q()
+        for origin in origins:
+            duplicate_filter |= Q(
+                data_source_id=origin["data_source"]["id"],
+                origin_id=origin["origin_id"],
+            )
+        existing_origins_qs = PeriodOrigin.objects.select_related("period").filter(
+            duplicate_filter
+        )
+        # Same-resource DatePeriods may share origins — exclude them from conflict
+        # detection so only cross-resource duplicates trigger a 409.
+        if resource is not None:
+            existing_origins_qs = existing_origins_qs.exclude(period__resource=resource)
+        existing_origins_by_pair = {
+            (eo.data_source_id, eo.origin_id): eo for eo in existing_origins_qs
+        }
+
+        request = self.context.get("request")
+        for origin in origins:
+            ds_id = origin["data_source"]["id"]
+            origin_id = origin["origin_id"]
+            existing_origin = existing_origins_by_pair.get((ds_id, origin_id))
+            if existing_origin is None:
+                continue
+
+            # Only include the full date_period payload when the requesting user
+            # is actually allowed to read that period. Without this check the
+            # conflict path would leak data from non-public periods in
+            # organizations the caller cannot access.
+            existing_period = existing_origin.period
+            conflict_detail = {
+                "message": _(
+                    "DatePeriod with origin %(ds_id)s:%(origin_id)s already exists."
+                )
+                % {"ds_id": ds_id, "origin_id": origin_id},
+            }
+            if (
+                request is not None
+                and filter_queryset_by_permission(
+                    request.user,
+                    DatePeriod.objects.filter(pk=existing_period.pk),
+                    auth=request.auth,
+                ).exists()
+            ):
+                conflict_detail["date_period"] = DatePeriodSerializer(
+                    existing_period, context=self.context
+                ).data
+            raise Conflict(detail=conflict_detail)
+
+    def validate(self, attrs):
+        result = super().validate(attrs)
+
+        # Reject origins that already belong to a *different* resource's
+        # date period (HTTP 409 Conflict).  This must run on both create
+        # *and* update so that a PATCH cannot introduce a cross-resource
+        # duplicate.  Origins shared across multiple periods of the same
+        # resource are still allowed.
+        origins = result.get("origins") or []
+        if origins:
+            # On PATCH, `resource` may not be in attrs; fall back to the
+            # existing instance's resource.
+            resource = result.get("resource") or (
+                self.instance.resource if self.instance is not None else None
+            )
+            self._check_duplicate_origins(origins, resource=resource)
+
+        return result
 
 
 class TimeElementSerializer(serializers.Serializer):

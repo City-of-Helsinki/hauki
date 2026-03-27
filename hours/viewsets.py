@@ -792,9 +792,15 @@ class DatePeriodViewSet(
             )
         return super().list(request, *args, **kwargs)
 
+    def create(self, request, *args, **kwargs):
+        with transaction.atomic():
+            with DeferUpdatingDenormalizedDatePeriodData():
+                return super().create(request, *args, **kwargs)
+
     def update(self, request, *args, **kwargs):
-        with DeferUpdatingDenormalizedDatePeriodData():
-            return super().update(request, *args, **kwargs)
+        with transaction.atomic():
+            with DeferUpdatingDenormalizedDatePeriodData():
+                return super().update(request, *args, **kwargs)
 
 
 @extend_schema_view(

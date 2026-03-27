@@ -18,3 +18,4 @@
 !config_dev.env
 !manage.py
 !requirements*
+!pyproject.toml

@@ -4,6 +4,7 @@ django-cors-headers
 django-environ
 django-extra-fields
 django-filter
+django-helsinki-health-endpoints
 django-helusers
 django-logger-extra
 django-model-utils

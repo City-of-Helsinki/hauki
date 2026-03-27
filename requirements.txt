@@ -281,6 +281,7 @@ django==5.2.12 \
     #   django-cors-headers
     #   django-extra-fields
     #   django-filter
+    #   django-helsinki-health-endpoints
     #   django-helusers
     #   django-js-asset
     #   django-logger-extra
@@ -307,6 +308,10 @@ django-extra-fields==3.0.2 \
 django-filter==25.1 \
     --hash=sha256:1ec9eef48fa8da1c0ac9b411744b16c3f4c31176c867886e4c48da369c407153 \
     --hash=sha256:4fa48677cf5857b9b1347fed23e355ea792464e0fe07244d1fdfb8a806215b80
+    # via -r requirements.in
+django-helsinki-health-endpoints==1.0.0 \
+    --hash=sha256:75670113e99bfd1fc23e317a3a22cff563140f495655c2a5f6ab219389dafd52 \
+    --hash=sha256:eebf1baa6917d7b0e11123aec191df773883102ec1653025a86d7037dba389e2
     # via -r requirements.in
 django-helusers==1.0.1 \
     --hash=sha256:2a8b8b53168c13ef0e041a6193e10efea2da07853e9a5e31974f6e2ebdb78e85 \

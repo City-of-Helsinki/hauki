@@ -49,4 +49,5 @@ urlpatterns = [
     ),
     path("", include("rest_framework.urls", namespace="rest_framework")),
     path("", RedirectView.as_view(url="v1/")),
+    path("", include("helsinki_health_endpoints.urls")),
 ]

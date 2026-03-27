@@ -1,12 +1,14 @@
 import datetime
 import json
+from unittest.mock import patch
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import reverse
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from hours.enums import RuleContext, RuleSubject, State, Weekday
-from hours.models import DatePeriod
+from hours.models import DatePeriod, PeriodOrigin, TimeSpanGroup
 from hours.tests.utils import assert_response_status_code
 
 
@@ -917,3 +919,518 @@ def test_date_periods_api_ordering_by_order_field_with_nulls(
     assert returned_ids.index(dp_no_order_early.id) < returned_ids.index(
         dp_no_order_late.id
     )
+
+
+@pytest.mark.django_db
+def test_put_rolls_back_time_span_group_creation_on_origin_write_failure(
+    resource,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    date_period_factory,
+    api_client,
+):
+    """PUT that creates a new time_span_group but then fails during origin save
+    must be fully rolled back — the new time_span_group must not be persisted.
+
+    super().update_or_create_reverse_relations() creates/updates time_span_groups
+    *before* our code processes origins.  Without transaction.atomic() in the
+    viewset, the TimeSpanGroup INSERT is already committed when the origin write
+    raises, leaving the period in a partial / inconsistent state.
+    """
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    # Period deliberately starts with no time_span_groups.
+    date_period = date_period_factory(resource=resource, name="Period")
+    tsg_count_before = TimeSpanGroup.objects.count()
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.pk})
+    data = {
+        "resource": resource.id,
+        "name": "Period",
+        "start_date": None,
+        "end_date": None,
+        "resource_state": "undefined",
+        "override": False,
+        # NEW group — super().update_or_create_reverse_relations() will INSERT
+        # this into the DB before origins are processed.
+        "time_span_groups": [{"time_spans": [], "rules": []}],
+        # Valid origin whose save() is mocked to fail, simulating any
+        # DB-level failure that occurs after time_span_groups are written.
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "new-origin",
+            }
+        ],
+    }
+
+    def failing_save(*args, **kwargs):
+        raise DRFValidationError({"origin_id": ["Simulated DB failure"]})
+
+    with patch("hours.serializers.PeriodOriginSerializer.save", failing_save):
+        response = api_client.put(
+            url,
+            data=json.dumps(data, cls=DjangoJSONEncoder),
+            content_type="application/json",
+        )
+
+    assert response.status_code == 400, f"{response.status_code} {response.data}"
+
+    # With transaction.atomic() the TimeSpanGroup INSERT must be rolled back.
+    assert TimeSpanGroup.objects.count() == tsg_count_before, (
+        "A TimeSpanGroup was created despite the origin write failing — "
+        "the update is not atomic"
+    )
+    assert date_period.time_span_groups.count() == 0
+    # No orphan origin must have been created either.
+    assert date_period.origins.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_date_period_with_origin(
+    resource,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    api_client,
+):
+    """POST with a new origin creates the DatePeriod and a PeriodOrigin (201)."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource.id,
+        "name": "Testperiod with origin",
+        "start_date": "2020-01-01",
+        "end_date": "2020-12-31",
+        "resource_state": "undefined",
+        "override": False,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "test-origin-1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
+
+    date_period = DatePeriod.objects.get(pk=response.data["id"])
+    assert date_period.origins.count() == 1
+    origin = date_period.origins.first()
+    assert origin.origin_id == "test-origin-1"
+    assert origin.data_source == data_source
+
+
+@pytest.mark.django_db
+def test_create_date_period_duplicate_origin_returns_409(
+    resource,
+    resource_factory,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """POST with an origin already on a DIFFERENT resource's period → 409 Conflict."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    # New period will be for `resource`; conflicting origin lives on `other_resource`.
+    other_resource = resource_factory()
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    existing_period = date_period_factory(resource=other_resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="used-origin-1"
+    )
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource.id,
+        "name": "New period conflicting origin",
+        "start_date": "2021-01-01",
+        "end_date": "2021-12-31",
+        "resource_state": "undefined",
+        "override": False,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "used-origin-1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    assert "date_period" in response.data
+    assert str(response.data["date_period"]["id"]) == str(existing_period.id)
+
+
+@pytest.mark.django_db
+def test_create_date_period_duplicate_origin_no_new_period_created(
+    resource,
+    resource_factory,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """On 409 Conflict (cross-resource) the new DatePeriod must not be persisted."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    other_resource = resource_factory()
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    existing_period = date_period_factory(resource=other_resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="taken-origin"
+    )
+
+    period_count_before = DatePeriod.objects.count()
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource.id,
+        "name": "Should not be created",
+        "start_date": "2021-01-01",
+        "end_date": "2021-12-31",
+        "resource_state": "undefined",
+        "override": False,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "taken-origin",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert DatePeriod.objects.count() == period_count_before
+
+
+@pytest.mark.django_db
+def test_create_date_period_same_resource_origin_allowed(
+    resource,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """POST with an origin already on another period of the SAME resource → 201."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    existing_period = date_period_factory(resource=resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="shared-origin"
+    )
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource.id,
+        "name": "New period, same resource, same origin",
+        "start_date": "2021-01-01",
+        "end_date": "2021-12-31",
+        "resource_state": "undefined",
+        "override": False,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "shared-origin",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
+    new_period = DatePeriod.objects.get(pk=response.data["id"])
+    assert new_period.origins.filter(
+        data_source=data_source, origin_id="shared-origin"
+    ).exists()
+    # Both periods of the same resource now hold the origin.
+    assert (
+        PeriodOrigin.objects.filter(
+            data_source=data_source, origin_id="shared-origin"
+        ).count()
+        == 2
+    )
+
+
+@pytest.mark.django_db
+def test_patch_date_period_duplicate_origin_cross_resource_returns_409(
+    resource,
+    resource_factory,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """PATCH that adds an origin already on a DIFFERENT resource's period → 409."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    # origin already lives on another resource's period
+    other_resource = resource_factory()
+    existing_period = date_period_factory(resource=other_resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="taken-origin"
+    )
+
+    # period under test has no origins yet
+    date_period = date_period_factory(resource=resource, name="My period")
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.pk})
+    data = {
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "taken-origin",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    # The period must remain origin-free
+    assert date_period.origins.count() == 0
+
+
+@pytest.mark.django_db
+def test_patch_date_period_reuses_existing_origin(
+    resource,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """PUT/PATCH with an already-attached origin must update, not re-create it (200)."""
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    date_period = date_period_factory(resource=resource, name="Original name")
+    existing_origin = period_origin_factory(
+        period=date_period, data_source=data_source, origin_id="existing-origin"
+    )
+    origin_pk_before = existing_origin.pk
+
+    url = reverse("date_period-detail", kwargs={"pk": date_period.pk})
+    data = {
+        "name": "Updated name",
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "existing-origin",
+            }
+        ],
+    }
+
+    response = api_client.patch(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+
+    date_period.refresh_from_db()
+    assert date_period.name == "Updated name"
+    # Origin must have been re-used, not re-created.
+    assert PeriodOrigin.objects.filter(pk=origin_pk_before).exists()
+    assert date_period.origins.filter(pk=origin_pk_before).exists()
+
+
+@pytest.mark.django_db
+def test_put_date_period_with_origin_from_another_period(
+    resource,
+    data_source_factory,
+    organization_factory,
+    user_origin_factory,
+    user_factory,
+    period_origin_factory,
+    date_period_factory,
+    api_client,
+):
+    """PUT that assigns an origin already on another period of the SAME resource
+    succeeds (200) and creates a new PeriodOrigin row for the target period.
+    The original row on the source period is left intact — same-resource sharing
+    is explicitly allowed, so both periods end up holding the origin.
+    """
+    data_source = data_source_factory()
+    user = user_factory()
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    period_a = date_period_factory(resource=resource, name="Period A")
+    origin = period_origin_factory(
+        period=period_a, data_source=data_source, origin_id="moveable-origin"
+    )
+    origin_pk = origin.pk
+
+    period_b = date_period_factory(resource=resource, name="Period B")
+
+    url = reverse("date_period-detail", kwargs={"pk": period_b.pk})
+    data = {
+        "resource": resource.id,
+        "name": "Period B",
+        "start_date": None,
+        "end_date": None,
+        "resource_state": "undefined",
+        "override": False,
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "moveable-origin",
+            }
+        ],
+        "time_span_groups": [],
+    }
+
+    response = api_client.put(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
+
+    # period_b must now have the origin.
+    assert period_b.origins.filter(
+        data_source=data_source, origin_id="moveable-origin"
+    ).exists()
+
+    # Both periods share the origin — same-resource sharing is explicitly allowed,
+    # so exactly two PeriodOrigin rows exist for this (data_source, origin_id) pair.
+    assert (
+        PeriodOrigin.objects.filter(
+            data_source=data_source, origin_id="moveable-origin"
+        ).count()
+        == 2
+    )
+
+    # The original PeriodOrigin row for period_a is still intact and unchanged.
+    assert PeriodOrigin.objects.filter(pk=origin_pk).exists()
+    assert PeriodOrigin.objects.get(pk=origin_pk).period == period_a

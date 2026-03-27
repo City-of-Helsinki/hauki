@@ -2799,6 +2799,118 @@ def test_filter_dateperiod_queryset_by_read_permission(
     }
 
 
+@pytest.mark.django_db
+def test_create_date_period_authenticated_previously_used_origin_id(
+    resource,
+    resource_factory,
+    period_origin_factory,
+    date_period_factory,
+    organization_factory,
+    data_source,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    """POST with a duplicate origin on a DIFFERENT resource returns 409 Conflict."""
+    # Conflicting origin lives on a period of a *different* resource.
+    other_resource = resource_factory()
+    existing_period = date_period_factory(resource=other_resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="1"
+    )
+
+    user_origin_factory(data_source=data_source, user=user)
+    organization = organization_factory(
+        origin_id=12345,
+        data_source=data_source,
+        name="Test organization",
+    )
+    resource.organization = organization
+    resource.save()
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource.id,
+        "name": "Conflicting period",
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    assert "date_period" in response.data
+    assert str(response.data["date_period"]["id"]) == str(existing_period.id)
+
+
+@pytest.mark.django_db
+def test_create_date_period_authenticated_previously_used_origin_id_not_accessible(
+    resource_factory,
+    period_origin_factory,
+    date_period_factory,
+    organization_factory,
+    data_source,
+    data_source_factory,
+    user,
+    user_origin_factory,
+    api_client,
+):
+    """A 409 Conflict must not leak data about a period the caller cannot read.
+
+    The existing period belongs to a non-public resource in a different organisation.
+    The ``date_period`` key must be absent from the Conflict payload entirely.
+    """
+    other_data_source = data_source_factory()
+    other_org = organization_factory(
+        origin_id=99999,
+        data_source=other_data_source,
+        name="Other organization",
+    )
+    # Existing period on a non-public resource the requesting user cannot access.
+    other_resource = resource_factory(is_public=False, organization=other_org)
+    existing_period = date_period_factory(resource=other_resource)
+    period_origin_factory(
+        period=existing_period, data_source=data_source, origin_id="secret-1"
+    )
+
+    user_origin_factory(data_source=data_source, user=user)
+    api_client.force_authenticate(user=user)
+
+    url = reverse("date_period-list")
+    data = {
+        "resource": resource_factory(is_public=True).id,
+        "name": "Conflicting period",
+        "origins": [
+            {
+                "data_source": {"id": data_source.id},
+                "origin_id": "secret-1",
+            }
+        ],
+    }
+
+    response = api_client.post(
+        url,
+        data=json.dumps(data, cls=DjangoJSONEncoder),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 409, f"{response.status_code} {response.data}"
+    assert "message" in response.data
+    # The "date_period" key must be absent – caller has no read access to it.
+    assert "date_period" not in response.data
+
+
 #
 # Rule
 #

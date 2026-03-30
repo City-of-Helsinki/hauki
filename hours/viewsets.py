@@ -437,6 +437,44 @@ class ResourceViewSet(
         if not pk:
             raise Http404
 
+        # For actions that compute opening hours, prefetch date_periods and all
+        # related objects (time_span_groups, time_spans, rules) up front.  Without
+        # this, every call to resource.get_daily_opening_hours() causes a cascade of
+        # additional database queries (N+1) for each period / group / rule, which
+        # blocks the request thread for an extended time and causes APM data loss.
+        if getattr(self, "action", None) in ("opening_hours", "is_open_now"):
+            # For opening_hours the user may query historical date ranges, so
+            # derive the cutoff from the request's start_date (mirroring
+            # OpeningHoursViewSet). For is_open_now only "now" matters.
+            if self.action == "opening_hours":
+                try:
+                    req_start, _ = get_start_and_end_from_params(self.request)
+                    earliest_end_date = req_start - datetime.timedelta(days=1)
+                except (ValidationError, ValueError):
+                    earliest_end_date = (
+                        timezone.now() - datetime.timedelta(hours=26)
+                    ).date()
+            else:
+                earliest_end_date = (
+                    timezone.now() - datetime.timedelta(hours=26)
+                ).date()
+            queryset = queryset.prefetch_related(
+                Prefetch(
+                    "date_periods",
+                    DatePeriod.objects.filter(
+                        Q(end_date__gte=earliest_end_date) | Q(end_date__isnull=True)
+                    ).prefetch_related(
+                        Prefetch(
+                            "time_span_groups",
+                            TimeSpanGroup.objects.all().prefetch_related(
+                                Prefetch("time_spans", TimeSpan.objects.all()),
+                                Prefetch("rules", Rule.objects.all()),
+                            ),
+                        )
+                    ),
+                )
+            )
+
         obj = get_object_or_404(queryset, **get_resource_pk_filter(pk))
 
         if check_permission:

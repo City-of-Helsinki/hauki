@@ -258,7 +258,9 @@ cryptography==46.0.6 \
     --hash=sha256:d9528b535a6c4f8ff37847144b8986a9a143585f0540fbcb1a98115b543aa463 \
     --hash=sha256:ed3775295fb91f70b4027aeba878d79b3e55c0b3e97eaa4de71f8f23a9f2eb77 \
     --hash=sha256:ed418c37d095aeddf5336898a132fba01091f0ac5844e3e8018506f014b6d2c4
-    # via pyjwt
+    # via
+    #   pyjwt
+    #   python-jose
 decorator==5.2.1 \
     --hash=sha256:65f266143752f734b0a7cc83c46f4618af75b8c5911b00ccb61d0ac9b6da0360 \
     --hash=sha256:d316bb415a2d9e2d2b3abcc4084c6502fc09240e292cd76a76afc106a1c8e04a
@@ -488,7 +490,9 @@ python-dateutil==2.9.0.post0 \
 python-jose==3.5.0 \
     --hash=sha256:abd1202f23d34dfad2c3d28cb8617b90acf34132c7afd60abd0b0b7d3cb55771 \
     --hash=sha256:fb4eaa44dbeb1c26dcc69e4bd7ec54a1cb8dd64d3b4d81ef08d90ff453f2b01b
-    # via django-helusers
+    # via
+    #   -r requirements.in
+    #   django-helusers
 python3-openid==3.2.0 \
     --hash=sha256:33fbf6928f401e0b790151ed2b5290b02545e8775f982485205a066f874aaeaf \
     --hash=sha256:6626f771e0417486701e0b4daff762e7212e820ca5b29fcc0d05f6f8736dfa6b

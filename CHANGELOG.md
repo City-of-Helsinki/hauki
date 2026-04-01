@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.11.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.2...hauki-v1.11.0) (2026-04-01)
+
+
+### Features
+
+* Add Django admin AD-login and disable password login ([c131f68](https://github.com/City-of-Helsinki/hauki/commit/c131f68366abfc15e803baa0b07c5729162ed2cd))
+* **serializers:** Add origins support to DatePeriod ([e2004bd](https://github.com/City-of-Helsinki/hauki/commit/e2004bde6a44718f8d9ec912d1d03c44ac76dc5f))
+* Use django-helsinki-health-endpoints for readiness and healthz ([23de11d](https://github.com/City-of-Helsinki/hauki/commit/23de11d6edf44e9342722b16c479a9df50927931))
+
+
+### Bug Fixes
+
+* **auth:** Enforce &lt;data_source&gt;:<origin_id> format for hsa_resource ([ac78947](https://github.com/City-of-Helsinki/hauki/commit/ac789473d8ccf258de02a699c5bdd50fb5e9a256))
+* Return 409 Conflict on duplicate resource origin ([8c99ed7](https://github.com/City-of-Helsinki/hauki/commit/8c99ed7f362321975d2a40c86121f54013d507fc))
+
+
+### Performance Improvements
+
+* Optimize copy opening hours with bulk DB operations ([f64c525](https://github.com/City-of-Helsinki/hauki/commit/f64c52576096d9c7bbacbe6f16616f6cac3b1e3f))
+* Optimize opening hours N+1 queries and add tests ([414fd7c](https://github.com/City-of-Helsinki/hauki/commit/414fd7c878d4052f955ce306bcfa7a7a12d611a1))
+
+
+### Dependencies
+
+* Add python-jose[cryptography] to mitigate CVE-2024-23342 ([fcc1860](https://github.com/City-of-Helsinki/hauki/commit/fcc1860a552f42ab36948120bf3602224aebf5f4))
+* Bump cryptography, pygments, requests, urllib3 and sqlparse ([c665c49](https://github.com/City-of-Helsinki/hauki/commit/c665c49a9fced3ed7c050c126cf40c8507f1d70c))
+* Bump ecdsa from 0.19.1 to 0.19.2 ([daf99f8](https://github.com/City-of-Helsinki/hauki/commit/daf99f8c9376e28c1ed38c376a23d857dd0d97c4))
+* Bump nltk from 3.9.3 to 3.9.4 ([1f937fb](https://github.com/City-of-Helsinki/hauki/commit/1f937fb5f0c7672a7775d109d123024c3284d203))
+
 ## [1.10.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.10.1...hauki-v1.10.2) (2026-03-18)
 
 

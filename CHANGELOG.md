@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.1...hauki-v1.11.2) (2026-04-15)
+
+
+### Dependencies
+
+* Bump pytest from 8.4.2 to 9.0.3 ([223fdb2](https://github.com/City-of-Helsinki/hauki/commit/223fdb2d3360c9253340a902e8a3b76d5d27678d))
+
 ## [1.11.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.0...hauki-v1.11.1) (2026-04-09)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.4](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.3...hauki-v1.11.4) (2026-05-11)
+
+
+### Dependencies
+
+* Bump django from 5.2.13 to 5.2.14 ([c85cb2e](https://github.com/City-of-Helsinki/hauki/commit/c85cb2e36cda19a1f6ad0cd42fcc9ec80b4a8d14))
+* Bump pip from 26.0 to 26.1 ([9ffa955](https://github.com/City-of-Helsinki/hauki/commit/9ffa9557bbee6e985fc3b7c4cc2fabb486ee4a11))
+
 ## [1.11.3](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.2...hauki-v1.11.3) (2026-04-20)
 
 

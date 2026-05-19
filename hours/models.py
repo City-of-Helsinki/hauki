@@ -138,7 +138,9 @@ def combine_element_time_spans(elements, override=False):
     states = {el.resource_state for el in elements if el.override == override}
 
     for state in states:
-        state_elements = [el for el in elements if el.resource_state == state]
+        state_elements = [
+            el for el in elements if el.resource_state == state and el.override == override
+        ]
 
         # This will return those with start_time None first.
         # Other fields being equal, this will return those with end_time None last.

@@ -39,6 +39,74 @@ KIRKANTA_LONG_EXCEPTIONAL_PERIODS = [
 
 # Periods that are not usable from the kirkanta and are thus hard coded
 KIRKANTA_FIXED_GROUPS = {
+    # Library "Metropolian kirjasto | Myllypuro" Period "Metropolia kevät/syksy"
+    # The library has split self-service windows flanking a staffed open period,
+    # which the generic get_openings() pattern detection cannot round-trip faithfully.
+    # Schedule: Mon-Thu staffed 10:00-17:00, Fri staffed 10:00-15:00,
+    # self-service 07:30-10:00 (Mon-Fri) and 17:00-20:00 (Mon-Thu) / 15:00-20:00 (Fri).
+    326187: [
+        {
+            "time_spans": [
+                {
+                    "group": None,
+                    "start_time": time(hour=10, minute=0),
+                    "end_time": time(hour=17, minute=0),
+                    "weekdays": [
+                        Weekday.MONDAY,
+                        Weekday.TUESDAY,
+                        Weekday.WEDNESDAY,
+                        Weekday.THURSDAY,
+                    ],
+                    "resource_state": State.OPEN,
+                    "full_day": False,
+                },
+                {
+                    "group": None,
+                    "start_time": time(hour=10, minute=0),
+                    "end_time": time(hour=15, minute=0),
+                    "weekdays": [Weekday.FRIDAY],
+                    "resource_state": State.OPEN,
+                    "full_day": False,
+                },
+                {
+                    "group": None,
+                    "start_time": time(hour=7, minute=30),
+                    "end_time": time(hour=10, minute=0),
+                    "weekdays": [
+                        Weekday.MONDAY,
+                        Weekday.TUESDAY,
+                        Weekday.WEDNESDAY,
+                        Weekday.THURSDAY,
+                        Weekday.FRIDAY,
+                    ],
+                    "resource_state": State.SELF_SERVICE,
+                    "full_day": False,
+                },
+                {
+                    "group": None,
+                    "start_time": time(hour=17, minute=0),
+                    "end_time": time(hour=20, minute=0),
+                    "weekdays": [
+                        Weekday.MONDAY,
+                        Weekday.TUESDAY,
+                        Weekday.WEDNESDAY,
+                        Weekday.THURSDAY,
+                    ],
+                    "resource_state": State.SELF_SERVICE,
+                    "full_day": False,
+                },
+                {
+                    "group": None,
+                    "start_time": time(hour=15, minute=0),
+                    "end_time": time(hour=20, minute=0),
+                    "weekdays": [Weekday.FRIDAY],
+                    "resource_state": State.SELF_SERVICE,
+                    "full_day": False,
+                },
+            ],
+            "rules": [],
+        },
+    ],
     # Library "Saksalainen kirjasto Deutsche Bibliothek" Period "Kirjaston aukioloajat"
     # Opening hours from their website:
     # https://www.deutsche-bibliothek.org/fi/kirjaston/oeffnungszeiten.html

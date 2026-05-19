@@ -1063,9 +1063,7 @@ class OpeningHoursViewSet(viewsets.GenericViewSet):
                     "date_periods",
                     DatePeriod.objects.filter(
                         Q(end_date__gte=earliest_end_date) | Q(end_date__isnull=True)
-                    )
-                    .defer("name", "description")
-                    .prefetch_related(
+                    ).prefetch_related(
                         Prefetch(
                             "time_span_groups",
                             TimeSpanGroup.objects.all().prefetch_related(

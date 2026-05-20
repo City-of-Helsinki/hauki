@@ -16,6 +16,7 @@ from dateutil.relativedelta import SU, relativedelta
 from django.conf import settings
 from django.contrib.humanize.templatetags.humanize import ordinal
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F
@@ -385,7 +386,11 @@ class Resource(SoftDeletableModel, TimeStampedModel):
     class Meta:
         verbose_name = _("Resource")
         verbose_name_plural = _("Resources")
-        indexes = (models.Index(fields=["created"]), models.Index(fields=["modified"]))
+        indexes = (
+            models.Index(fields=["created"]),
+            models.Index(fields=["modified"]),
+            GinIndex(fields=["ancestry_organization"], name="hours_res_anc_org_gin"),
+        )
 
     objects = SoftDeletableManager()
 

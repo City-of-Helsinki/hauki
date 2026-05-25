@@ -4,7 +4,7 @@
 set -e
 
 # TPREK organization structure must be up to date so users have the correct organization rights
-./manage.py import_organizations -c tprek http://www.hel.fi/palvelukarttaws/rest/v4/department/
+./manage.py import_organizations -c tprek https://www.hel.fi/palvelukarttaws/rest/v4/department/
 # TPREK units and connections must be up to date so changed TPREK data is present in Hauki
 # NOTE! --parse-nothing should be used here when Hauki is in production. It will prevent new
 # opening hours being created when resources contain opening hours strings.

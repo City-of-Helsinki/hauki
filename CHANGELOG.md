@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.5...hauki-v1.11.6) (2026-05-27)
+
+
+### Bug Fixes
+
+* Add GIN index for ancestry_organization to improve query perf ([1082ded](https://github.com/City-of-Helsinki/hauki/commit/1082ded4c0f3db41249569a054978f0f6d967f3e))
+* Filter override flag consistently in combine_element_time_spans ([7ec8eb4](https://github.com/City-of-Helsinki/hauki/commit/7ec8eb4ba13fbd8801ac0959135100d90f25d1ad))
+
+
+### Performance Improvements
+
+* **opening_hours:** Fix N+1 query issue from DatePeriod prefetch ([ae98d45](https://github.com/City-of-Helsinki/hauki/commit/ae98d45bc0a4bd5f4f5f88d6bc8904f422f603ad))
+
 ## [1.11.5](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.4...hauki-v1.11.5) (2026-05-19)
 
 

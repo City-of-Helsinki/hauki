@@ -21,12 +21,10 @@ RUN dnf update -y && dnf install -y \
     nmap-ncat \
     gettext \
     glibc-locale-source \
-    && pip install -U pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --only-binary :all: -U pip \
+    && pip install --only-binary :all: --uploaded-prior-to=P7D -U setuptools wheel \
+    && pip install --require-hashes --no-deps --no-cache-dir -r requirements.txt \
     && localedef --inputfile=fi_FI --charmap=UTF-8 fi_FI.UTF-8 \
-    && mkdir -p /usr/local/lib/uwsgi/plugins \
-    && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
-    && mv sentry_plugin.so /usr/local/lib/uwsgi/plugins/ \
     && dnf clean all
 
 # Build and copy specific python-uwsgi-common files.
@@ -36,7 +34,10 @@ RUN mkdir -p /usr/src/python-uwsgi-common && \
     cp /usr/src/python-uwsgi-common/uwsgi-base.ini /hauki/ && \
     uwsgi --build-plugin /usr/src/python-uwsgi-common && \
     rm -rf /usr/src/${UWSGI_COMMON_REF}.tar.gz && \
-    rm -rf /usr/src/python-uwsgi-common
+    rm -rf /usr/src/python-uwsgi-common && \
+    uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry && \
+    mkdir -p /usr/local/lib/uwsgi/plugins && \
+    mv sentry_plugin.so /usr/local/lib/uwsgi/plugins/
 
 # Keep media in its own directory outside home, in case home
 # directory forms some sort of attack route
@@ -51,7 +52,7 @@ FROM appbase AS development
 # ==============================
 
 COPY --chown=default:root requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt
+RUN pip install --require-hashes --no-deps --no-cache-dir -r requirements-dev.txt
 
 COPY --chown=default:root . .
 

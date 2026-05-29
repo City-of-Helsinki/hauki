@@ -514,8 +514,6 @@ class ResourceViewSet(
         tz = resource.timezone
         if not tz:
             tz = zoneinfo.ZoneInfo(settings.RESOURCE_DEFAULT_TIMEZONE)
-            if not tz:
-                tz = zoneinfo.ZoneInfo("Europe/Helsinki")
 
         resource_time_now = time_now.astimezone(tz)
 

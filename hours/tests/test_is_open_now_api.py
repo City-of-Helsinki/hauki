@@ -367,3 +367,12 @@ def test_is_open_one_match_from_previous_day(
 
     assert response.data["is_open"] is True
     assert len(response.data["matching_opening_hours"]) == 1
+
+
+@pytest.mark.django_db
+def test_is_open_invalid_timezone(admin_client, resource):
+    url = reverse("resource-is-open-now", kwargs={"pk": resource.id})
+
+    response = admin_client.get(url, data={"timezone": "Not/ATimezone"})
+
+    assert response.status_code == 400

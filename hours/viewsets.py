@@ -1,7 +1,7 @@
 import datetime
+import zoneinfo
 from operator import itemgetter
 
-import pytz
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db import transaction
@@ -513,18 +513,18 @@ class ResourceViewSet(
 
         tz = resource.timezone
         if not tz:
-            tz = pytz.timezone(settings.RESOURCE_DEFAULT_TIMEZONE)
+            tz = zoneinfo.ZoneInfo(settings.RESOURCE_DEFAULT_TIMEZONE)
             if not tz:
-                tz = pytz.timezone("Europe/Helsinki")
+                tz = zoneinfo.ZoneInfo("Europe/Helsinki")
 
         resource_time_now = time_now.astimezone(tz)
 
         other_tz = None
         if request.query_params.get("timezone"):
             try:
-                other_tz = pytz.timezone(request.query_params.get("timezone"))
-            except pytz.exceptions.UnknownTimeZoneError:
-                raise APIException("Unknown timezone")
+                other_tz = zoneinfo.ZoneInfo(request.query_params.get("timezone"))
+            except zoneinfo.ZoneInfoNotFoundError:
+                raise ValidationError("Unknown timezone")
 
         opening_hours = resource.get_daily_opening_hours(
             resource_time_now.date(), resource_time_now.date()
@@ -554,26 +554,24 @@ class ResourceViewSet(
                 opening_hour.end_time if opening_hour.end_time else datetime.time.max
             )
 
-            start_datetime = tz.localize(
-                datetime.datetime(
-                    year=start_date.year,
-                    month=start_date.month,
-                    day=start_date.day,
-                    hour=start_time.hour,
-                    minute=start_time.minute,
-                    second=start_time.second,
-                )
+            start_datetime = datetime.datetime(
+                year=start_date.year,
+                month=start_date.month,
+                day=start_date.day,
+                hour=start_time.hour,
+                minute=start_time.minute,
+                second=start_time.second,
+                tzinfo=tz,
             )
 
-            end_datetime = tz.localize(
-                datetime.datetime(
-                    year=end_date.year,
-                    month=end_date.month,
-                    day=end_date.day,
-                    hour=end_time.hour,
-                    minute=end_time.minute,
-                    second=end_time.second,
-                )
+            end_datetime = datetime.datetime(
+                year=end_date.year,
+                month=end_date.month,
+                day=end_date.day,
+                hour=end_time.hour,
+                minute=end_time.minute,
+                second=end_time.second,
+                tzinfo=tz,
             )
 
             if (
@@ -1220,7 +1218,7 @@ class DatePeriodsAsTextForTprek(viewsets.GenericViewSet):
         for resource in page:
             tz = resource.timezone
             if not tz:
-                tz = pytz.timezone("Europe/Helsinki")
+                tz = zoneinfo.ZoneInfo("Europe/Helsinki")
 
             start_date = time_now.astimezone(tz).date()
             resource_serializer = ResourceSimpleSerializer(resource)

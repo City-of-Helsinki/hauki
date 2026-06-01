@@ -1,5 +1,6 @@
+import datetime
+
 from django.utils import timezone
-from pytz import InvalidTimeError, utc
 from rest_framework.fields import DateTimeField
 
 
@@ -12,8 +13,8 @@ class TimezoneRetainingDateTimeField(DateTimeField):
                 return value
             try:
                 return timezone.make_aware(value, field_timezone)
-            except InvalidTimeError:
+            except (ValueError, TypeError):
                 self.fail("make_aware", timezone=field_timezone)
         elif (field_timezone is None) and timezone.is_aware(value):
-            return timezone.make_naive(value, utc)
+            return timezone.make_naive(value, datetime.UTC)
         return value

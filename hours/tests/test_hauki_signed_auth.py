@@ -5,7 +5,6 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
-from pytz import UTC
 from rest_framework.test import APIRequestFactory
 from rest_framework.views import APIView
 
@@ -461,8 +460,8 @@ def test_signed_auth_entry_not_invalidated(
     # Add a non invalidated entry to the database
     SignedAuthEntry.objects.create(
         signature=signature,
-        created_at=now.replace(tzinfo=UTC),
-        valid_until=valid_until.replace(tzinfo=UTC),
+        created_at=now.replace(tzinfo=datetime.UTC),
+        valid_until=valid_until.replace(tzinfo=datetime.UTC),
     )
 
     # Check that auth still works
@@ -512,8 +511,8 @@ def test_invalidate_signature_success_header_params(
 
     signed_auth_entry = SignedAuthEntry.objects.get(signature=signature)
 
-    assert signed_auth_entry.created_at == now.replace(tzinfo=UTC)
-    assert signed_auth_entry.valid_until == valid_until.replace(tzinfo=UTC)
+    assert signed_auth_entry.created_at == now.replace(tzinfo=datetime.UTC)
+    assert signed_auth_entry.valid_until == valid_until.replace(tzinfo=datetime.UTC)
 
     # Verify that the auth no longer works
     response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)

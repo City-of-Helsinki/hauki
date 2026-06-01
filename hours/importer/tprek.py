@@ -1,5 +1,6 @@
 import csv
 import re
+import zoneinfo
 from calendar import day_abbr, different_locale, month_name
 from collections.abc import Hashable
 from datetime import date
@@ -7,7 +8,6 @@ from datetime import time as datetime_time
 from itertools import zip_longest
 from pathlib import Path
 
-import pytz
 from django import db
 from django.conf import settings
 from django.db.models.signals import m2m_changed
@@ -842,7 +842,7 @@ class TPRekImporter(Importer):
             "same_as": self.get_url("unit", data["id"]),
             "organization": obj_organization,
             "extra_data": self.get_unit_links(data),
-            "timezone": pytz.timezone("Europe/Helsinki"),
+            "timezone": zoneinfo.ZoneInfo("Europe/Helsinki"),
             "periods": periods,
             "subsections": subsections,
         }

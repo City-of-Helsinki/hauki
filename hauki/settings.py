@@ -318,7 +318,6 @@ except KeyError as e:
 LANGUAGE_CODE = env("LANGUAGES")[0]
 
 TIME_ZONE = "Europe/Helsinki"
-USE_DEPRECATED_PYTZ = True
 
 USE_I18N = True
 

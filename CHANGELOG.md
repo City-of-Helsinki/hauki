@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.11.7](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.6...hauki-v1.11.7) (2026-06-03)
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.6 to 46.0.7 ([06b6432](https://github.com/City-of-Helsinki/hauki/commit/06b64328402554a6de20f21fabc2fd8670cba75f))
+* Bump idna from 3.10 to 3.15 ([b32051f](https://github.com/City-of-Helsinki/hauki/commit/b32051fdc1cc9714a650072960d1d04beb2da9d5))
+* Bump urllib3 from 2.6.3 to 2.7.0 ([a0ca544](https://github.com/City-of-Helsinki/hauki/commit/a0ca544d26d26272d6dfeb1d95839252da76f7ad))
+* Migrate from pytz to stdlib zoneinfo ([dc31ab2](https://github.com/City-of-Helsinki/hauki/commit/dc31ab2f18c5e35c011e5acd19a23840c7e61765))
+* Remove Elastic APM ([fcd28a2](https://github.com/City-of-Helsinki/hauki/commit/fcd28a216fe6098b37efa0250143f3306f8b321a))
+
 ## [1.11.6](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.5...hauki-v1.11.6) (2026-05-27)
 
 

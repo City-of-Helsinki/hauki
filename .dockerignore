@@ -1,21 +1,10 @@
-#################################################
-# Exclude all by default
-#################################################
-*
-
-#################################################
-# Whitelisted folders
-#################################################
-!hauki*
-!hours*
-!users*
-!locale*
-!deploy
-
-#################################################
-# Whitelisted files
-#################################################
-!config_dev.env
-!manage.py
-!requirements*
-!pyproject.toml
+.venv
+__pycache__/
+*.py[cod]
+*.egg-info/
+.git
+.gitignore
+.github
+.pre-commit-config.yaml
+README.md
+CHANGELOG.md

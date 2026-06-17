@@ -2,17 +2,26 @@
 FROM registry.access.redhat.com/ubi9/python-312 AS appbase
 # ==============================
 
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /usr/local/bin/
+
 # Branch or tag used to pull python-uwsgi-common.
 ARG UWSGI_COMMON_REF=main
 
 USER root
 WORKDIR /hauki
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV STATIC_ROOT /srv/static
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    STATIC_ROOT=/srv/static \
+    UV_PROJECT_ENVIRONMENT=/opt/app-root \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
+    UV_PYTHON_DOWNLOADS=never
 
-COPY --chown=default:root requirements.txt .
+ENV PATH="/opt/app-root/bin:$PATH"
+
+COPY --chown=default:root pyproject.toml uv.lock ./
 
 # nmap-ncat (nc) installed for in-container manual debugging
 # we need the Finnish locale built
@@ -21,9 +30,7 @@ RUN dnf update -y && dnf install -y \
     nmap-ncat \
     gettext \
     glibc-locale-source \
-    && pip install --only-binary :all: -U pip \
-    && pip install --only-binary :all: --uploaded-prior-to=P7D -U setuptools wheel \
-    && pip install --require-hashes --no-deps --no-cache-dir -r requirements.txt \
+    && uv sync --frozen --no-dev --group prod \
     && localedef --inputfile=fi_FI --charmap=UTF-8 fi_FI.UTF-8 \
     && dnf clean all
 
@@ -51,8 +58,7 @@ EXPOSE 8000/tcp
 FROM appbase AS development
 # ==============================
 
-COPY --chown=default:root requirements-dev.txt .
-RUN pip install --require-hashes --no-deps --no-cache-dir -r requirements-dev.txt
+RUN uv sync --frozen
 
 COPY --chown=default:root . .
 
@@ -63,6 +69,6 @@ FROM appbase AS production
 # ==============================
 
 COPY --chown=default:root . .
-RUN SECRET_KEY="only-used-for-collectstatic" python manage.py collectstatic --noinput
+RUN SECRET_KEY="only-used-for-collectstatic" uv run python manage.py collectstatic --noinput
 
 USER default

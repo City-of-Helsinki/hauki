@@ -2,6 +2,58 @@
 name = "hauki"
 requires-python = ">=3.12, <3.13"
 version = "1.11.7"
+dependencies = [
+    "Django~=5.2.14",
+    "bleach",
+    "django-cors-headers",
+    "django-environ",
+    "django-extra-fields",
+    "django-filter",
+    "django-helsinki-health-endpoints",
+    "django-helusers",
+    "django-logger-extra",
+    "python-jose[cryptography]",  # Explicit cryptography backend to avoid vulnerable ecdsa (CVE-2024-23342)
+    "django-model-utils<5",
+    "django-modeltranslation",
+    "django-orghierarchy",
+    "django-simple-history",
+    "django-timezone-field",
+    "djangorestframework",
+    "drf-spectacular<0.27",  # 0.27 breaks the schema generation
+    "drf-writable-nested",
+    "holidays",
+    "ipython",
+    "psycopg[c]",
+    "requests-cache",
+    "sentry-sdk[django]",
+    "social-auth-app-django",
+    "tzdata",
+    "whitenoise",
+]
+
+[dependency-groups]
+prod = [
+    "uwsgi",
+    "uwsgitop",
+]
+dev = [
+    "bandit",
+    "django-extensions",
+    "factory_boy",
+    "faker",
+    "freezegun",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "pytest-django",
+    "pytest-factoryboy",
+    "requests-mock",
+    "safety",
+]
+
+[tool.uv]
+package = false
+exclude-newer = "P3D"
 
 [tool.ruff]
 target-version = "py312"
@@ -30,8 +82,3 @@ extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] 
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "hauki.test_settings"
-
-[tool.pip-tools.compile]
-generate-hashes = true
-strip-extras = true
-allow-unsafe = true

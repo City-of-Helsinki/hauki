@@ -87,8 +87,7 @@ createdb -l fi_FI.UTF-8 -E UTF8 -T template0 -O <your username> hauki;'
 
 #### Prerequisites
 
-* [Pyenv](https://github.com/pyenv/pyenv)
-* [Pyenv virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+* [uv](https://docs.astral.sh/uv/) — Python package and project manager
 
 Clone the repo:
 ```
@@ -96,12 +95,9 @@ git clone https://github.com/City-of-Helsinki/hauki.git
 cd hauki
 ```
 
-Initiate a virtualenv and install the Python requirements plus development requirements:
+Install all dependencies (creates `.venv` automatically):
 ```
-pyenv virtualenv hauki-env
-pyenv local hauki-env
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+uv sync
 ```
 
 Copy the development config file example `config_dev.env.example` to `config_dev.env`
@@ -112,17 +108,17 @@ cp config_dev.env.example config_dev.env
 
 Run tests:
 ```
-pytest
+uv run pytest
 ```
 
 Run migrations:
 ```
-python manage.py migrate
+uv run python manage.py migrate
 ```
 
 Run dev server:
 ```
-python manage.py runserver
+uv run python manage.py runserver
 ```
 and open your browser to http://127.0.0.1:8000/.
 
@@ -130,7 +126,7 @@ and open your browser to http://127.0.0.1:8000/.
 
 Before committing files to the repository it's advisable to use the configured pre-commit hooks (see [`.pre-commit-config.yaml`](./.pre-commit-config.yaml)). The CI pipeline will fail if the files are not formatted correctly.
 
-pre-commit is included in the requirements-dev.txt. After cloning the repository you should install the requirements and then install the hooks by running:
+pre-commit is included in the dev dependencies. After cloning the repository you should install the dependencies and then install the hooks by running:
 
 ```
 pre-commit install

@@ -22,7 +22,6 @@ dependencies = [
     "drf-spectacular<0.27",  # 0.27 breaks the schema generation
     "drf-writable-nested",
     "holidays",
-    "ipython",
     "psycopg[c]",
     "requests-cache",
     "sentry-sdk[django]",
@@ -41,6 +40,7 @@ dev = [
     "factory_boy",
     "faker",
     "freezegun",
+    "ipython",
     "pre-commit",
     "pytest",
     "pytest-cov",

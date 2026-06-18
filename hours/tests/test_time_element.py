@@ -551,7 +551,6 @@ class TestCombineElementTimeSpansOverrideFlag:
         assert combine_element_time_spans([non_override], override=True) == []
 
     def test_result_override_flag_matches_parameter(self):
-
         for flag in (False, True):
             elements = [
                 _te(

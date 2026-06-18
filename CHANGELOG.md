@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.8](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.7...hauki-v1.11.8) (2026-06-18)
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.7 to 48.0.1 ([d9b69a1](https://github.com/City-of-Helsinki/hauki/commit/d9b69a13c656b680251f7cc5cdf3301187bd2126))
+* Bump pyjwt from 2.12.1 to 2.13.0 ([2eb39a5](https://github.com/City-of-Helsinki/hauki/commit/2eb39a59a54df6bd23aded5f49abcc30cf72be13))
+
 ## [1.11.7](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.6...hauki-v1.11.7) (2026-06-03)
 
 

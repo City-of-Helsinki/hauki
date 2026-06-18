@@ -31,7 +31,6 @@ if [[ "$1" = "help" ]]; then
     _log "- start_django_development_server: runs Django development server at port 8000"
     _log "- initial_data: runs some initial import tasks to populate the database"
     _log "- migrate: runs Django migrations (manage.py migrate)"
-    _log "- test: runs Django tests (pytest)"
     _log "- maintenance_tasks: run periodic maintenance tasks, with level as parameter"
     _log "- <anything else>: run command in shell, verbatim"
     _log ""
@@ -64,19 +63,6 @@ elif [[ "$1" = "initial_data" ]]; then
 elif [[ "$1" = "migrate" ]]; then
     _log_boxed "Running migrations"
     ./manage.py migrate
-elif [[ "$1" = "test" ]]; then
-    _log_boxed "Running flake8"
-    flake8
-    _log_boxed "Running black"
-    black --check .
-    _log_boxed "Running isort"
-    isort --check-only --diff .
-    _log_boxed "Running safety"
-    safety check -r requirements.txt
-    _log_boxed "Running bandit"
-    bandit -r . -ll
-    _log_boxed "Running tests"
-    pytest
 elif [[ -n "$*" ]]; then
     _log_boxed "exec'n $*"
     exec "$@"

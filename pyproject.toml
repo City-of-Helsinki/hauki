@@ -37,7 +37,6 @@ prod = [
     "uwsgitop",
 ]
 dev = [
-    "bandit",
     "django-extensions",
     "factory_boy",
     "faker",
@@ -48,7 +47,6 @@ dev = [
     "pytest-django",
     "pytest-factoryboy",
     "requests-mock",
-    "safety",
 ]
 
 [tool.uv]

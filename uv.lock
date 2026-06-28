@@ -546,7 +546,7 @@ wheels = [
 
 [[package]]
 name = "hauki"
-version = "1.11.7"
+version = "1.11.9"
 source = { virtual = "." }
 dependencies = [
     { name = "bleach" },

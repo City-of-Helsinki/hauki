@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.9](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.8...hauki-v1.11.9) (2026-07-01)
+
+
+### Bug Fixes
+
+* **release-please:** Update uv.lock TOML JSONPath ([b37fa56](https://github.com/City-of-Helsinki/hauki/commit/b37fa56095e22f180339974fe876f0791afb45d3))
+
 ## [1.11.8](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.7...hauki-v1.11.8) (2026-06-18)
 
 

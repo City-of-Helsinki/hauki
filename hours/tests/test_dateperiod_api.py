@@ -183,6 +183,7 @@ def test_list_date_periods_filter_by_resource_direct_data_source(
     resource.data_sources.add(expected_data_source)
     expected_date_period = date_period_factory(
         resource=resource,
+        start_date=datetime.date(year=2024, month=1, day=1),
     )
     date_period_factory(
         resource=resource_factory(),

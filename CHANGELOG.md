@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.9](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.8...hauki-v1.11.9) (2026-08-07)
+
+
+### Bug Fixes
+
+* **release-please:** Update uv.lock TOML JSONPath ([b37fa56](https://github.com/City-of-Helsinki/hauki/commit/b37fa56095e22f180339974fe876f0791afb45d3))
+
+
+### Dependencies
+
+* Bump cryptography from 49.0.0 to 50.0.0 ([d02a277](https://github.com/City-of-Helsinki/hauki/commit/d02a277043ac644ba023af0ec38a93378f186546))
+* Bump pyasn1 from 0.6.3 to 0.6.4 ([dd514bf](https://github.com/City-of-Helsinki/hauki/commit/dd514bf2cdef240c431e1527d7ea0538c68785c0))
+
 ## [1.11.8](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.7...hauki-v1.11.8) (2026-06-18)
 
 

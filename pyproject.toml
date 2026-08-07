@@ -1,7 +1,7 @@
 [project]
 name = "hauki"
 requires-python = ">=3.12, <3.13"
-version = "1.11.8"
+version = "1.11.9"
 dependencies = [
     "Django~=5.2.14",
     "bleach",

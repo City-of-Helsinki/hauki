@@ -3,7 +3,7 @@ name = "hauki"
 requires-python = ">=3.12, <3.13"
 version = "1.11.9"
 dependencies = [
-    "django~=5.2.16",
+    "django~=5.2",
     "bleach",
     "django-cors-headers",
     "django-environ",

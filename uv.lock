@@ -598,7 +598,7 @@ prod = [
 [package.metadata]
 requires-dist = [
     { name = "bleach" },
-    { name = "django", specifier = "~=5.2.16" },
+    { name = "django", specifier = "~=5.2" },
     { name = "django-cors-headers" },
     { name = "django-environ" },
     { name = "django-extra-fields" },

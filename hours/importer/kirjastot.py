@@ -361,15 +361,18 @@ class KirjastotImporter(Importer):
                                 {"weekday": day_in_the_week["weekday"]}
                             )
                 time_spans = []
-                for status, week_opening_times in week_opening_times_by_status.items():
-                    for week_opening_time in week_opening_times:
+                for (
+                    status,
+                    status_opening_times,
+                ) in week_opening_times_by_status.items():
+                    for week_opening_time in status_opening_times:
                         if "from" not in week_opening_time:
                             week_opening_time["from"] = ""
                         if "to" not in week_opening_time:
                             week_opening_time["to"] = ""
 
                     grouped_times = groupby(
-                        sorted(week_opening_times, key=itemgetter("from", "to")),
+                        sorted(status_opening_times, key=itemgetter("from", "to")),
                         itemgetter("from", "to"),
                     )
                     for opening_time, opening_times in grouped_times:

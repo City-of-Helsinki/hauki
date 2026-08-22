@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.11.11](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.10...hauki-v1.11.11) (2026-08-22)
+
+
+### Bug Fixes
+
+* Rename loop variable due to outer loop shadowing ([2bf79bc](https://github.com/City-of-Helsinki/hauki/commit/2bf79bc6a0da9d8d430bd27facd208d504fd3410))
+
+
+### Dependencies
+
+* Bump sqlparse from 0.5.5 to 0.6.0 ([e85e98e](https://github.com/City-of-Helsinki/hauki/commit/e85e98e3a5682d93fcaf4a87b018d5568306b77a))
+
 ## [1.11.10](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.9...hauki-v1.11.10) (2026-08-14)
 
 

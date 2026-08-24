@@ -10,6 +10,7 @@ from pathlib import Path
 
 from django import db
 from django.conf import settings
+from django.db.models import QuerySet
 from django.db.models.signals import m2m_changed
 from django_orghierarchy.models import Organization
 from model_utils.models import SoftDeletableModel
@@ -1350,7 +1351,10 @@ class TPRekImporter(Importer):
         self.logger.info("Extra opening hours found in imported strings saved")
 
     def save_extra_subsections_with_periods(
-        self, period_syncher: ModelSyncher, extra_subsections: list, data_to_match: str
+        self,
+        period_syncher: ModelSyncher,
+        extra_subsections: list,
+        data_to_match: QuerySet | None,
     ):
         """
         Saves extra data found in opening hours, connection or unit

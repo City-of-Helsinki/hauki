@@ -60,6 +60,7 @@ class Importer:
         }
 
     def setup(self):
+        # Optional hook for subclasses to run custom initialization; no-op by default.
         pass
 
     def get_object_ids(self, obj: Model) -> list:

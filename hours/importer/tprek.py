@@ -223,7 +223,9 @@ class TPRekImporter(Importer):
             return self.check_non_public(obj)
         return super().check_deleted(obj)
 
-    def parse_dates(self, start: str, end: str) -> tuple[date, date]:
+    def parse_dates(
+        self, start: str | None, end: str | None
+    ) -> tuple[date | None, date | None]:
         """
         Parses period start and end dates. If end is given, start string may be
         incomplete.

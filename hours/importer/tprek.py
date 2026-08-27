@@ -1353,7 +1353,7 @@ class TPRekImporter(Importer):
     def save_extra_subsections_with_periods(
         self,
         period_syncher: ModelSyncher,
-        extra_subsections: list,
+        extra_subsections: dict,
         data_to_match: QuerySet | None,
     ):
         """

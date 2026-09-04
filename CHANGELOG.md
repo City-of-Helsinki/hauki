@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.12](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.11...hauki-v1.11.12) (2026-09-04)
+
+
+### Dependencies
+
+* Bump djangorestframework from 3.17.1 to 3.17.2 ([8f0b8ac](https://github.com/City-of-Helsinki/hauki/commit/8f0b8ac5d7aca5f110363c4fdbfce892fb085d12))
+
 ## [1.11.11](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.10...hauki-v1.11.11) (2026-08-27)
 
 

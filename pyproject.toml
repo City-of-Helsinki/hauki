@@ -12,7 +12,6 @@ dependencies = [
     "django-helsinki-health-endpoints",
     "django-helusers",
     "django-logger-extra",
-    "python-jose[cryptography]",  # Explicit cryptography backend to avoid vulnerable ecdsa (CVE-2024-23342)
     "django-model-utils<5",
     "django-modeltranslation",
     "django-orghierarchy",

@@ -6,6 +6,7 @@ from datetime import timedelta
 from dateutil.parser import parse
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -188,25 +189,27 @@ class HaukiSignedAuthentication(BaseAuthentication):
 
         data_source = DataSource.objects.get(id=params["hsa_source"])
 
-        try:
-            user = User.objects.get(username=params["hsa_username"])
+        user = User.objects.filter(username=params["hsa_username"]).first()
+        if user and (not user.is_active or user.is_superuser):
+            raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
 
-            try:
-                user_origin = user.origins.get(data_source=data_source)
-            except UserOrigin.DoesNotExist:
-                user_origin = UserOrigin.objects.create(
-                    user=user, data_source=data_source
-                )
-        except User.DoesNotExist:
+        if not user:
             user = User()
             user.set_unusable_password()
             user.username = params["hsa_username"]
-            user.save()
+            try:
+                user.save()
+            except IntegrityError:
+                raise exceptions.AuthenticationFailed(_("Failed to create user."))
+            else:
+                user_origin = UserOrigin.objects.create(
+                    user=user, data_source=data_source
+                )
 
+        try:
+            user_origin = user.origins.get(data_source=data_source)
+        except UserOrigin.DoesNotExist:
             user_origin = UserOrigin.objects.create(user=user, data_source=data_source)
-
-        if not user.is_active:
-            raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
 
         hsa_auth_data = HaukiSignedAuthData()
         hsa_auth_data.user = user

@@ -1,7 +1,9 @@
 import datetime
+import json
 import urllib.parse
 
 import pytest
+from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
@@ -14,7 +16,7 @@ from hours.authentication import (
     join_params,
 )
 from hours.models import SignedAuthEntry
-from users.models import User
+from users.models import User, UserOrigin
 
 
 @pytest.mark.django_db
@@ -425,6 +427,143 @@ def test_join_user_to_organization_invalid_org(
     user = User.objects.get(username="test_user")
 
     assert user.organization_memberships.count() == 0
+
+
+@pytest.mark.django_db
+def test_authenticate_as_unrelated_existing_superuser_without_prior_data_source_link(
+    api_client, data_source, signed_auth_key_factory, user_factory
+):
+    """Test that existing superuser without prior data source link cannot be impersonated."""
+
+    signed_auth_key = signed_auth_key_factory(data_source=data_source)
+
+    admin = user_factory(
+        username="real.admin.account", is_staff=True, is_superuser=True
+    )
+    assert not UserOrigin.objects.filter(user=admin, data_source=data_source).exists()
+
+    url = reverse("auth_required_test-list")
+
+    now = timezone.now()
+    data = {
+        "hsa_source": data_source.id,
+        "hsa_username": admin.username,
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 403
+
+    admin.refresh_from_db()
+    assert admin.is_superuser
+    assert not UserOrigin.objects.filter(user=admin, data_source=data_source).exists()
+
+
+@pytest.mark.django_db
+def test_hsa_signed_auth_impersonated_superuser_cannot_write_unrelated_org_resource(
+    api_client,
+    resource,
+    organization_factory,
+    data_source_factory,
+    signed_auth_key_factory,
+    user_factory,
+):
+    """Test that an impersonated superuser cannot write to a resource belonging to an unrelated organization."""
+    victim_organization = organization_factory(name="Victim organization")
+    resource.organization = victim_organization
+    resource.name = "Original name"
+    resource.save()
+
+    attacker_data_source = data_source_factory()
+    signed_auth_key = signed_auth_key_factory(data_source=attacker_data_source)
+
+    admin = user_factory(
+        username="real.admin.account", is_staff=True, is_superuser=True
+    )
+    assert not UserOrigin.objects.filter(
+        user=admin, data_source=attacker_data_source
+    ).exists()
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    now = timezone.now()
+    hsa_data = {
+        "hsa_source": attacker_data_source.id,
+        "hsa_username": admin.username,
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(hsa_data))
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**hsa_data, "hsa_signature": signature}
+    )
+
+    response = api_client.patch(
+        url,
+        data=json.dumps({"name": "Hijacked name"}, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    resource.refresh_from_db()
+
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
+    assert resource.name == "Original name"
+
+
+@pytest.mark.django_db
+def test_hsa_signed_auth_impersonated_superuser_cannot_write_related_org_resource(
+    api_client,
+    resource,
+    organization_factory,
+    signed_auth_key_factory,
+    user_factory,
+):
+    """Test that an impersonated superuser cannot write to a resource belonging to a related organization."""
+    victim_organization = organization_factory(name="Victim organization")
+    resource.organization = victim_organization
+    resource.name = "Original name"
+    resource.save()
+
+    attacker_data_source = victim_organization.data_source
+    signed_auth_key = signed_auth_key_factory(data_source=attacker_data_source)
+
+    admin = user_factory(
+        username="real.admin.account", is_staff=True, is_superuser=True
+    )
+    UserOrigin.objects.create(user=admin, data_source=attacker_data_source)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    now = timezone.now()
+    hsa_data = {
+        "hsa_source": attacker_data_source.id,
+        "hsa_username": admin.username,
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+    }
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(hsa_data))
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**hsa_data, "hsa_signature": signature}
+    )
+
+    response = api_client.patch(
+        url,
+        data=json.dumps({"name": "Hijacked name"}, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    resource.refresh_from_db()
+
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
+    assert resource.name == "Original name"
 
 
 @pytest.mark.django_db

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.13](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.12...hauki-v1.11.13) (2026-10-04)
+
+
+### Dependencies
+
+* Bump django-helusers from 1.1.0 to 1.3.0 ([ebe88d5](https://github.com/City-of-Helsinki/hauki/commit/ebe88d5a8e52cb6095e5fd5879a3b5a0e31c1c15))
+* Bump oauthlib from 3.3.1 to 4.0.0 ([a2f9fcd](https://github.com/City-of-Helsinki/hauki/commit/a2f9fcd7afa2643a3f0356b00ce99369b64d261b))
+* Bump pyjwt from 2.13.0 to 2.15.0 ([03185ec](https://github.com/City-of-Helsinki/hauki/commit/03185ecc5cc04766a2390b57f2ae58d3c3f7fad3))
+* Bump social-auth-core from 4.9.1 to 5.0.0 ([f51eb1b](https://github.com/City-of-Helsinki/hauki/commit/f51eb1bf99cd3ebee85ac85e255f48dc097f5a13))
+* Bump urllib3 from 2.7.0 to 2.8.0 ([e96e835](https://github.com/City-of-Helsinki/hauki/commit/e96e8352133aaa06c5e6a3f4c30c7b508e1b146e))
+* Bump virtualenv from 21.5.0 to 21.7.12 ([a88c984](https://github.com/City-of-Helsinki/hauki/commit/a88c9842b7fab513bbcf477ff25e4b4089903f6e))
+* Bump virtualenv from 21.7.12 to 21.7.13 ([75660f4](https://github.com/City-of-Helsinki/hauki/commit/75660f4b4f2f9336715329b976d0111dd5912f01))
+* Remove unused python-jose dependency ([7658b37](https://github.com/City-of-Helsinki/hauki/commit/7658b37f2b83902c2634cbfbcd4bb03955402667))
+
 ## [1.11.12](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.11...hauki-v1.11.12) (2026-09-04)
 
 

@@ -220,12 +220,15 @@ class HaukiSignedAuthentication(BaseAuthentication):
             try:
                 organization = Organization.objects.get(id=params["hsa_organization"])
 
-                users_organizations = user.organization_memberships.all()
+                # Only the data source that owns the organization may grant
+                # membership in it.
+                if organization.data_source_id == data_source.id:
+                    users_organizations = user.organization_memberships.all()
 
-                if organization not in users_organizations:
-                    user.organization_memberships.add(organization)
+                    if organization not in users_organizations:
+                        user.organization_memberships.add(organization)
 
-                hsa_auth_data.organization = organization
+                    hsa_auth_data.organization = organization
             except Organization.DoesNotExist:
                 # TODO: Should we raise exception here
                 pass

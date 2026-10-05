@@ -430,6 +430,91 @@ def test_join_user_to_organization_invalid_org(
 
 
 @pytest.mark.django_db
+def test_join_user_to_organization_unrelated_data_source(
+    api_client, data_source_factory, signed_auth_key_factory, organization_factory
+):
+    signing_data_source = data_source_factory()
+    signed_auth_key = signed_auth_key_factory(data_source=signing_data_source)
+
+    unrelated_org = organization_factory()
+
+    url = reverse("auth_required_test-list")
+
+    now = timezone.now()
+
+    data = {
+        "hsa_source": signing_data_source.id,
+        "hsa_username": "test_user",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+        "hsa_organization": unrelated_org.id,
+    }
+
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(data))
+
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**data, "hsa_signature": signature}
+    )
+
+    response = api_client.get(url, HTTP_AUTHORIZATION=authz_string)
+
+    assert response.status_code == 200
+    assert response.data["username"] == "test_user"
+
+    user = User.objects.get(username="test_user")
+
+    assert user.organization_memberships.count() == 0
+
+
+@pytest.mark.django_db
+def test_hsa_organization_unrelated_data_source_cannot_write_resource(
+    api_client,
+    resource,
+    data_source_factory,
+    signed_auth_key_factory,
+    organization_factory,
+):
+    victim_organization = organization_factory(name="Victim organization")
+    resource.organization = victim_organization
+    resource.name = "Original name"
+    resource.save()
+
+    attacker_data_source = data_source_factory()
+    signed_auth_key = signed_auth_key_factory(data_source=attacker_data_source)
+
+    url = reverse("resource-detail", kwargs={"pk": resource.id})
+
+    now = timezone.now()
+    hsa_data = {
+        "hsa_source": attacker_data_source.id,
+        "hsa_username": "new.unrelated.user",
+        "hsa_created_at": now.isoformat(),
+        "hsa_valid_until": (now + datetime.timedelta(minutes=10)).isoformat(),
+        "hsa_organization": victim_organization.id,
+        "hsa_has_organization_rights": "true",
+    }
+    signature = calculate_signature(signed_auth_key.signing_key, join_params(hsa_data))
+    authz_string = "haukisigned " + urllib.parse.urlencode(
+        {**hsa_data, "hsa_signature": signature}
+    )
+
+    response = api_client.patch(
+        url,
+        data=json.dumps({"name": "Hijacked name"}, cls=DjangoJSONEncoder),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=authz_string,
+    )
+
+    resource.refresh_from_db()
+
+    assert response.status_code == 403, f"{response.status_code} {response.data}"
+    assert resource.name == "Original name"
+
+    user = User.objects.get(username="new.unrelated.user")
+    assert user.organization_memberships.count() == 0
+
+
+@pytest.mark.django_db
 def test_authenticate_as_unrelated_existing_superuser_without_prior_data_source_link(
     api_client, data_source, signed_auth_key_factory, user_factory
 ):
@@ -961,6 +1046,34 @@ def test_auth_data_org(
     assert auth.has_organization_rights is False
     assert auth.organization == org
     assert auth.resource is None
+
+
+@pytest.mark.django_db
+def test_auth_data_org_different_data_source(
+    api_client, data_source_factory, organization_factory, hsa_params_factory
+):
+    """auth.organization stays None when the organization belongs to a
+    different data source than the one that signed the request.
+    """
+    signing_data_source = data_source_factory()
+    unrelated_org = organization_factory()
+
+    hsa_params = {
+        "username": "test_user",
+        "data_source": signing_data_source,
+        "organization": unrelated_org,
+    }
+    params = hsa_params_factory(**hsa_params)
+
+    request_factory = APIRequestFactory()
+    http_request = request_factory.get("/", params)
+    request = APIView().initialize_request(http_request)
+
+    auth = HaukiSignedAuthentication()
+    (authenticated_user, auth) = auth.authenticate(request)
+
+    assert auth.organization is None
+    assert authenticated_user.organization_memberships.count() == 0
 
 
 @pytest.mark.django_db

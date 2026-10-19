@@ -218,6 +218,16 @@ If you only wish to import opening hours for a single library, you may use its k
 python manage.py hours_import kirjastot --openings --single 84860
 ```
 
+By default, the names and descriptions are imported in Finnish, Swedish and English. The kirjastot.fi API returns the texts that have not been translated in Finnish, and they are stored as such. Descriptions are only imported when the existing description is empty, so descriptions edited in Hauki are never overwritten. If the texts in Swedish or English cannot be fetched, the existing texts in that language are kept.
+
+If you only wish to update the texts in a single language, leaving the texts in other languages untouched, you may use
+
+```
+python manage.py hours_import kirjastot --openings --language sv
+```
+
+The opening hours are always read from the Finnish data, so the data is fetched in Finnish as well as in the given language.
+
 ---
 
 *Opening hours* may also be imported by trying to parse strings provided in [TPREK API](https://www.hel.fi/palvelukarttaws/restpages/ver4.html) for all known TPREK units. This feature should not be run automatically in production, as you must manually verify that the resulting opening hours are the same as the intention of the TPREK data.

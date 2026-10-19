@@ -12,6 +12,7 @@ from django import db
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from modeltranslation import settings as mt_settings
 from requests import RequestException
 
 from ..enums import RuleContext, RuleSubject, State, Weekday
@@ -28,7 +29,21 @@ from .base import Importer, register_importer
 from .sync import ModelSyncher
 
 KIRKANTA_STATUS_MAP = {0: State.CLOSED, 1: State.OPEN, 2: State.SELF_SERVICE}
-finnish_holiday_names = holidays.Finland(language="fi")
+
+# Languages supported by the kirjastot.fi API through the "lang" parameter. The API
+# returns the texts in Finnish if they have not been translated.
+KIRKANTA_LANGUAGES = ("fi", "sv", "en")
+
+# Holiday names by language. The holidays library needs the locale codes for the
+# languages other than Finnish, and silently falls back to Finnish for unknown codes.
+HOLIDAY_NAMES = {
+    "fi": holidays.Finland(language="fi"),
+    "sv": holidays.Finland(language="sv_FI"),
+    "en": holidays.Finland(language="en_US"),
+}
+
+# The max length of the name fields of the date periods and time spans
+NAME_MAX_LENGTH = 255
 
 # List of periods that are known not to be a rotation of x weeks, but need to be
 # handled day-by-day.
@@ -99,6 +114,7 @@ class KirkantaPeriod(TypedDict):
     id: int
     library: int
     name: str
+    description: str | None
     validFrom: str
     validUntil: str
     isException: bool
@@ -109,6 +125,9 @@ class AnnotatedKirkantaPeriod(KirkantaPeriod):
     index: int  # index in the original data
     weekday: int  # ISO 8601 weekday
     days: list[dict]  # annotated days for the period
+    # texts by language, see KirjastotImporter.annotate_translations
+    name_translations: dict[str, str | None]
+    description_translations: dict[str, str | None]
 
 
 class KirkakantaRefs(TypedDict):
@@ -120,6 +139,7 @@ class KirkantaSchedule(TypedDict):
     period: int  # period id, references KirkantaPeriod
     closed: bool
     times: list[dict]
+    info: str | None
 
 
 class KirkantaData(TypedDict):
@@ -153,6 +173,7 @@ class KirjastotValidationError(KirjastotError):
 @register_importer
 class KirjastotImporter(Importer):
     name = "kirjastot"
+    supports_language_option = True
 
     def __init__(self, *args, **kwargs):
         self._errors = []
@@ -163,6 +184,46 @@ class KirjastotImporter(Importer):
             defaults=defaults, **ds_args
         )
         super().__init__(*args, **kwargs)
+
+    def setup(self):
+        # The only language whose texts are updated, or None for all languages
+        self.language = self.options.get("language")
+        self.languages = self.get_languages(self.language)
+
+    @property
+    def primary_language(self) -> str:
+        """
+        The language whose data is used for the opening hours. Only the texts are
+        used from the data in the other languages.
+        """
+        return self.languages[0]
+
+    @staticmethod
+    def get_languages(language: str | None = None) -> list[str]:
+        """
+        Returns the languages to fetch from the API, the default language first.
+        If language is given, only the default language and that language are
+        returned, since the data in the default language is always used for the
+        opening hours. Otherwise, all the supported languages are returned.
+        """
+        available_languages = [
+            lang
+            for lang in mt_settings.AVAILABLE_LANGUAGES
+            if lang in KIRKANTA_LANGUAGES
+        ]
+        if language:
+            if language not in available_languages:
+                raise KirjastotImporterError(
+                    f"Unsupported language {language}. Supported languages:"
+                    f" {', '.join(available_languages)}"
+                )
+            if language == mt_settings.DEFAULT_LANGUAGE:
+                return [language]
+            return [mt_settings.DEFAULT_LANGUAGE, language]
+        return sorted(
+            available_languages,
+            key=lambda lang: lang != mt_settings.DEFAULT_LANGUAGE,
+        )
 
     @staticmethod
     def get_date_range(
@@ -181,11 +242,11 @@ class KirjastotImporter(Importer):
         return begin, end
 
     def get_hours_from_api(
-        self, resource: Resource, start: date, end: date
+        self, resource: Resource, start: date, end: date, lang: str | None = None
     ) -> KirkantaJsonResponse:
         """
         Fetch opening hours for Target from kirjastot.fi's v4 API for the
-        given date range.
+        given date range. If lang is given, the texts are fetched in that language.
         """
         kirkanta_id = resource.origins.get(data_source=self.data_source).origin_id
 
@@ -195,17 +256,144 @@ class KirjastotImporter(Importer):
             "period.start": start,
             "period.end": end,
         }
+        if lang:
+            params["lang"] = lang
         try:
             data = self.api_get("library", kirkanta_id, params)
             if data["total"] > 0:
                 return data
         except RequestException as e:
+            lang_text = f" in language {lang}" if lang else ""
             self.logger.warning(
                 "Could not fetch data from the kirjastot.fi API"
-                f" for library {self.data_source.id}:{kirkanta_id}. Error: {str(e)}"
+                f" for library {self.data_source.id}:{kirkanta_id}{lang_text}."
+                f" Error: {str(e)}"
             )
 
         return {}
+
+    def get_hours_for_languages(
+        self, resource: Resource, start: date, end: date
+    ) -> dict[str, KirkantaJsonResponse]:
+        """
+        Fetch opening hours in each language to import, the primary language first.
+        Returns the data by language, or an empty dict if the data in the primary
+        language could not be fetched. The other languages are only used for the
+        texts, so they are left out if they could not be fetched. This way their
+        existing texts are kept.
+        """
+        primary_data = self.get_hours_from_api(
+            resource, start, end, lang=self.primary_language
+        )
+        if not primary_data:
+            return {}
+
+        data_by_language = {self.primary_language: primary_data}
+        for lang in self.languages[1:]:
+            data = self.get_hours_from_api(resource, start, end, lang=lang)
+            if not data:
+                self.logger.warning(
+                    f'No data in language {lang} for "{resource.name}"'
+                    f" id:{resource.id}. Keeping the existing texts in {lang}."
+                )
+                continue
+            data_by_language[lang] = data
+
+        return data_by_language
+
+    @staticmethod
+    def _get_schedule_key(schedule: KirkantaSchedule) -> tuple[str, int]:
+        # The date is a string in the API data, and a date after annotation
+        return str(schedule["date"]), schedule.get("period")
+
+    @classmethod
+    def annotate_translations(
+        cls,
+        data: KirkantaJsonResponse,
+        data_by_language: dict[str, KirkantaJsonResponse],
+    ) -> None:
+        """
+        Annotates the periods and schedules in data with their texts in each
+        language of data_by_language. The periods are matched by their ids and the
+        schedules by their dates and period ids. Missing texts are set to None.
+        """
+        if not data:
+            return
+
+        periods_by_language = {
+            lang: lang_data.get("refs", {}).get("period") or {}
+            for lang, lang_data in data_by_language.items()
+        }
+        schedules_by_language = {
+            lang: {
+                cls._get_schedule_key(schedule): schedule
+                for schedule in lang_data.get("data", {}).get("schedules") or []
+            }
+            for lang, lang_data in data_by_language.items()
+        }
+
+        for period_id, period in (data.get("refs", {}).get("period") or {}).items():
+            lang_periods = {
+                lang: periods.get(period_id) or {}
+                for lang, periods in periods_by_language.items()
+            }
+            period["name_translations"] = {
+                lang: lang_period.get("name")
+                for lang, lang_period in lang_periods.items()
+            }
+            period["description_translations"] = {
+                lang: lang_period.get("description")
+                for lang, lang_period in lang_periods.items()
+            }
+
+        for schedule in data.get("data", {}).get("schedules") or []:
+            key = cls._get_schedule_key(schedule)
+            schedule["info_translations"] = {
+                lang: (schedules.get(key) or {}).get("info")
+                for lang, schedules in schedules_by_language.items()
+            }
+
+    def _get_translations(self, item: dict, field: str) -> dict[str, str | None]:
+        """
+        Returns the texts of the field in the annotated item by language. If the item
+        has not been annotated, the text is returned in the primary language only.
+        """
+        translations = item.get(f"{field}_translations")
+        if translations is None:
+            return {self.primary_language: item.get(field)}
+        return dict(translations)
+
+    @staticmethod
+    def _truncate_names(names: dict[str, str | None]) -> dict[str, str | None]:
+        return {
+            lang: name[:NAME_MAX_LENGTH] if name else name
+            for lang, name in names.items()
+        }
+
+    def _get_period_names(self, period: dict) -> dict[str, str | None]:
+        return self._truncate_names(self._get_translations(period, "name"))
+
+    def _get_period_descriptions(self, period: dict) -> dict[str, str | None]:
+        # Store empty descriptions as None, so that they can be filled later
+        return {
+            lang: description or None
+            for lang, description in self._get_translations(
+                period, "description"
+            ).items()
+        }
+
+    def _get_day_infos(self, day: dict) -> dict[str, str | None]:
+        return self._truncate_names(self._get_translations(day, "info"))
+
+    def _get_day_names(self, day: dict) -> dict[str, str | None]:
+        """
+        Returns the names of the day by language. The info text of the day is used
+        if there is one, otherwise the name of the holiday on the day, if any.
+        """
+        return {
+            lang: info or HOLIDAY_NAMES[lang].get(day["date"])
+            for lang, info in self._get_day_infos(day).items()
+        }
 
     def check_period_common_dates_equal(
         self, period_id: int, first_data: list, second_data: list
@@ -434,7 +622,8 @@ class KirjastotImporter(Importer):
             return [
                 {
                     "resource": resource,
-                    "name": {"fi": period.get("name", "")},
+                    "name": self._get_period_names(period),
+                    "description": self._get_period_descriptions(period),
                     "start_date": parse(period["validFrom"]).date(),
                     "end_date": parse(period["validUntil"]).date(),
                     "resource_state": State.CLOSED,
@@ -448,17 +637,14 @@ class KirjastotImporter(Importer):
                 }
             ]
 
+        descriptions = self._get_period_descriptions(period)
         periods = []
         for day in period["days"]:
-            # Use the provided name if it exists, otherwise use the holiday name
-            name = (
-                day.get("info")
-                if day.get("info")
-                else finnish_holiday_names.get(day["date"])
-            )
             sub_period = {
                 "resource": resource,
-                "name": {"fi": name},
+                # Use the provided name if it exists, otherwise use the holiday name
+                "name": self._get_day_names(day),
+                "description": descriptions,
                 "start_date": day["date"],
                 "end_date": day["date"],
                 "resource_state": State.UNDEFINED,
@@ -505,7 +691,7 @@ class KirjastotImporter(Importer):
                         "end_time": end_time,
                         "end_time_on_next_day": end_time_on_next_day,
                         "resource_state": KIRKANTA_STATUS_MAP[opening_time["status"]],
-                        "name": {"fi": day.get("info")},
+                        "name": self._get_day_infos(day),
                         "full_day": full_day,
                     }
                 )
@@ -784,7 +970,8 @@ class KirjastotImporter(Importer):
 
         long_period = {
             "resource": library,
-            "name": {"fi": kirkanta_period.get("name", "")},
+            "name": self._get_period_names(kirkanta_period),
+            "description": self._get_period_descriptions(kirkanta_period),
             "start_date": valid_from,
             "end_date": valid_until,
             "resource_state": state,
@@ -843,9 +1030,20 @@ class KirjastotImporter(Importer):
             )
             has_fixed_periods = False
 
-            kirkanta_data = self.get_hours_from_api(
+            data_by_language = self.get_hours_for_languages(
                 library, import_start_date, import_end_date
             )
+            kirkanta_data = data_by_language.get(self.primary_language, {})
+            # Only update the texts in the languages that were fetched, and only in
+            # the requested language if one is given, so that the existing texts in
+            # the other languages are kept. New objects get all the fetched texts.
+            fetched_languages = list(data_by_language)
+            languages = [
+                lang
+                for lang in fetched_languages
+                if not self.language or lang == self.language
+            ]
+            self.annotate_translations(kirkanta_data, data_by_language)
             kirkanta_periods = self.get_kirkanta_periods(kirkanta_data)
 
             periods = []
@@ -862,7 +1060,13 @@ class KirjastotImporter(Importer):
                     # so we need to save them all first and then check them.
                     saved_periods = []
                     for period_data in periods:
-                        period = self.save_dateperiod(period_data)
+                        period = self.save_dateperiod(
+                            period_data,
+                            languages=languages,
+                            new_object_languages=fetched_languages,
+                            # Never overwrite descriptions edited in Hauki
+                            only_fill_empty=("description",),
+                        )
                         saved_periods.append(period)
 
                     self.logger.info(
@@ -935,7 +1139,11 @@ class KirjastotImporter(Importer):
             self.logger.info(
                 f'Fetching schedule for "{library.name}" id:{library.id}...'
             )
-            data = self.get_hours_from_api(library, import_start_date, import_end_date)
+            # The check only compares opening hours, so the texts in other
+            # languages are not needed.
+            data = self.get_hours_from_api(
+                library, import_start_date, import_end_date, lang=self.primary_language
+            )
 
             is_ok = self.check_library_data(
                 library,

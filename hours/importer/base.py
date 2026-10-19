@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from collections.abc import Sized
+from collections.abc import Iterable, Sized
 from itertools import zip_longest
 from typing import TypeVar
 
@@ -18,6 +18,10 @@ M = TypeVar("M", bound=Model)
 
 
 class Importer:
+    # Whether the importer supports the --language option, i.e. fetching and
+    # updating the translated texts only in a single language
+    supports_language_option = False
+
     def __init__(self, options):
         self.logger = logging.getLogger(f"{self.name}_importer")
         self.options = options
@@ -140,9 +144,31 @@ class Importer:
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
 
-    def _update_fields(self, obj: object, info: dict, skip_fields: list = None):
+    @staticmethod
+    def _is_empty(value) -> bool:
+        return value is None or value == ""
+
+    @classmethod
+    def _can_fill(cls, obj: object, field_name: str, val: object) -> bool:
+        return cls._is_empty(getattr(obj, field_name, None)) and not cls._is_empty(val)
+
+    def _update_fields(
+        self,
+        obj: object,
+        info: dict,
+        skip_fields: list = None,
+        languages: Iterable[str] | None = None,
+        only_fill_empty: Iterable[str] = (),
+    ):
         """
         Updates the fields in obj according to info.
+
+        If languages is given, only the translations in those languages are
+        updated. Translations in other languages are left untouched.
+
+        Fields listed in only_fill_empty are only updated if their current value is
+        empty, so existing values are never overwritten. For translated fields, this
+        applies to each language separately.
         """
         if not skip_fields:
             skip_fields = []
@@ -158,11 +184,20 @@ class Importer:
                 if field_name not in info:
                     continue
 
+                if languages is not None and lang not in languages:
+                    continue
+
                 data = info[field_name]
                 if data is not None and lang in data:
                     val = data[lang]
                 else:
                     val = None
+
+                if field_name in only_fill_empty and not self._can_fill(
+                    obj, lf.name, val
+                ):
+                    continue
+
                 self._set_field(obj, lf.name, val)
 
             # Remove original translated field
@@ -178,16 +213,27 @@ class Importer:
             field_name = field.name
             if field_name not in info:
                 continue
-            self._set_field(obj, field_name, info[field_name])
+            val = info[field_name]
+            if field_name in only_fill_empty and not self._can_fill(
+                obj, field_name, val
+            ):
+                continue
+            self._set_field(obj, field_name, val)
 
     def _update_or_create_object(
         self,
         model: type[M],
         data: dict,
+        languages: Iterable[str] | None = None,
+        only_fill_empty: Iterable[str] = (),
+        new_object_languages: Iterable[str] | None = None,
     ) -> M:
         """
         Takes the class and serialized data, creates and/or updates the Model
         object, saves and returns it saved for class-specific processing.
+
+        If new_object_languages is given, it is used instead of languages when the
+        object is created.
         """
         # look for existing object
         obj_id = self.get_data_ids(data)[0]
@@ -209,7 +255,11 @@ class Importer:
         obj._changed = False
         obj._changed_fields = []
 
-        self._update_fields(obj, data)
+        if obj._created and new_object_languages is not None:
+            languages = new_object_languages
+        self._update_fields(
+            obj, data, languages=languages, only_fill_empty=only_fill_empty
+        )
         self._set_field(obj, "is_removed", False)
         self._set_field(obj, "is_public", True)  # always set resource public at save
 
@@ -323,12 +373,33 @@ class Importer:
     def save_dateperiod(
         self,
         data: dict,
+        languages: Iterable[str] | None = None,
+        only_fill_empty: Iterable[str] = (),
+        new_object_languages: Iterable[str] | None = None,
     ) -> DatePeriod:
         """Takes the serialized period data, creates and/or updates the corresponding
         DatePeriod object, and returns it.
-        """
 
-        period = self._update_or_create_object(DatePeriod, data)
+        If languages is given, only the translations in those languages are updated
+        in the period and its time spans and rules. Translations in other languages
+        are left untouched.
+
+        If new_object_languages is given, it is used instead of languages for the
+        newly created period, time spans and rules.
+
+        Period fields listed in only_fill_empty are only updated if their current
+        value is empty, so existing values are never overwritten.
+        """
+        if new_object_languages is None:
+            new_object_languages = languages
+
+        period = self._update_or_create_object(
+            DatePeriod,
+            data,
+            languages=languages,
+            only_fill_empty=only_fill_empty,
+            new_object_languages=new_object_languages,
+        )
         try:
             time_span_groups_data = data.pop("time_span_groups")
         except KeyError:
@@ -379,14 +450,19 @@ class Importer:
                     continue
                 elif not existing_time_span:
                     time_span_datum["group"] = time_span_group
-                    time_span = TimeSpan(**time_span_datum)
+                    time_span = TimeSpan(group=time_span_group)
+                    self._update_fields(
+                        time_span, time_span_datum, languages=new_object_languages
+                    )
                     time_span.save()
                     period._changed = True
                     period._changed_fields.append("time_span_groups__time_span")
                 else:
                     time_span_datum["group"] = time_span_group
                     existing_time_span._changed = False
-                    self._update_fields(existing_time_span, time_span_datum)
+                    self._update_fields(
+                        existing_time_span, time_span_datum, languages=languages
+                    )
                     if existing_time_span._changed:
                         period._changed = True
                         period._changed_fields.append("time_span_groups__time_span")
@@ -403,14 +479,17 @@ class Importer:
                     continue
                 elif not existing_rule:
                     rule_datum["group"] = time_span_group
-                    rule = Rule(**rule_datum)
+                    rule = Rule(group=time_span_group)
+                    self._update_fields(
+                        rule, rule_datum, languages=new_object_languages
+                    )
                     rule.save()
                     period._changed = True
                     period._changed_fields.append("time_span_groups__rule")
                 else:
                     rule_datum["group"] = time_span_group
                     existing_rule._changed = False
-                    self._update_fields(existing_rule, rule_datum)
+                    self._update_fields(existing_rule, rule_datum, languages=languages)
                     if existing_rule._changed:
                         period._changed = True
                         period._changed_fields.append("time_span_groups__rule")

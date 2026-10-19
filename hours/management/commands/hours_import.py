@@ -1,6 +1,7 @@
 import logging
 
 import requests_cache
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from hours.importer.base import get_importers
@@ -73,6 +74,25 @@ class Command(BaseCommand):
             dest="parse_extra",
             help="Create new resources based on parsed opening hours strings in all text fields. This will create subresources that do not exist in the original data source when extra opening hours are found.",  # noqa
         )
+        language_importers = sorted(
+            name
+            for name, importer in self.importers.items()
+            if importer.supports_language_option
+        )
+        parser.add_argument(
+            "--language",
+            action="store",
+            dest="language",
+            default=None,
+            choices=[lang for lang, _name in settings.LANGUAGES],
+            help=(
+                "Update the translated texts only in the given language. Texts in"
+                " other languages are left untouched. The opening hours are still"
+                " read from the data in the default language. By default, the texts"
+                " in all languages are updated. Supported by: "
+                + ", ".join(language_importers)
+            ),
+        )
 
         for imp in self.importer_types:
             parser.add_argument(
@@ -88,6 +108,10 @@ class Command(BaseCommand):
                 f"Importer {module} not found. Valid importers: {self.imp_list}"
             )
         imp_class = self.importers[module]
+        if options.get("language") and not imp_class.supports_language_option:
+            raise CommandError(
+                f"Importer {module} does not support the --language option"
+            )
         importer = imp_class(options)
 
         # Activate the default language for the duration of the import

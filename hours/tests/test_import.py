@@ -1,9 +1,11 @@
+import copy
 import json
 import os
 from datetime import datetime, timedelta
 
 import pytest
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django_orghierarchy.models import Organization
 
 from hours.models import (
@@ -759,6 +761,281 @@ def test_import_kirjastot_complex(mock_library_data):
     assert first_week_thu.rules.all()[0].frequency_ordinal == 2
     assert second_week_thu.rules.all()[0].start == 2
     assert second_week_thu.rules.all()[0].frequency_ordinal == 2
+
+
+KALLIO_KIRKANTA_ID = 84860
+KIRJASTOT_URL = (
+    f"https://api.kirjastot.fi/v4/library/{KALLIO_KIRKANTA_ID}/?with=schedules"
+    "&refs=period&period.start=2020-06-01&period.end=2021-06-01"
+)
+SUMMER_PERIOD_ID = "343802"
+SUMMER_PERIOD_TEXT = "Kesä2020"
+MIDSUMMER_PERIOD_ID = "339753"
+
+
+def translate_kirjastot_data(data: dict, lang: str) -> dict:
+    """
+    Returns a copy of the kirjastot.fi API data with its texts in the given language,
+    like the API returns them with the lang parameter.
+    """
+    data = copy.deepcopy(data)
+    for period in data["refs"]["period"].values():
+        period["name"] = f"{period['name']} ({lang})"
+        period["description"] = f"{period['description']} ({lang})"
+    for schedule in data["data"]["schedules"]:
+        if schedule["info"]:
+            schedule["info"] = f"{schedule['info']} ({lang})"
+    return data
+
+
+def mock_kirjastot_data_by_language(requests_mock, data_by_language: dict):
+    for lang, data in data_by_language.items():
+        requests_mock.get(f"{KIRJASTOT_URL}&lang={lang}", text=json.dumps(data))
+
+
+def import_kirjastot(*args):
+    call_command(
+        "hours_import",
+        "kirjastot",
+        "--openings",
+        "--single",
+        KALLIO_KIRKANTA_ID,
+        "--date",
+        "2020-06-01",
+        *args,
+    )
+
+
+def get_requested_languages(requests_mock, start: int = 0) -> list:
+    return [r.qs.get("lang") for r in requests_mock.request_history[start:]]
+
+
+def get_names(obj) -> tuple:
+    return obj.name_fi, obj.name_sv, obj.name_en
+
+
+def get_descriptions(obj) -> tuple:
+    return obj.description_fi, obj.description_sv, obj.description_en
+
+
+def get_history_counts() -> tuple:
+    return (
+        DatePeriod.history.count(),
+        TimeSpan.history.count(),
+        Rule.history.count(),
+    )
+
+
+def change_summer_period_texts(data_by_language: dict, field: str):
+    for lang, data in data_by_language.items():
+        data["refs"]["period"][SUMMER_PERIOD_ID][field] = f"Changed {lang}"
+
+
+@pytest.fixture
+def mock_multilingual_library_data(requests_mock):
+    """
+    Creates a library and mocks its kirjastot.fi API data in fi, sv and en. Returns
+    the mocked data by language, so that it can be changed and mocked again.
+    """
+    kirkanta = DataSource.objects.create(id="kirkanta")
+    kallio = Resource.objects.create()
+    ResourceOrigin.objects.create(
+        data_source=kirkanta, origin_id=KALLIO_KIRKANTA_ID, resource=kallio
+    )
+    test_file_path = os.path.join(
+        os.path.dirname(__file__), "fixtures", "test_import_kirjastot_data_pattern.json"
+    )
+    with open(test_file_path) as f:
+        data = json.load(f)
+    for schedule in data["data"]["schedules"]:
+        if schedule["date"] == "2020-06-20":
+            # Without the info, the name of the holiday is used
+            schedule["info"] = None
+
+    data_by_language = {
+        "fi": data,
+        "sv": translate_kirjastot_data(data, "sv"),
+        "en": translate_kirjastot_data(data, "en"),
+    }
+    mock_kirjastot_data_by_language(requests_mock, data_by_language)
+    return data_by_language
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_languages(mock_multilingual_library_data, requests_mock):
+    import_kirjastot()
+
+    # The data is fetched once in each language, the default language first
+    assert get_requested_languages(requests_mock) == [["fi"], ["sv"], ["en"]]
+    assert DatePeriod.objects.count() == 5
+    summer_period = DatePeriod.objects.get(origins__origin_id=SUMMER_PERIOD_ID)
+    summer_texts = (
+        SUMMER_PERIOD_TEXT,
+        f"{SUMMER_PERIOD_TEXT} (sv)",
+        f"{SUMMER_PERIOD_TEXT} (en)",
+    )
+    assert get_names(summer_period) == summer_texts
+    assert get_descriptions(summer_period) == summer_texts
+    pre_eve = DatePeriod.objects.get(
+        origins__origin_id=f"{MIDSUMMER_PERIOD_ID}-2020-06-18"
+    )
+    pre_eve_names = (
+        "Juhannuksen aaton aatto",
+        "Juhannuksen aaton aatto (sv)",
+        "Juhannuksen aaton aatto (en)",
+    )
+    assert get_names(pre_eve) == pre_eve_names
+    assert get_descriptions(pre_eve) == ("Juhannus", "Juhannus (sv)", "Juhannus (en)")
+    pre_eve_time_spans = TimeSpan.objects.filter(group__period=pre_eve)
+    assert pre_eve_time_spans.count() == 2
+    for time_span in pre_eve_time_spans:
+        assert get_names(time_span) == pre_eve_names
+    midsummer_day = DatePeriod.objects.get(
+        origins__origin_id=f"{MIDSUMMER_PERIOD_ID}-2020-06-20"
+    )
+    assert get_names(midsummer_day) == (
+        "Juhannuspäivä",
+        "Midsommardagen",
+        "Midsummer Day",
+    )
+
+    # Importing the same data again changes nothing
+    history_counts = get_history_counts()
+    import_kirjastot()
+    assert get_history_counts() == history_counts
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_single_language(
+    mock_multilingual_library_data, requests_mock
+):
+    import_kirjastot()
+    change_summer_period_texts(mock_multilingual_library_data, "name")
+    mock_kirjastot_data_by_language(requests_mock, mock_multilingual_library_data)
+    n_requests = len(requests_mock.request_history)
+
+    import_kirjastot("--language", "sv")
+
+    # The data in fi is fetched for the opening hours, but only the texts in sv
+    # are updated
+    assert get_requested_languages(requests_mock, n_requests) == [["fi"], ["sv"]]
+    assert DatePeriod.objects.count() == 5
+    summer_period = DatePeriod.objects.get(origins__origin_id=SUMMER_PERIOD_ID)
+    assert get_names(summer_period) == (
+        SUMMER_PERIOD_TEXT,
+        "Changed sv",
+        f"{SUMMER_PERIOD_TEXT} (en)",
+    )
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_single_language_failed_fetch_keeps_data(
+    mock_multilingual_library_data, requests_mock
+):
+    import_kirjastot()
+    change_summer_period_texts(mock_multilingual_library_data, "name")
+    mock_kirjastot_data_by_language(requests_mock, mock_multilingual_library_data)
+    requests_mock.get(f"{KIRJASTOT_URL}&lang=sv", status_code=500)
+    history_counts = get_history_counts()
+
+    import_kirjastot("--language", "sv")
+
+    # The opening hours come from the data in fi, so no periods are removed, and
+    # no texts are updated without the data in sv
+    assert DatePeriod.objects.count() == 5
+    summer_period = DatePeriod.objects.get(origins__origin_id=SUMMER_PERIOD_ID)
+    assert get_names(summer_period) == (
+        SUMMER_PERIOD_TEXT,
+        f"{SUMMER_PERIOD_TEXT} (sv)",
+        f"{SUMMER_PERIOD_TEXT} (en)",
+    )
+    assert get_history_counts() == history_counts
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_failed_language_keeps_texts(
+    mock_multilingual_library_data, requests_mock
+):
+    import_kirjastot()
+    change_summer_period_texts(mock_multilingual_library_data, "name")
+    mock_kirjastot_data_by_language(requests_mock, mock_multilingual_library_data)
+    requests_mock.get(f"{KIRJASTOT_URL}&lang=sv", status_code=500)
+
+    import_kirjastot()
+
+    # No periods are removed, and the existing texts in sv are kept
+    assert DatePeriod.objects.count() == 5
+    summer_period = DatePeriod.objects.get(origins__origin_id=SUMMER_PERIOD_ID)
+    assert get_names(summer_period) == (
+        "Changed fi",
+        f"{SUMMER_PERIOD_TEXT} (sv)",
+        "Changed en",
+    )
+    midsummer_day = DatePeriod.objects.get(
+        origins__origin_id=f"{MIDSUMMER_PERIOD_ID}-2020-06-20"
+    )
+    assert get_names(midsummer_day) == (
+        "Juhannuspäivä",
+        "Midsommardagen",
+        "Midsummer Day",
+    )
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_keeps_existing_descriptions(
+    mock_multilingual_library_data, requests_mock
+):
+    import_kirjastot()
+    summer_period = DatePeriod.objects.get(origins__origin_id=SUMMER_PERIOD_ID)
+    # The description is edited in Hauki in fi, and removed in sv
+    summer_period.description_fi = "Muokattu Haukissa"
+    summer_period.description_sv = ""
+    summer_period.save()
+    change_summer_period_texts(mock_multilingual_library_data, "description")
+    mock_kirjastot_data_by_language(requests_mock, mock_multilingual_library_data)
+
+    import_kirjastot()
+
+    summer_period.refresh_from_db()
+    # Existing descriptions are never overwritten, only the empty ones are filled
+    assert get_descriptions(summer_period) == (
+        "Muokattu Haukissa",
+        "Changed sv",
+        f"{SUMMER_PERIOD_TEXT} (en)",
+    )
+
+
+@pytest.mark.django_db
+def test_import_kirjastot_check_fetches_only_default_language(
+    mock_multilingual_library_data, requests_mock
+):
+    import_kirjastot()
+    n_requests = len(requests_mock.request_history)
+
+    call_command(
+        "hours_import",
+        "kirjastot",
+        "--check",
+        "--single",
+        KALLIO_KIRKANTA_ID,
+        "--date",
+        "2020-06-01",
+    )
+
+    # The texts are not needed for checking the opening hours
+    assert get_requested_languages(requests_mock, n_requests) == [["fi"]]
+
+
+@pytest.mark.django_db
+def test_import_language_option_not_supported():
+    with pytest.raises(CommandError, match="does not support the --language option"):
+        call_command("hours_import", "tprek", "--resources", "--language", "sv")
+
+
+@pytest.mark.django_db
+def test_import_language_option_invalid_language():
+    with pytest.raises(CommandError, match="invalid choice"):
+        call_command("hours_import", "kirjastot", "--openings", "--language", "de")
 
 
 @pytest.mark.django_db

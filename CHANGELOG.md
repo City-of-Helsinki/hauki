@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.12.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.13...hauki-v1.12.0) (2026-10-23)
+
+
+### Features
+
+* **kirjastot:** Import sv and en translations ([ca686af](https://github.com/City-of-Helsinki/hauki/commit/ca686af7de0f39f371ae84551f1d7dddcb33c2cc))
+
+
+### Bug Fixes
+
+* Bump uv version to 0.13.5 ([ea10850](https://github.com/City-of-Helsinki/hauki/commit/ea108502a73178a8be562f98724f9dc01899744d))
+
+
+### Dependencies
+
+* Bump certifi to 2026.10.19 ([b36c2a4](https://github.com/City-of-Helsinki/hauki/commit/b36c2a40d156b5c185c66edfe26b625fd62a225b))
+
 ## [1.11.13](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.12...hauki-v1.11.13) (2026-10-16)
 
 

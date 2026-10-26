@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.12.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.12.0...hauki-v1.12.1) (2026-10-26)
+
+
+### Dependencies
+
+* Bump djangorestframework from 3.17.2 to 3.18.2 ([beb1733](https://github.com/City-of-Helsinki/hauki/commit/beb17333a80e211ad8f96ca0c02833c6c5be6ded))
+* Bump filelock from 3.29.4 to 4.2.1 ([252791c](https://github.com/City-of-Helsinki/hauki/commit/252791cc0a561a04d27578ffebd4f464337620ee))
+* Bump virtualenv from 21.14.9 to 21.14.13 ([15b4254](https://github.com/City-of-Helsinki/hauki/commit/15b42542f1ba7571f482b5c6bca35cb14f2d1b21))
+* Bump virtualenv from 21.7.13 to 21.14.9 ([9e61068](https://github.com/City-of-Helsinki/hauki/commit/9e61068c24ba064289d5fb9b59600920f314efd8))
+
 ## [1.12.0](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.11.13...hauki-v1.12.0) (2026-10-23)
 
 

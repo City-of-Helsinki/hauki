@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.2](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.12.1...hauki-v1.12.2) (2026-11-07)
+
+
+### Dependencies
+
+* Bump filelock from 3.29.4 to 4.2.1 ([2495791](https://github.com/City-of-Helsinki/hauki/commit/24957916c02cccb025050d9ce8dc221e81325c19))
+* Bump oauthlib from 4.0.0 to 4.0.1 ([a62cd42](https://github.com/City-of-Helsinki/hauki/commit/a62cd42d0db2976ae40dcedb0d892a4b7dd57299))
+
 ## [1.12.1](https://github.com/City-of-Helsinki/hauki/compare/hauki-v1.12.0...hauki-v1.12.1) (2026-10-26)
 
 

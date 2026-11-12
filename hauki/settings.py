@@ -83,6 +83,7 @@ env = environ.Env(
     MAIL_MAILGUN_API=(str, ""),
     RESOURCE_DEFAULT_TIMEZONE=(str, None),
     HSA_CLOCK_SKEW_LEEWAY_SECONDS=(int, 30),
+    E2E_SIGNED_AUTH_KEY=(str, ""),
     HELUSERS_PASSWORD_LOGIN_DISABLED=(bool, False),
     SOCIAL_AUTH_TUNNISTAMO_KEY=(str, ""),
     SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
@@ -457,3 +458,8 @@ if not SECRET_KEY:
     )
 
 HSA_CLOCK_SKEW_LEEWAY_SECONDS = env("HSA_CLOCK_SKEW_LEEWAY_SECONDS")
+
+# Fixed signing key for the e2e test data source (create_e2e_test_data), so
+# local e2e runs can sign requests without reading a random key from the logs.
+# Leave empty outside local/dev use.
+E2E_SIGNED_AUTH_KEY = env("E2E_SIGNED_AUTH_KEY")

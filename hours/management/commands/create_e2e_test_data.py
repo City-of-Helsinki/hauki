@@ -2,6 +2,7 @@ import logging
 from datetime import UTC, datetime
 from secrets import token_hex
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django_orghierarchy.models import Organization
@@ -25,14 +26,20 @@ class Command(BaseCommand):
             logger.info(
                 f"Test data source with id {test_data_source.id} already exists"
             )
+        configured_key = settings.E2E_SIGNED_AUTH_KEY
         test_signed_auth_key, created = SignedAuthKey.objects.get_or_create(
             data_source=test_data_source,
             defaults={
                 "valid_after": datetime.now(UTC),
-                "signing_key": token_hex(64),
+                "signing_key": configured_key or token_hex(64),
             },
         )
-        if created:
+        if configured_key:
+            if test_signed_auth_key.signing_key != configured_key:
+                test_signed_auth_key.signing_key = configured_key
+                test_signed_auth_key.save(update_fields=["signing_key"])
+            logger.info("Test signed auth key set from E2E_SIGNED_AUTH_KEY")
+        elif created:
             logger.info(
                 f"Created test signed auth key {test_signed_auth_key.signing_key}"
             )
